@@ -155,6 +155,7 @@ class SendKeyboard():
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 @click.pass_context
 def heartbeat_habits(ctx, **kwargs):
+    logging.warning(datetime.now().isoformat())
     ctx.ensure_object(dict)
     for k, v in kwargs.items():
         ctx.obj[k] = v
