@@ -30,7 +30,7 @@ import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from pymongo import MongoClient
-import common
+import _common
 import pandas as pd
 
 
@@ -41,7 +41,7 @@ class SendKeyboard():
         self._chat_id = chat_id
         self._bot = bot
         self._columns = 2
-        self._keyboard = common.TIME_CATS
+        self._keyboard = _common.TIME_CATS
         self._mongo_client = MongoClient(mongo_url)
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -64,14 +64,14 @@ class SendKeyboard():
                                      )
 #        print(mess.message_id)
         self._sanitize_mongo()
-        self._mongo_client[common.MONGO_COLL_NAME]["alex.time"].insert_one({
+        self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
             "date": _now,
             "category": None,
             "telegram_message_id": mess.message_id,
         })
 
     def _sanitize_mongo(self):
-        mongo_coll = self._mongo_client[common.MONGO_COLL_NAME]["alex.time"]
+        mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
         empties = pd.DataFrame(mongo_coll.find({"category": None}))
 #        print(empties)
         if len(empties) > 0:

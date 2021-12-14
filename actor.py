@@ -28,7 +28,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton,
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from pymongo import MongoClient
 from datetime import datetime, timedelta
-import common
+import _common
 
 
 class Callback:
@@ -47,7 +47,7 @@ class Callback:
         message_id = update.callback_query.message.message_id
         data = int(update.callback_query.data)
 
-        mongo_coll = self._mongo_client[common.MONGO_COLL_NAME]["alex.time"]
+        mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
         msg = mongo_coll.find_one(
             {"telegram_message_id": message_id})
         if msg is None:
@@ -58,7 +58,7 @@ class Callback:
             logging.warning(
                 f"already have saved state \"{msg['category']}\" for message_id={message_id} ==> ignore")
             return
-        time_category = common.TIME_CATS[data]
+        time_category = _common.TIME_CATS[data]
         print(time_category)
         mongo_coll.update_one(
             {"telegram_message_id": message_id}, {"$set": {"category": time_category}})
