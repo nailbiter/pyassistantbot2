@@ -27,17 +27,18 @@ import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from pymongo import MongoClient
+from datetime import datetime, timedelta
 import common
 
 
 class Callback:
-    def __init__(self, telegram_token, chat_id, mongo_url,bot):
+    def __init__(self, telegram_token, chat_id, mongo_url, bot):
         self._chat_id = chat_id
         self._mongo_client = MongoClient(mongo_url)
         self._bot = bot
 
     def __call__(self, update, context):
-        #print((update, context))
+        now_ = datetime.now()
         chat_id = update.effective_message.chat_id
         if chat_id != self._chat_id:
             logging.warning(f"spurious message from {chat_id} ==> ignore")
@@ -62,9 +63,13 @@ class Callback:
         mongo_coll.update_one(
             {"telegram_message_id": message_id}, {"$set": {"category": time_category}})
 
-        self._bot.sendMessage(chat_id=chat_id,text=f"""
+        self._bot.delete_message(
+            chat_id,
+            message_id
+        )
+        self._bot.sendMessage(chat_id=chat_id, text=f"""
 got: {time_category}
-remaining time to live: {str(datetime(1991,12,24)+timedelta(years=80)-now_)} 
+remaining time to live: {str(datetime(1991+70,12,24)-now_)} 
         """.strip())
 
 
@@ -77,7 +82,7 @@ def actor(telegram_token, chat_id, mongo_url):
     bot = updater.bot
 #    updater.dispatcher.add_handler(
 #        MessageHandler(filters=Filters.all, callback=edbp))
-    edbp = Callback(telegram_token, chat_id, mongo_url,bot)
+    edbp = Callback(telegram_token, chat_id, mongo_url, bot)
     updater.dispatcher.add_handler(
         CallbackQueryHandler(callback=edbp))
     updater.start_polling()

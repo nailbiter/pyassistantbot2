@@ -31,4 +31,5 @@ TIME_CATS = [
     "german",
     "math project",
 ]
-MONGO_COLL_NAME = "pyassistantbot2"
+#MONGO_COLL_NAME = "pyassistantbot2"
+MONGO_COLL_NAME = "logistics"

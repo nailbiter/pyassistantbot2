@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+    heartbeat_time:
+        build:
+            context: .
+            dockerfile: Dockerfile.heartbeat_time  
+    actor:
+        build:
+            context: .
+            dockerfile: Dockerfile.actor  

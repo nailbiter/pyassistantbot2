@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """===============================================================================
 
-        FILE: heartbeat.py
+        FILE: heartbeat_time.py
 
        USAGE: (not intended to be directly executed)
 
@@ -31,6 +31,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton,
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 from pymongo import MongoClient
 import common
+import pandas as pd
 
 
 class SendKeyboard():
@@ -42,6 +43,7 @@ class SendKeyboard():
         self._columns = 2
         self._keyboard = common.TIME_CATS
         self._mongo_client = MongoClient(mongo_url)
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     def __call__(self):
         _now = datetime.now()
@@ -61,18 +63,30 @@ class SendKeyboard():
                                      ]),
                                      )
 #        print(mess.message_id)
+        self._sanitize_mongo()
         self._mongo_client[common.MONGO_COLL_NAME]["alex.time"].insert_one({
             "date": _now-timedelta(hours=9),
             "category": None,
             "telegram_message_id": mess.message_id,
         })
 
+    def _sanitize_mongo(self):
+        mongo_coll = self._mongo_client[common.MONGO_COLL_NAME]["alex.time"]
+        empties = pd.DataFrame(mongo_coll.find({"category": None}))
+#        print(empties)
+        if len(empties) > 0:
+            self._logger.warning(empties)
+            # FIXME: optimize via `update_many`
+            for message_id in empties.telegram_message_id:
+                mongo_coll.update_one({"telegram_message_id": message_id}, {
+                                      "$set": {"category": "useless"}})
+
 
 @click.command()
 @click.option("-t", "--telegram-token", required=True, envvar="TELEGRAM_TOKEN")
 @click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
-def heartbeat(telegram_token, chat_id, mongo_url):
+def heartbeat_time(telegram_token, chat_id, mongo_url):
     job = SendKeyboard(telegram_token, chat_id, mongo_url)
 
     if not True:
@@ -90,4 +104,4 @@ if __name__ == "__main__":
     if path.isfile(".env"):
         logging.warning("loading .env")
         load_dotenv()
-    heartbeat()
+    heartbeat_time()

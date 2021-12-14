@@ -5,8 +5,8 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 COPY common.py .
-COPY actor.py .
+COPY heartbeat_time.py .
 
 COPY .env .env
 
-CMD ["python3","actor.py"]
+CMD ["python3","heartbeat_time.py"]
