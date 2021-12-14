@@ -1,0 +1,12 @@
+FROM python:3.9-slim-buster
+LABEL maintainer="nailbiter"
+
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt
+
+COPY _common.py .
+COPY heartbeat_habits.py .
+
+COPY .env .env
+
+CMD ["python3","heartbeat_habits.py","heartbeat"]

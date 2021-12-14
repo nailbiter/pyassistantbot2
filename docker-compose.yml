@@ -1,6 +1,10 @@
 version: '3.3'
 
 services:
+    heartbeat_habits:
+        build:
+            context: .
+            dockerfile: Dockerfile.heartbeat_habits  
     heartbeat_time:
         build:
             context: .

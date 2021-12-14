@@ -162,7 +162,7 @@ def heartbeat_habits(ctx, **kwargs):
 
 @heartbeat_habits.command()
 @click.pass_context
-def hb(ctx):
+def heartbeat(ctx):
     job = SendKeyboard(*[
         ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")
     ], create_bot=True)
@@ -179,7 +179,7 @@ def hb(ctx):
 
 
 @heartbeat_habits.command()
-@click.option("-i", "--index", type=int)
+@click.option("-i", "--index", type=int,multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
 @click.pass_context
 def show_habits(ctx, index, status):
@@ -191,8 +191,8 @@ def show_habits(ctx, index, status):
     click.echo(f"{len(df)} habits")
 
 #    print(df.loc[0])
-    if index is not None:
-        r = df.loc[index]
+    for i in index:
+        r = df.loc[i]
         job.set_status(r["name"], r.date.to_pydatetime(), status)
 
 
