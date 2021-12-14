@@ -31,9 +31,10 @@ import common
 
 
 class Callback:
-    def __init__(self, telegram_token, chat_id, mongo_url):
+    def __init__(self, telegram_token, chat_id, mongo_url,bot):
         self._chat_id = chat_id
         self._mongo_client = MongoClient(mongo_url)
+        self._bot = bot
 
     def __call__(self, update, context):
         #print((update, context))
@@ -61,6 +62,11 @@ class Callback:
         mongo_coll.update_one(
             {"telegram_message_id": message_id}, {"$set": {"category": time_category}})
 
+        self._bot.sendMessage(chat_id=chat_id,text=f"""
+got: {time_category}
+remaining time to live: {str(datetime(1991,12,24)+timedelta(years=80)-now_)} 
+        """.strip())
+
 
 @click.command()
 @click.option("-t", "--telegram-token", required=True, envvar="TELEGRAM_TOKEN")
@@ -68,10 +74,10 @@ class Callback:
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 def actor(telegram_token, chat_id, mongo_url):
     updater = Updater(telegram_token, use_context=True)
-    #bot = updater.bot
+    bot = updater.bot
 #    updater.dispatcher.add_handler(
 #        MessageHandler(filters=Filters.all, callback=edbp))
-    edbp = Callback(telegram_token, chat_id, mongo_url)
+    edbp = Callback(telegram_token, chat_id, mongo_url,bot)
     updater.dispatcher.add_handler(
         CallbackQueryHandler(callback=edbp))
     updater.start_polling()
