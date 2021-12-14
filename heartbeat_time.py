@@ -65,7 +65,7 @@ class SendKeyboard():
 #        print(mess.message_id)
         self._sanitize_mongo()
         self._mongo_client[common.MONGO_COLL_NAME]["alex.time"].insert_one({
-            "date": _now-timedelta(hours=9),
+            "date": _now,
             "category": None,
             "telegram_message_id": mess.message_id,
         })
