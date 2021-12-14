@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""===============================================================================
+
+        FILE: heartbeat.py
+
+       USAGE: (not intended to be directly executed)
+
+ DESCRIPTION:
+
+     OPTIONS: ---
+REQUIREMENTS: ---
+        BUGS: ---
+       NOTES: ---
+      AUTHOR: Alex Leontiev (alozz1991@gmail.com)
+ORGANIZATION:
+     VERSION: ---
+     CREATED: 2021-12-14T10:42:48.216487
+    REVISION: ---
+
+==============================================================================="""
+
+import click
+from dotenv import load_dotenv
+import os
+from os import path
+import schedule
+from datetime import datetime, timedelta
+import logging
+import time
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
+from pymongo import MongoClient
+import common
+
+
+class SendKeyboard():
+    def __init__(self, token, chat_id, mongo_url):
+        updater = Updater(token, use_context=True)
+        bot = updater.bot
+        self._chat_id = chat_id
+        self._bot = bot
+        self._columns = 2
+        self._keyboard = common.TIME_CATS
+        self._mongo_client = MongoClient(mongo_url)
+
+    def __call__(self):
+        _now = datetime.now()
+        print(f"working at {_now.isoformat()}")
+        mess = self._bot.sendMessage(chat_id=self._chat_id, text="北鼻，你在幹什麼？",
+                                     parse_mode="Markdown",
+                                     reply_markup=InlineKeyboardMarkup([
+                                         [
+                                             InlineKeyboardButton(
+                                                 self._keyboard[i+j], callback_data=str(i+j))
+                                             for j in
+                                             range(self._columns)
+                                             if i+j < len(self._keyboard)
+                                         ]
+                                         for i
+                                         in range(0, len(self._keyboard), self._columns)
+                                     ]),
+                                     )
+#        print(mess.message_id)
+        self._mongo_client[common.MONGO_COLL_NAME]["alex.time"].insert_one({
+            "date": _now-timedelta(hours=9),
+            "category": None,
+            "telegram_message_id": mess.message_id,
+        })
+
+
+@click.command()
+@click.option("-t", "--telegram-token", required=True, envvar="TELEGRAM_TOKEN")
+@click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
+@click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
+def heartbeat(telegram_token, chat_id, mongo_url):
+    job = SendKeyboard(telegram_token, chat_id, mongo_url)
+
+    if not True:
+        schedule.every(1).minutes.do(job)
+    else:
+        schedule.every().hour.at(":30").do(job)
+        schedule.every().hour.at(":00").do(job)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
+if __name__ == "__main__":
+    if path.isfile(".env"):
+        logging.warning("loading .env")
+        load_dotenv()
+    heartbeat()
