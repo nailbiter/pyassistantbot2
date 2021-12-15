@@ -4,8 +4,12 @@ LABEL maintainer="nailbiter"
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
+ENV TZ=Asia/Tokyo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 COPY _common.py .
 COPY actor.py .
+COPY heartbeat_habits.py .
 
 COPY .env .env
 

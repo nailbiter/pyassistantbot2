@@ -47,21 +47,30 @@ class SendKeyboard():
 
     def __call__(self):
         _now = datetime.now()
-        print(f"working at {_now.isoformat()}")
-        mess = self._bot.sendMessage(chat_id=self._chat_id, text="北鼻，你在幹什麼？",
-                                     parse_mode="Markdown",
-                                     reply_markup=InlineKeyboardMarkup([
-                                         [
-                                             InlineKeyboardButton(
-                                                 self._keyboard[i+j], callback_data=str(i+j))
-                                             for j in
-                                             range(self._columns)
-                                             if i+j < len(self._keyboard)
-                                         ]
-                                         for i
-                                         in range(0, len(self._keyboard), self._columns)
-                                     ]),
-                                     )
+        print(f"working at {_now.isoformat()}", flush=True)
+        sleeping_state = _common.get_sleeping_state(self._mongo_client)
+        if sleeping_state is None:
+            mess = self._send_message("北鼻，你在幹什麼？",
+                                      parse_mode="Markdown",
+                                      reply_markup=InlineKeyboardMarkup([
+                                          [
+                                                 InlineKeyboardButton(
+                                                     self._keyboard[i+j], callback_data=str(i+j))
+                                                 for j in
+                                                 range(self._columns)
+                                                 if i+j < len(self._keyboard)
+                                          ]
+                                          for i
+                                          in range(0, len(self._keyboard), self._columns)
+                                      ]),
+                                      )
+        elif sleeping_state=="NO_BOTHER":
+            pass
+        else:
+            mess = self._send_message(f"""
+got: {sleeping_state}
+remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
+        """.strip())
 #        print(mess.message_id)
         self._sanitize_mongo()
         self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
@@ -69,6 +78,14 @@ class SendKeyboard():
             "category": None,
             "telegram_message_id": mess.message_id,
         })
+
+    def _send_message(self, text, **kwargs):
+        mess = self._bot.sendMessage(
+            chat_id=self._chat_id,
+            text=text,
+            **kwargs
+        )
+        return mess
 
     def _sanitize_mongo(self):
         mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]

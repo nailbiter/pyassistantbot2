@@ -26,19 +26,20 @@ from os import path
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
-from pymongo import MongoClient
+import pymongo
 from datetime import datetime, timedelta
 import _common
+import subprocess
 
 
 class Callback:
-    def __init__(self, telegram_token, chat_id, mongo_url, bot):
+    def __init__(self, chat_id, mongo_url, bot):
         self._chat_id = chat_id
-        self._mongo_client = MongoClient(mongo_url)
+        self._mongo_client = pymongo.MongoClient(mongo_url)
         self._bot = bot
 
     def __call__(self, update, context):
-        now_ = datetime.now()
+        _now = datetime.now()
         chat_id = update.effective_message.chat_id
         if chat_id != self._chat_id:
             logging.warning(f"spurious message from {chat_id} ==> ignore")
@@ -69,8 +70,75 @@ class Callback:
         )
         self._bot.sendMessage(chat_id=chat_id, text=f"""
 got: {time_category}
-remaining time to live: {str(datetime(1991+70,12,24)-now_)} 
+remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
         """.strip())
+
+
+class ProcessCommand:
+    def __init__(self, chat_id, mongo_url, bot):
+        self._chat_id = chat_id
+        self._bot = bot
+        self._mongo_client = pymongo.MongoClient(mongo_url)
+
+    def __call__(self, update, context):
+        chat_id = update.effective_message.chat_id
+        _now = datetime.now()
+
+        if chat_id != self._chat_id:
+            logging.warning(
+                f"spurious message {update.message} from {chat_id} ==> ignore")
+            return
+
+        text = update.message.text.strip()
+        if text.startswith("/habits"):
+            cmd = f"python3 heartbeat_habits.py show-habits {text[len('/habits'):]}"
+            ec, out = subprocess.getstatusoutput(cmd)
+            assert ec == 0, (cmd, ec, out)
+            self._send_message(f"```{out}```", parse_mode="Markdown")
+        elif text.startswith("/done"):
+            stripped = text[len("/done"):]
+            # TODO
+        elif text.startswith("/sleepstart"):
+            cat = text[len("/sleepstart"):].strip()
+
+            _SLEEP_CATS = ["sleeping", "social"]
+            if cat not in _SLEEP_CATS:
+                self._send_message(
+                    f"cat \"{cat}\" not in \"{','.join(_SLEEP_CATS)}\"")
+                return
+            elif _common.get_sleeping_state(self._mongo_client) is not None:
+                self._send_message(f"already sleeping!")
+                return
+            elif self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].find_one(sort=[("date", pymongo.DESCENDING)]).get("category", None) is None:
+                self._send_message(f"waiting for time reply!")
+                return
+
+            mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
+            mongo_coll.insert_one(
+                {"category": cat, "startsleep": _now-timedelta(hours=9)})
+            self._send_message(f"start sleeping \"{cat}\"")
+        elif text.startswith("/sleepend"):
+            stripped = text[len("/sleepend"):].strip()
+            mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
+            last_record = mongo_coll.find_one(
+                sort=[("startsleep", pymongo.DESCENDING)])
+            cat = last_record["category"]
+            if _common.get_sleeping_state(self._mongo_client) is None:
+                self._send_message("not sleeping")
+                return
+            mongo_coll.update_one(
+                {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _now-timedelta(hours=9)}})
+            self._send_message(
+                f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})")
+
+    def _send_message(self, text, **kwargs):
+        mess = self._bot.sendMessage(
+            chat_id=self._chat_id,
+            text=text,
+            **kwargs
+        )
+
+#        print(update.message.text,flush=True)
 
 
 @click.command()
@@ -78,11 +146,12 @@ remaining time to live: {str(datetime(1991+70,12,24)-now_)}
 @click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 def actor(telegram_token, chat_id, mongo_url):
+    logging.warning(datetime.now().isoformat())
     updater = Updater(telegram_token, use_context=True)
     bot = updater.bot
-#    updater.dispatcher.add_handler(
-#        MessageHandler(filters=Filters.all, callback=edbp))
-    edbp = Callback(telegram_token, chat_id, mongo_url, bot)
+    updater.dispatcher.add_handler(
+        MessageHandler(filters=Filters.command, callback=ProcessCommand(chat_id, mongo_url, bot)))
+    edbp = Callback(chat_id, mongo_url, bot)
     updater.dispatcher.add_handler(
         CallbackQueryHandler(callback=edbp))
     updater.start_polling()

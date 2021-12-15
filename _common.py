@@ -17,6 +17,8 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
+import pymongo
+
 TIME_CATS = [
     "sleeping",
     "logistics",
@@ -31,5 +33,17 @@ TIME_CATS = [
     "german",
     "math project",
 ]
+
 #MONGO_COLL_NAME = "pyassistantbot2"
 MONGO_COLL_NAME = "logistics"
+
+def get_sleeping_state(mongo_client):
+    """
+    return None, "NO_BOTHER" or state
+    """
+    mongo_coll = mongo_client[MONGO_COLL_NAME]["alex.sleepingtimes"]
+    last_record = mongo_coll.find_one(sort=[("startsleep",pymongo.DESCENDING)])
+    if last_record.get("endsleep",None) is not None:
+        return None
+    else:
+        return "NO_BOTHER" if last_record["category"]=="sleeping" else last_record["category"]

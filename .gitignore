@@ -127,5 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#alex
 *.swp
 *.sqlite3
+.env

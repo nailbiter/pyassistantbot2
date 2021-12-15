@@ -180,7 +180,7 @@ def heartbeat(ctx):
 
 
 @heartbeat_habits.command()
-@click.option("-i", "--index", type=int,multiple=True)
+@click.option("-i", "--index", type=int, multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
 @click.pass_context
 def show_habits(ctx, index, status):
