@@ -18,6 +18,7 @@ ORGANIZATION:
 
 ==============================================================================="""
 import pymongo
+from datetime import datetime,timedelta
 
 TIME_CATS = [
     "sleeping",
@@ -47,3 +48,5 @@ def get_sleeping_state(mongo_client):
         return None
     else:
         return "NO_BOTHER" if last_record["category"]=="sleeping" else last_record["category"]
+def to_utc_date(date):
+    return date-timedelta(hours=9)

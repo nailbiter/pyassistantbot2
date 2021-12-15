@@ -60,7 +60,10 @@ class SendKeyboard():
 
         habits_punch_df = []
         for habit in habits_df.to_dict(orient="records"):
-            base = _START_DATE
+            if "start_date" in habit:
+                base = habit["start_date"]+timedelta(hours=9)
+            else:
+                base = _START_DATE
             it = croniter(habit["cronline"], base)
             while (ds := it.get_next(datetime)) <= _now:
                 habits_punch_df.append({
@@ -94,17 +97,18 @@ class SendKeyboard():
             upserts_df.due = upserts_df.due.apply(
                 lambda ds: ds.strftime("%Y-%m-%d %H:%S"))
             self._send_message(
-                f"don't forget to execute!:\n{upserts_df[['name','due']]}")
+                f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
 #        for r in upserts_df.to_dict(orient="records"):
 #            self._send_message(
 #                text=f"don't forget to execute: \"{r['name']}\" before {(r['due']+timedelta(hours=9)).strftime('%Y-%m-%d %H:%M')}!")
 
         self._sanitize_mongo()
 
-    def _send_message(self, text):
+    def _send_message(self, text, **kwargs):
         mess = self._bot.sendMessage(
             chat_id=self._chat_id,
             text=text,
+            **kwargs
         )
 
     def _get_habits_punch_coll(self):
@@ -126,13 +130,14 @@ class SendKeyboard():
 
     def _sanitize_mongo(self):
         coll = self._get_habits_punch_coll()
-        _now = datetime.now()-timedelta(hours=9)
+        _now = datetime.now()
         habits_to_fail_df = pd.DataFrame(coll.find({"$and": [
-            {"due": {"$lt": _now-timedelta(hours=9)}},
+            {"due": {"$lt": _common.to_utc_date(_now)}},
             {"status": {"$exists": False}},
         ]}))
         if len(habits_to_fail_df) > 0:
-            self._send_message(f"you failed:\n{habits_to_fail_df[['name']]}")
+            self._send_message(
+                f"you failed:\n```{habits_to_fail_df[['name']]}```", parse_mode="Markdown")
         for r in habits_to_fail_df.to_dict(orient="records"):
             coll.update_one(
                 {k: r[k] for k in ["name", "date"]},

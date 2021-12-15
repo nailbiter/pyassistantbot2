@@ -64,7 +64,7 @@ class SendKeyboard():
                                           in range(0, len(self._keyboard), self._columns)
                                       ]),
                                       )
-        elif sleeping_state=="NO_BOTHER":
+        elif sleeping_state == "NO_BOTHER":
             pass
         else:
             mess = self._send_message(f"""

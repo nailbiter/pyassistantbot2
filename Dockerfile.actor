@@ -10,6 +10,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY _common.py .
 COPY actor.py .
 COPY heartbeat_habits.py .
+COPY _actor.py .
 
 COPY .env .env
 

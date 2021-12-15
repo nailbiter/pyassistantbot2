@@ -30,6 +30,7 @@ import pymongo
 from datetime import datetime, timedelta
 import _common
 import subprocess
+import _actor
 
 
 class Callback:
@@ -130,6 +131,15 @@ class ProcessCommand:
                 {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _now-timedelta(hours=9)}})
             self._send_message(
                 f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})")
+        elif text.startswith("/money"):
+            stripped = text[len("/money"):].strip()
+            _actor.add_money(
+                stripped, send_message_cb=self._send_message, mongo_client=self._mongo_client)
+        else:
+            logging.warning(
+                f"unmatched message \"{text}\" ==> use default handler `add_money`")
+            _actor.add_money(
+                text, send_message_cb=self._send_message, mongo_client=self._mongo_client)
 
     def _send_message(self, text, **kwargs):
         mess = self._bot.sendMessage(
@@ -149,8 +159,16 @@ def actor(telegram_token, chat_id, mongo_url):
     logging.warning(datetime.now().isoformat())
     updater = Updater(telegram_token, use_context=True)
     bot = updater.bot
+    pc = ProcessCommand(chat_id, mongo_url, bot)
     updater.dispatcher.add_handler(
-        MessageHandler(filters=Filters.command, callback=ProcessCommand(chat_id, mongo_url, bot)))
+        MessageHandler(filters=Filters.command, callback=pc))
+    updater.dispatcher.add_handler(
+        MessageHandler(
+            filters=Filters.all,
+            callback=lambda update, context: _actor.add_money(
+                update.message.text.strip(), send_message_cb=pc._send_message, mongo_client=pc._mongo_client)
+        )
+    )
     edbp = Callback(chat_id, mongo_url, bot)
     updater.dispatcher.add_handler(
         CallbackQueryHandler(callback=edbp))
