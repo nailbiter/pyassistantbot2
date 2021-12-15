@@ -131,4 +131,4 @@ dmypy.json
 #alex
 *.swp
 *.sqlite3
-.env
+.envrc
