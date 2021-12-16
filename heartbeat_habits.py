@@ -202,7 +202,7 @@ def show_habits(ctx, index, status, name):
                     for _n in df.name]].index[0] for n in name]
 #    print(new_idxs)
 #    exit(0)
-    for i in set(index+new_idxs):
+    for i in set(list(index)+new_idxs):
         r = df.loc[i]
         job.set_status(r["name"], r.date.to_pydatetime(), status)
 
