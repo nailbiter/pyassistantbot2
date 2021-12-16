@@ -186,9 +186,10 @@ def heartbeat(ctx):
 
 @heartbeat_habits.command()
 @click.option("-i", "--index", type=int, multiple=True)
+@click.option("-n", "--name", multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
 @click.pass_context
-def show_habits(ctx, index, status):
+def show_habits(ctx, index, status, name):
     job = SendKeyboard(*[
         ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")
     ])
@@ -197,7 +198,11 @@ def show_habits(ctx, index, status):
     click.echo(f"{len(df)} habits")
 
 #    print(df.loc[0])
-    for i in index:
+    new_idxs = [df[[_n.startswith(n)
+                    for _n in df.name]].index[0] for n in name]
+#    print(new_idxs)
+#    exit(0)
+    for i in set(index+new_idxs):
         r = df.loc[i]
         job.set_status(r["name"], r.date.to_pydatetime(), status)
 
