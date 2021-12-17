@@ -115,6 +115,21 @@ class SendKeyboard():
         habits_punch_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habitspunch2"]
         return habits_punch_coll
 
+    def get_failed_habits(self):
+        coll = self._get_habits_punch_coll()
+        _now = datetime.now()-timedelta(hours=9)
+        pending_habits_df = pd.DataFrame(coll.find({"$and": [
+            {"due": {"$lt": _now}},
+            {"status": {"$ne": "DONE"}},
+            {"status": {"$exists": True}},
+            {"onFailed": {"$ne": "remove"}},
+        ]}))
+        pending_habits_df = pending_habits_df.drop(columns=["_id"])
+        pending_habits_df = pending_habits_df.sort_values(by="due")
+        pending_habits_df.date += timedelta(hours=9)
+        pending_habits_df.due += timedelta(hours=9)
+        return pending_habits_df
+
     def get_pending_habits(self):
         coll = self._get_habits_punch_coll()
         _now = datetime.now()-timedelta(hours=9)
@@ -188,14 +203,31 @@ def heartbeat(ctx):
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-n", "--name", multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
+@click.option("--show-failed/--no-show-failed", default=False)
 @click.pass_context
-def show_habits(ctx, index, status, name):
+def show_habits(ctx, index, status, name, show_failed):
     job = SendKeyboard(*[
         ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")
     ])
-    df = job.get_pending_habits()
-    click.echo(df.to_string())
-    click.echo(f"{len(df)} habits")
+
+    if not show_failed:
+        df = job.get_pending_habits()
+        click.echo(df.to_string())
+        click.echo(f"{len(df)} habits")
+    else:
+        df = job.get_failed_habits()
+        l = len(df)
+        df = pd.DataFrame([
+            {
+                "name": n,
+                "cnt": len(slice_),
+                "date": slice_.date.min(),
+            }
+            for n, slice_
+            in df.groupby("name")
+        ])
+        click.echo(df.to_string())
+        click.echo(f"{l} habits")
 
 #    print(df.loc[0])
     new_idxs = [df[[_n.startswith(n)

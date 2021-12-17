@@ -18,7 +18,7 @@ ORGANIZATION:
 
 ==============================================================================="""
 import pymongo
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 
 TIME_CATS = [
     "sleeping",
@@ -38,15 +38,20 @@ TIME_CATS = [
 #MONGO_COLL_NAME = "pyassistantbot2"
 MONGO_COLL_NAME = "logistics"
 
+
 def get_sleeping_state(mongo_client):
     """
-    return None, "NO_BOTHER" or state
+    return None or (is_no_bother,state)
     """
     mongo_coll = mongo_client[MONGO_COLL_NAME]["alex.sleepingtimes"]
-    last_record = mongo_coll.find_one(sort=[("startsleep",pymongo.DESCENDING)])
-    if last_record.get("endsleep",None) is not None:
+    last_record = mongo_coll.find_one(
+        sort=[("startsleep", pymongo.DESCENDING)])
+    if last_record.get("endsleep", None) is not None:
         return None
     else:
-        return "NO_BOTHER" if last_record["category"]=="sleeping" else last_record["category"]
+        cat = last_record["category"]
+        return cat == "sleeping", cat
+
+
 def to_utc_date(date):
     return date-timedelta(hours=9)

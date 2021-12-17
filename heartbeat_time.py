@@ -49,6 +49,7 @@ class SendKeyboard():
         _now = datetime.now()
         print(f"working at {_now.isoformat()}", flush=True)
         sleeping_state = _common.get_sleeping_state(self._mongo_client)
+        self._logger.warning(f"sleeping_state: {sleeping_state}")
         if sleeping_state is None:
             mess = self._send_message("北鼻，你在幹什麼？",
                                       parse_mode="Markdown",
@@ -64,20 +65,23 @@ class SendKeyboard():
                                           in range(0, len(self._keyboard), self._columns)
                                       ]),
                                       )
-        elif sleeping_state == "NO_BOTHER":
-            pass
         else:
-            mess = self._send_message(f"""
-got: {sleeping_state}
+            is_no_bother, cat = sleeping_state
+            if not is_no_bother:
+                mess = self._send_message(f"""
+got: {cat}
 remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
-        """.strip())
-#        print(mess.message_id)
-        self._sanitize_mongo()
-        self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
+            """.strip())
+        self._logger.warning("before sanitize")
+        self._sanitize_mongo(
+            "useless" if sleeping_state is None else sleeping_state[1])
+        self._logger.warning("before insert")
+        res = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
             "date": _now,
             "category": None,
-            "telegram_message_id": mess.message_id,
+            "telegram_message_id": mess.message_id if sleeping_state is None else sleeping_state[1],
         })
+        self._logger.warning(f"after insert: {res.inserted_id}")
 
     def _send_message(self, text, **kwargs):
         mess = self._bot.sendMessage(
@@ -87,7 +91,7 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
         )
         return mess
 
-    def _sanitize_mongo(self):
+    def _sanitize_mongo(self, imputation_state):
         mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
         empties = pd.DataFrame(mongo_coll.find({"category": None}))
 #        print(empties)
@@ -96,7 +100,10 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
             # FIXME: optimize via `update_many`
             for message_id in empties.telegram_message_id:
                 mongo_coll.update_one({"telegram_message_id": message_id}, {
-                                      "$set": {"category": "useless"}})
+                                      "$set": {"category": imputation_state}})
+
+
+_SCHEDULING_INTERVAL_MIN = 30
 
 
 @click.command()
@@ -104,13 +111,14 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
 @click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 def heartbeat_time(telegram_token, chat_id, mongo_url):
+    assert 60 % _SCHEDULING_INTERVAL_MIN == 0
     job = SendKeyboard(telegram_token, chat_id, mongo_url)
 
     if not True:
         schedule.every(1).minutes.do(job)
     else:
-        schedule.every().hour.at(":30").do(job)
-        schedule.every().hour.at(":00").do(job)
+        for i in range(0, 60, _SCHEDULING_INTERVAL_MIN):
+            schedule.every().hour.at(f":{i:02d}").do(job)
 
     while True:
         schedule.run_pending()
