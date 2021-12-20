@@ -60,7 +60,7 @@ class SendKeyboard():
 
         habits_punch_df = []
         for habit in habits_df.to_dict(orient="records"):
-            if "start_date" in habit:
+            if "start_date" in habit and not pd.isna(habit["start_date"]):
                 base = habit["start_date"]+timedelta(hours=9)
             else:
                 base = _START_DATE
