@@ -92,14 +92,15 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
         return mess
 
     def _sanitize_mongo(self, imputation_state):
+        self._logger.warning(f"imputation_state: {imputation_state}")
         mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
         empties = pd.DataFrame(mongo_coll.find({"category": None}))
 #        print(empties)
         if len(empties) > 0:
             self._logger.warning(empties)
             # FIXME: optimize via `update_many`
-            for message_id in empties.telegram_message_id:
-                mongo_coll.update_one({"telegram_message_id": message_id}, {
+            for _id in empties["_id"]:
+                mongo_coll.update_one({"_id": _id}, {
                                       "$set": {"category": imputation_state}})
 
 
