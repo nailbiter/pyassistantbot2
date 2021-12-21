@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 import _common
 import subprocess
 import _actor
+import heartbeat_time
 
 
 class Callback:
@@ -80,6 +81,7 @@ class ProcessCommand:
         self._chat_id = chat_id
         self._bot = bot
         self._mongo_client = pymongo.MongoClient(mongo_url)
+        self._mongo_url = mongo_url
 
     def __call__(self, update, context):
         chat_id = update.effective_message.chat_id
@@ -129,6 +131,8 @@ class ProcessCommand:
                 return
             mongo_coll.update_one(
                 {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _now-timedelta(hours=9)}})
+            heartbeat_time.SendKeyboard(
+                mongo_url=self._mongo_url, is_create_bot=False).sanitize_mongo(cat)
             self._send_message(
                 f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})")
         elif text.startswith("/money"):

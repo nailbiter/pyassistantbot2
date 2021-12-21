@@ -35,11 +35,12 @@ import pandas as pd
 
 
 class SendKeyboard():
-    def __init__(self, token, chat_id, mongo_url):
-        updater = Updater(token, use_context=True)
-        bot = updater.bot
-        self._chat_id = chat_id
-        self._bot = bot
+    def __init__(self, mongo_url, token=None, chat_id=None, is_create_bot=True):
+        if is_create_bot:
+            updater = Updater(token, use_context=True)
+            bot = updater.bot
+            self._chat_id = chat_id
+            self._bot = bot
         self._columns = 2
         self._keyboard = _common.TIME_CATS
         self._mongo_client = MongoClient(mongo_url)
@@ -73,7 +74,7 @@ got: {cat}
 remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
             """.strip())
         self._logger.warning("before sanitize")
-        self._sanitize_mongo(
+        self.sanitize_mongo(
             "useless" if sleeping_state is None else sleeping_state[1])
         self._logger.warning("before insert")
         res = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
@@ -91,7 +92,7 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
         )
         return mess
 
-    def _sanitize_mongo(self, imputation_state):
+    def sanitize_mongo(self, imputation_state):
         self._logger.warning(f"imputation_state: {imputation_state}")
         mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
         empties = pd.DataFrame(mongo_coll.find({"category": None}))
@@ -113,7 +114,8 @@ _SCHEDULING_INTERVAL_MIN = 30
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 def heartbeat_time(telegram_token, chat_id, mongo_url):
     assert 60 % _SCHEDULING_INTERVAL_MIN == 0
-    job = SendKeyboard(telegram_token, chat_id, mongo_url)
+    job = SendKeyboard(
+        mongo_url, token=telegram_token, chat_id=chat_id)
 
     if not True:
         schedule.every(1).minutes.do(job)
