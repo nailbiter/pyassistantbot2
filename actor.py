@@ -139,6 +139,13 @@ class ProcessCommand:
             stripped = text[len("/money"):].strip()
             _actor.add_money(
                 stripped, send_message_cb=self._send_message, mongo_client=self._mongo_client)
+        elif text.startswith("/ttask"):
+            content = text[len("/money"):].strip()
+            self._mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
+                "content": content,
+                "date": _common.to_utc_date(datetime.now()),
+            })
+            self._send_message(f"log \"{content}\"")
         else:
             logging.warning(
                 f"unmatched message \"{text}\" ==> use default handler `add_money`")

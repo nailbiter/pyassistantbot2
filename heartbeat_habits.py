@@ -113,31 +113,36 @@ class SendKeyboard():
 
     def _get_habits_punch_coll(self):
         habits_punch_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habitspunch2"]
+        if True:
+            _df = pd.DataFrame(habits_punch_coll.find())
+#            logging.warning("sanity check")
+            _df = pd.DataFrame([
+                {"name":n,"date":d,"cnt":len(slice_)}
+                for (n,d),slice_ 
+                in _df.groupby(["name","date"])
+            ])
+            assert len(_df.query("cnt>1"))==0, _df.query("cnt>1").head()
         return habits_punch_coll
 
-    def get_failed_habits(self):
+    def get_habits(self, which="PENDING"):
         coll = self._get_habits_punch_coll()
         _now = datetime.now()-timedelta(hours=9)
-        pending_habits_df = pd.DataFrame(coll.find({"$and": [
-            {"due": {"$lt": _now}},
-            {"status": {"$ne": "DONE"}},
-            {"status": {"$exists": True}},
-            {"onFailed": {"$ne": "remove"}},
-        ]}))
-        pending_habits_df = pending_habits_df.drop(columns=["_id"])
-        pending_habits_df = pending_habits_df.sort_values(by="due")
-        pending_habits_df.date += timedelta(hours=9)
-        pending_habits_df.due += timedelta(hours=9)
-        return pending_habits_df
-
-    def get_pending_habits(self):
-        coll = self._get_habits_punch_coll()
-        _now = datetime.now()-timedelta(hours=9)
-        pending_habits_df = pd.DataFrame(coll.find({"$and": [
-            {"due": {"$gt": _now}},
-            {"status": {"$exists": False}},
-        ]}))
-        pending_habits_df = pending_habits_df.drop(columns=["_id"])
+        if which == "PENDING":
+            filter_ = {"$and": [
+                {"due": {"$gt": _now}},
+                {"status": {"$exists": False}},
+            ]}
+        elif which == "FAILED":
+            filter_ = {"$and": [
+                {"due": {"$lt": _now}},
+                {"status": {"$ne": "DONE"}},
+                {"status": {"$exists": True}},
+                {"onFailed": {"$ne": "remove"}},
+            ]}
+        else:
+            raise NotImplementedError(which)
+        pending_habits_df = pd.DataFrame(coll.find(filter_))
+#        pending_habits_df = pending_habits_df.drop(columns=["_id"])
         pending_habits_df = pending_habits_df.sort_values(by="due")
         pending_habits_df.date += timedelta(hours=9)
         pending_habits_df.due += timedelta(hours=9)
@@ -159,11 +164,11 @@ class SendKeyboard():
                 {"$set": {"status": "FAILED"}},
             )
 
-    def set_status(self, name, date, status):
+    def set_status(self,_id, status,name=None,date=None):
         coll = self._get_habits_punch_coll()
-        print(f"set status \"{status}\" for {(name,date)}")
+        print(f"set status \"{status}\" for {(_id,name,date)}")
         res = coll.update_one(
-            {"name": name, "date": date-timedelta(hours=9)},
+            {"_id": _id},
             {"$set": {"status": status}},
         )
         print((res.matched_count, res.modified_count))
@@ -204,30 +209,32 @@ def heartbeat(ctx):
 @click.option("-n", "--name", multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
 @click.option("--show-failed/--no-show-failed", default=False)
+@click.option("-c","--count",default=1,type=int)
 @click.pass_context
-def show_habits(ctx, index, status, name, show_failed):
+def show_habits(ctx, index, status, name, show_failed,count):
     job = SendKeyboard(*[
         ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")
     ])
 
     if not show_failed:
-        df = job.get_pending_habits()
-        click.echo(df.to_string())
-        click.echo(f"{len(df)} habits")
-    else:
-        df = job.get_failed_habits()
+        df = job.get_habits(which="PENDING")
+        df["_ids"] = df.pop("_id").apply(lambda x:[x])
         l = len(df)
+    else:
+        df = job.get_habits(which="FAILED")
         df = pd.DataFrame([
             {
                 "name": n,
                 "cnt": len(slice_),
                 "date": slice_.date.min(),
+                "_ids": list(slice_["_id"]),
             }
             for n, slice_
             in df.groupby("name")
         ])
-        click.echo(df.to_string())
-        click.echo(f"{l} habits")
+        l = df.cnt.sum()
+    click.echo(df.drop(columns=["_ids"]).to_string())
+    click.echo(f"{df.cnt.sum()} habits")
 
 #    print(df.loc[0])
     new_idxs = [df[[_n.startswith(n)
@@ -236,7 +243,8 @@ def show_habits(ctx, index, status, name, show_failed):
 #    exit(0)
     for i in set(list(index)+new_idxs):
         r = df.loc[i]
-        job.set_status(r["name"], r.date.to_pydatetime(), status)
+        for _id in r["_ids"][:count]:
+            job.set_status(_id, status, name=r["name"], date=r.date.to_pydatetime())
 
 
 if __name__ == "__main__":
