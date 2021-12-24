@@ -117,11 +117,11 @@ class SendKeyboard():
             _df = pd.DataFrame(habits_punch_coll.find())
 #            logging.warning("sanity check")
             _df = pd.DataFrame([
-                {"name":n,"date":d,"cnt":len(slice_)}
-                for (n,d),slice_ 
-                in _df.groupby(["name","date"])
+                {"name": n, "date": d, "cnt": len(slice_)}
+                for (n, d), slice_
+                in _df.groupby(["name", "date"])
             ])
-            assert len(_df.query("cnt>1"))==0, _df.query("cnt>1").head()
+            assert len(_df.query("cnt>1")) == 0, _df.query("cnt>1").head()
         return habits_punch_coll
 
     def get_habits(self, which="PENDING"):
@@ -164,7 +164,7 @@ class SendKeyboard():
                 {"$set": {"status": "FAILED"}},
             )
 
-    def set_status(self,_id, status,name=None,date=None):
+    def set_status(self, _id, status, name=None, date=None):
         coll = self._get_habits_punch_coll()
         print(f"set status \"{status}\" for {(_id,name,date)}")
         res = coll.update_one(
@@ -209,16 +209,16 @@ def heartbeat(ctx):
 @click.option("-n", "--name", multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
 @click.option("--show-failed/--no-show-failed", default=False)
-@click.option("-c","--count",default=1,type=int)
+@click.option("-c", "--count", default=1, type=int)
 @click.pass_context
-def show_habits(ctx, index, status, name, show_failed,count):
+def show_habits(ctx, index, status, name, show_failed, count):
     job = SendKeyboard(*[
         ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")
     ])
 
     if not show_failed:
         df = job.get_habits(which="PENDING")
-        df["_ids"] = df.pop("_id").apply(lambda x:[x])
+        df["_ids"] = df.pop("_id").apply(lambda x: [x])
         l = len(df)
     else:
         df = job.get_habits(which="FAILED")
@@ -234,7 +234,7 @@ def show_habits(ctx, index, status, name, show_failed,count):
         ])
         l = df.cnt.sum()
     click.echo(df.drop(columns=["_ids"]).to_string())
-    click.echo(f"{df.cnt.sum()} habits")
+    click.echo(f"{l} habits")
 
 #    print(df.loc[0])
     new_idxs = [df[[_n.startswith(n)
@@ -244,7 +244,8 @@ def show_habits(ctx, index, status, name, show_failed,count):
     for i in set(list(index)+new_idxs):
         r = df.loc[i]
         for _id in r["_ids"][:count]:
-            job.set_status(_id, status, name=r["name"], date=r.date.to_pydatetime())
+            job.set_status(
+                _id, status, name=r["name"], date=r.date.to_pydatetime())
 
 
 if __name__ == "__main__":
