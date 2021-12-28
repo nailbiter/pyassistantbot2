@@ -101,8 +101,15 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
             self._logger.warning(empties)
             # FIXME: optimize via `update_many`
             for _id in empties["_id"]:
-                mongo_coll.update_one({"_id": _id}, {
-                                      "$set": {"category": imputation_state}})
+                mongo_coll.update_one(
+                    {"_id": _id},
+                    {
+                        "$set": {
+                            "category": imputation_state,
+                            "_last_modification_date": _common.to_utc_date()
+                        }
+                    },
+                )
 
 
 _SCHEDULING_INTERVAL_MIN = 30
