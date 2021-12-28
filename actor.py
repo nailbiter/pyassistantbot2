@@ -31,7 +31,7 @@ from datetime import datetime, timedelta
 import _common
 import subprocess
 import _actor
-import heartbeat_time
+import re
 
 
 class Callback:
@@ -77,11 +77,12 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
 
 
 class ProcessCommand:
-    def __init__(self, chat_id, mongo_url, bot):
+    def __init__(self, chat_id, mongo_url, bot, commands={}):
         self._chat_id = chat_id
         self._bot = bot
         self._mongo_client = pymongo.MongoClient(mongo_url)
         self._mongo_url = mongo_url
+        self._commands = commands
 
     def __call__(self, update, context):
         chat_id = update.effective_message.chat_id
@@ -92,65 +93,27 @@ class ProcessCommand:
                 f"spurious message {update.message} from {chat_id} ==> ignore")
             return
 
-        text = update.message.text.strip()
-        if text.startswith("/habits"):
-            cmd = f"python3 heartbeat_habits.py show-habits {text[len('/habits'):]}"
-            ec, out = subprocess.getstatusoutput(cmd)
-            assert ec == 0, (cmd, ec, out)
-            self._send_message(f"```{out}```", parse_mode="Markdown")
-        elif text.startswith("/done"):
-            stripped = text[len("/done"):]
-            # TODO
-        elif text.startswith("/sleepstart"):
-            cat = text[len("/sleepstart"):].strip()
-
-            _SLEEP_CATS = ["sleeping", "social"]
-            if cat not in _SLEEP_CATS:
-                self._send_message(
-                    f"cat \"{cat}\" not in \"{','.join(_SLEEP_CATS)}\"")
-                return
-            elif _common.get_sleeping_state(self._mongo_client) is not None:
-                self._send_message(f"already sleeping!")
-                return
-            elif self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].find_one(sort=[("date", pymongo.DESCENDING)]).get("category", None) is None:
-                self._send_message(f"waiting for time reply!")
-                return
-
-            mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
-            mongo_coll.insert_one(
-                {"category": cat, "startsleep": _now-timedelta(hours=9)})
-            self._send_message(f"start sleeping \"{cat}\"")
-        elif text.startswith("/sleepend"):
-            stripped = text[len("/sleepend"):].strip()
-            mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
-            last_record = mongo_coll.find_one(
-                sort=[("startsleep", pymongo.DESCENDING)])
-            cat = last_record["category"]
-            if _common.get_sleeping_state(self._mongo_client) is None:
-                self._send_message("not sleeping")
-                return
-            mongo_coll.update_one(
-                {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _now-timedelta(hours=9)}})
-            heartbeat_time.SendKeyboard(
-                mongo_url=self._mongo_url, is_create_bot=False).sanitize_mongo(cat)
-            self._send_message(
-                f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})")
-        elif text.startswith("/money"):
-            stripped = text[len("/money"):].strip()
-            _actor.add_money(
-                stripped, send_message_cb=self._send_message, mongo_client=self._mongo_client)
-        elif text.startswith("/ttask"):
-            content = text[len("/money"):].strip()
-            self._mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
-                "content": content,
-                "date": _common.to_utc_date(datetime.now()),
-            })
-            self._send_message(f"log \"{content}\"")
-        else:
+        try:
+            text = update.message.text.strip()
+            for command, callback in self._commands.items():
+                if text.startswith(f"/{command}"):
+                    stripped = text[len(command)+1:].strip()
+                    callback(stripped, send_message_cb=self._send_message,
+                             mongo_client=self._mongo_client)
+                    return
+            if text.startswith("/"):
+                cmd, *_ = re.split(r"\s+", text)
+                raise Exception(f"unknown command {cmd}")
+#                logging.error(f"unknown command {text}")
+#                return
             logging.warning(
-                f"unmatched message \"{text}\" ==> use default handler `add_money`")
-            _actor.add_money(
+                f"unmatched message \"{text}\" ==> use default handler")
+            self._commands[None](
                 text, send_message_cb=self._send_message, mongo_client=self._mongo_client)
+        except Exception as e:
+            # FIXME: is catch-all catcher inappropriate here?
+            self._send_message(f"exception: ``` {e}```", parse_mode="Markdown")
+            raise e
 
     def _send_message(self, text, **kwargs):
         mess = self._bot.sendMessage(
@@ -170,16 +133,25 @@ def actor(telegram_token, chat_id, mongo_url):
     logging.warning(datetime.now().isoformat())
     updater = Updater(telegram_token, use_context=True)
     bot = updater.bot
-    pc = ProcessCommand(chat_id, mongo_url, bot)
-    updater.dispatcher.add_handler(
-        MessageHandler(filters=Filters.command, callback=pc))
-    updater.dispatcher.add_handler(
-        MessageHandler(
-            filters=Filters.all,
-            callback=lambda update, context: _actor.add_money(
-                update.message.text.strip(), send_message_cb=pc._send_message, mongo_client=pc._mongo_client)
-        )
+    pc = ProcessCommand(
+        chat_id,
+        mongo_url,
+        bot,
+        commands={
+            "money": _actor.add_money,
+            None: _actor.ttask,
+            #        if text.startswith("/habits"):
+            "habits": _actor.habits,
+            #            # TODO
+            #        elif text.startswith("/done"):
+            "sleepstart": _actor.sleepstart,
+            "sleepend": _actor.sleepend,
+            "ttask": _actor.ttask,
+        }
     )
+    updater.dispatcher.add_handler(
+        #        MessageHandler(filters=Filters.command, callback=pc))
+        MessageHandler(filters=Filters.all, callback=pc))
     edbp = Callback(chat_id, mongo_url, bot)
     updater.dispatcher.add_handler(
         CallbackQueryHandler(callback=edbp))
