@@ -106,8 +106,8 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
                     {
                         "$set": {
                             "category": imputation_state,
-                            "_last_modification_date": _common.to_utc_date()
-                        }
+                            "_last_modification_date": _common.to_utc_date(),
+                        },
                     },
                 )
 

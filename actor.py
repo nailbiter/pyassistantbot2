@@ -63,8 +63,9 @@ class Callback:
             return
         time_category = _common.TIME_CATS[data]
         print(time_category)
+        # FIXME: use `sanitize_mongo` of `heartbeat_time`
         mongo_coll.update_one(
-            {"telegram_message_id": message_id}, {"$set": {"category": time_category}})
+            {"telegram_message_id": message_id}, {"$set": {"category": time_category, "_last_modification_date": _common.to_utc_date()}})
 
         self._bot.delete_message(
             chat_id,
