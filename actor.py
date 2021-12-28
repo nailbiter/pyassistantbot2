@@ -147,6 +147,7 @@ def actor(telegram_token, chat_id, mongo_url):
             "sleepstart": _actor.sleepstart,
             "sleepend": _actor.sleepend,
             "ttask": _actor.ttask,
+            "note": _actor.note,
         }
     )
     updater.dispatcher.add_handler(

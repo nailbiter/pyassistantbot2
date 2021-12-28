@@ -110,3 +110,11 @@ def sleepstart(cat, send_message_cb=None, mongo_client=None):
     mongo_coll.insert_one(
         {"category": cat, "startsleep": _common.to_utc_date})
     send_message_cb(f"start sleeping \"{cat}\"")
+
+
+def note(content, send_message_cb=None, mongo_client=None):
+    mongo_client[_common.MONGO_COLL_NAME]["alex.notes"].insert_one({
+        "content": content,
+        "date": _common.to_utc_date(),
+    })
+    send_message_cb(f"note \"{content}\"")
