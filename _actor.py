@@ -108,7 +108,7 @@ def sleepstart(cat, send_message_cb=None, mongo_client=None):
 
     mongo_coll = mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
     mongo_coll.insert_one(
-        {"category": cat, "startsleep": _common.to_utc_date})
+        {"category": cat, "startsleep": _common.to_utc_date()})
     send_message_cb(f"start sleeping \"{cat}\"")
 
 
