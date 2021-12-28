@@ -37,7 +37,10 @@ def add_money(text, send_message_cb=None, mongo_client=None):
                 tags.add(x)
         elif x.startswith("%"):
             x = x[1:]
-            # TODO
+            if len(x) == 12:
+                date = datetime.strptime(x, "%Y%m%d%H%M")
+            elif len(x) == 6:
+                date = datetime.strptime(x, "%d%H%M")
         else:
             break
     comment = " ".join(other[i:])
