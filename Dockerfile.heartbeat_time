@@ -4,7 +4,10 @@ LABEL maintainer="nailbiter"
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-COPY _common.py .
+RUN mkdir _common
+COPY _common/__init__.py _common
+COPY _common/simple_math_eval.py _common
+
 COPY heartbeat_time.py .
 
 COPY .env .env

@@ -23,13 +23,14 @@ from datetime import datetime
 import subprocess
 import pymongo
 import _common
+import _common.simple_math_eval
 import heartbeat_time
 import os
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
     amount, *other = re.split(r" +", text)
-    amount = float(amount)
+    amount = _common.simple_math_eval.simple_math_eval(amount)
     tags = set()
     date = datetime.now()
     category = None

@@ -7,7 +7,10 @@ RUN pip3 install -r requirements.txt
 ENV TZ=Asia/Tokyo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-COPY _common.py .
+RUN mkdir _common
+COPY _common/__init__.py _common
+COPY _common/simple_math_eval.py _common
+
 COPY heartbeat_habits.py .
 
 COPY .env .env
