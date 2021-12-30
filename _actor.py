@@ -58,7 +58,8 @@ def add_money(text, send_message_cb=None, mongo_client=None):
         "category": category,
         "amount": amount,
     })
-    send_message_cb(f"added amount {amount} to category {category} on {date.strftime('%Y-%m-%d %H:%M')}")
+    send_message_cb(
+        f"added amount {amount} to category {category} on {date.strftime('%Y-%m-%d %H:%M')}")
 
 
 def habits(text, send_message_cb=None, **_):
