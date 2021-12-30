@@ -26,6 +26,7 @@ import _common
 import _common.simple_math_eval
 import heartbeat_time
 import os
+import logging
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
@@ -49,7 +50,7 @@ def add_money(text, send_message_cb=None, mongo_client=None):
                 date = datetime.strptime(x, "%d%H%M")
         else:
             break
-    print((i, other[i:]))
+    logging.warning((i, other[i:]))
     comment = " ".join(other[i:])
     assert category is not None
     mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
