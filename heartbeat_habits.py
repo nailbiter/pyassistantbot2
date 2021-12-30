@@ -67,7 +67,7 @@ class SendKeyboard():
             it = croniter(habit["cronline"], base)
             while (ds := it.get_next(datetime)) <= _now:
                 habits_punch_df.append({
-                    **{k: habit[k] for k in ["name", "onFailed"]},
+                    **{k: habit[k] for k in ["name", "onFailed", "info"]},
                     "date": ds-timedelta(hours=9),
                     "due": ds+timedelta(minutes=habit["delaymin"])-timedelta(hours=9),
                 })
