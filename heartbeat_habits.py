@@ -80,7 +80,7 @@ class SendKeyboard():
         for dhp in habits_punch_df.to_dict(orient="records"):
             result = habits_punch_coll.update_one(
                 {k: dhp[k] for k in ["name", "date"]},
-                {"$set": {k: dhp[k] for k in ["due", "onFailed"]}},
+                {"$set": {k: dhp[k] for k in ["due", "onFailed", "info"]}},
                 upsert=True,
             )
             modified_count += result.modified_count
@@ -96,12 +96,14 @@ class SendKeyboard():
             upserts_df.due += timedelta(hours=9)
             upserts_df.due = upserts_df.due.apply(
                 lambda ds: ds.strftime("%Y-%m-%d %H:%S"))
-            self._send_message(
-                f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
-#        for r in upserts_df.to_dict(orient="records"):
-#            self._send_message(
-#                text=f"don't forget to execute: \"{r['name']}\" before {(r['due']+timedelta(hours=9)).strftime('%Y-%m-%d %H:%M')}!")
-
+            upserts_df = upserts_df[["name", "due", "info"]]
+            if len(upserts_df) > 1:
+                self._send_message(
+                    f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
+            else:
+                self._send_message(
+                    f"don't forget to execute!:\n```{upserts_df.to_dict(orient='records')[0]}```", parse_mode="Markdown")
+                pass
         self._sanitize_mongo()
 
     def _send_message(self, text, **kwargs):

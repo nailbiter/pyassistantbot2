@@ -38,6 +38,9 @@ def ttask(index, mongo_url):
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
                       ("date", pymongo.DESCENDING)]))
+    if len(df) == 0:
+        click.echo("all done!")
+        return
     df.date += timedelta(hours=9)
     click.echo(df.drop(columns=["_id"]))
     for i in index:
