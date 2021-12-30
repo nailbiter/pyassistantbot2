@@ -49,6 +49,7 @@ def add_money(text, send_message_cb=None, mongo_client=None):
                 date = datetime.strptime(x, "%d%H%M")
         else:
             break
+    print((i, other[i:]))
     comment = " ".join(other[i:])
     assert category is not None
     mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
