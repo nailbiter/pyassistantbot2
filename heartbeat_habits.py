@@ -95,8 +95,11 @@ class SendKeyboard():
         if len(upserts_df) > 0:
             upserts_df.due += timedelta(hours=9)
             upserts_df.due = upserts_df.due.apply(
-                lambda ds: ds.strftime("%Y-%m-%d %H:%S"))
+                lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
             upserts_df = upserts_df[["name", "due", "info"]]
+#            for k in ["date", "duo"]:
+#                upserts_df[k] = upserts_df[k].apply(
+#                    lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
             if len(upserts_df) > 1:
                 self._send_message(
                     f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
@@ -235,6 +238,10 @@ def show_habits(ctx, index, status, name, show_failed, count):
             in df.groupby("name")
         ])
         l = df.cnt.sum()
+    _df = df.copy()
+    for k in ["date", "due"]:
+        if k in list(_df):
+            _df[k] = _df[k].apply(lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
     click.echo(df.drop(columns=["_ids"]).to_string())
     click.echo(f"{l} habits")
 
