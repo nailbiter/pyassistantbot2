@@ -30,9 +30,6 @@ from datetime import datetime
 #from __future__ import print_function
 import pickle
 import logging
-#from googleapiclient.discovery import build
-#from google_auth_oauthlib.flow import InstalledAppFlow
-#from google.auth.transport.requests import Request
 import re
 import random
 from _common import parse_cmdline_date, run_trello_cmd
