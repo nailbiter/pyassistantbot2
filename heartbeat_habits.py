@@ -242,7 +242,7 @@ def show_habits(ctx, index, status, name, show_failed, count):
     for k in ["date", "due"]:
         if k in list(_df):
             _df[k] = _df[k].apply(lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
-    click.echo(df.drop(columns=["_ids"]).to_string())
+    click.echo(_df.drop(columns=["_ids"]).to_string())
     click.echo(f"{l} habits")
 
 #    print(df.loc[0])
