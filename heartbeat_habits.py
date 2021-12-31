@@ -102,7 +102,7 @@ class SendKeyboard():
                     f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
             else:
                 self._send_message(
-                    f"don't forget to execute!:\n```{upserts_df.to_dict(orient='records')[0]}```", parse_mode="Markdown")
+                    f"don't forget to execute!:\n`{upserts_df.to_dict(orient='records')[0]}`", parse_mode="Markdown")
                 pass
         self._sanitize_mongo()
 
