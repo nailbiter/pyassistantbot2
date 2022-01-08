@@ -18,6 +18,7 @@ ENV TRELLO_PACKAGE_PATH=$_TMP_DIR/forpython/trello
 #todo
 ENV TODO_TRELLO_LIST_ID="5a83f3449c950b04c540ba66"
 ENV TODO_BOARD_ID="5a83f33d7c047209445249dd"
+ENV TASK_LIST_ID="5a83f3449c950b04c540ba66"
 
 RUN mkdir _common
 COPY _common/__init__.py _common
