@@ -187,6 +187,11 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
             webbrowser.get(web_browser).open(url)
 
 
+def _process_tag(tag,coll):
+    # TODO
+    return tag
+
+
 @gstasks.command()
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
@@ -194,6 +199,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-t", "--status", type=click.Choice(["DONE", "FAILED", "REGULAR"]))
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
+@click.option("--tag", multiple=True)
 @click.option("--url")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_date`)
 # FIXME: allow `NONE` for everything else
@@ -206,8 +212,10 @@ def edit(ctx, uuid_text, index, **kwargs):
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     task_list = ctx.obj["task_list"]
-    kwargs = {
-        **{k: v for k, v in kwargs.items() if k not in ["url"]}, "URL": kwargs["url"]}
+    kwargs["URL"] = kwargs.pop("url")
+    kwargs["tags"] = [_process_tag(tag,coll=task_list.get_coll("tags")) for tag in kwargs.pop("tag")]
+    print(kwargs)
+    exit(0)
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_date(s),
@@ -235,10 +243,10 @@ def edit(ctx, uuid_text, index, **kwargs):
 @click.option("-u", "--url")
 @click.option("-s", "--scheduled-date")
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
-@click.option("--tags",multiple=True)
+@click.option("--tags", multiple=True)
 @click.option("-d", "--due", type=click.DateTime())
 @click.pass_context
-def add(ctx, name, when, url, scheduled_date, due, status,tags):
+def add(ctx, name, when, url, scheduled_date, due, status, tags):
     scheduled_date = parse_cmdline_date(scheduled_date)
     task_list = ctx.obj["task_list"]
     r = {
@@ -248,7 +256,7 @@ def add(ctx, name, when, url, scheduled_date, due, status,tags):
         "status": status,
         "when": when,
         "due": due,
-        "tags":tags,
+        "tags": tags,
     }
     task_list.insert_or_replace_record(r)
 

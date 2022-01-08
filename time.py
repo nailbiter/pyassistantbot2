@@ -84,7 +84,7 @@ def show(ctx, remote_filter, local_filter):
         filter_["category"] = remote_filter
     df = pd.DataFrame(
         coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
-    df = df[["date", "category"]]
+    df = df[["_id", "date", "category"]]
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
     print(df.to_csv())

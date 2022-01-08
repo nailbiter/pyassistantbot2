@@ -28,6 +28,7 @@ import inspect
 from jinja2 import Template
 import logging
 import subprocess
+import os
 
 TIME_CATS = [
     "sleeping",
@@ -116,17 +117,27 @@ def parse_cmdline_date(s):
         return datetime.strptime(s, "%Y-%m-%d")
 
 
-def run_trello_cmd(cmd):
+_DEFAULT_TRELLO_PACKAGE_PATH = "/Users/nailbiter/for/forpython/trello"
+
+
+def run_trello_cmd(cmd, trello_path=None):
+    if trello_path is None:
+        trello_path = os.environ.get(
+            "TRELLO_PACKAGE_PATH", _DEFAULT_TRELLO_PACKAGE_PATH)
+
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(
         types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     cmd = Template("""
-    cd {{trello_path}} && . .envrc && ./trello.py {{cmd}}
+    cd {{trello_path}} {{" && . .envrc " if is_use_envrc}} && ./trello.py --trello_key {{trello_key}} --trello_token {{trello_token}} {{cmd}}
     """).render({
-        "trello_path": "/Users/nailbiter/for/forpython/trello",
+        "trello_path": trello_path,
         "cmd": cmd.strip(),
+        "trello_key": os.environ["TRELLO_KEY"],
+        "trello_token": os.environ["TRELLO_TOKEN"],
+        "is_use_envrc": trello_path == _DEFAULT_TRELLO_PACKAGE_PATH,
     })
     cmd = cmd.strip()
     logger.info(f"cmd: {cmd}")

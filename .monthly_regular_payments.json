@@ -1,0 +1,26 @@
+[
+  {
+    "amount": 28000,
+    "category": "food",
+    "comment": "rent",
+    "date": {
+      "day": 20
+    }
+  },
+  {
+    "amount": 5357,
+    "category": "food",
+    "comment": "coursera",
+    "date": {
+      "day": 20
+    }
+  },
+  {
+    "amount": 500,
+    "category": "food",
+    "comment": "amazon prime",
+    "date": {
+      "day": 30
+    }
+  }
+]

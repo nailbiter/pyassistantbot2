@@ -32,6 +32,7 @@ import _common
 import subprocess
 import _actor
 import re
+import functools
 
 
 class Callback:
@@ -142,7 +143,8 @@ def actor(telegram_token, chat_id, mongo_url):
             "money": _actor.add_money,
             None: _actor.ttask,
             #        if text.startswith("/habits"):
-            "habits": _actor.habits,
+            "habits": functools.partial(_actor.os_command, command="python3 heartbeat_habits.py show-habits"),
+            "tasks": functools.partial(_actor.os_command, command="python3 task.py s"),
             #            # TODO
             #        elif text.startswith("/done"):
             "sleepstart": _actor.sleepstart,

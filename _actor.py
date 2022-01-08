@@ -65,8 +65,9 @@ def add_money(text, send_message_cb=None, mongo_client=None):
         f"added amount {amount} to category {category} on {date.strftime('%Y-%m-%d %H:%M')}")
 
 
-def habits(text, send_message_cb=None, **_):
-    cmd = f"python3 heartbeat_habits.py show-habits {text}"
+def os_command(text, send_message_cb=None, command=None, **_):
+    assert command is not None
+    cmd = f"{command} {text}"
     ec, out = subprocess.getstatusoutput(cmd)
     assert ec == 0, (cmd, ec, out)
     send_message_cb(f"```{out}```", parse_mode="Markdown")

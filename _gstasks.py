@@ -65,7 +65,7 @@ class TaskList:
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def get_all_tasks(self, post_processing=True):
-        df = pd.DataFrame(self._get_coll().find())
+        df = pd.DataFrame(self.get_coll().find())
 #        df = df.sort_values(by=["_insertion_date", "_id"])
         df = df.drop(columns=[x for x in list(df) if x.startswith("_")])
         if post_processing:
@@ -77,7 +77,7 @@ class TaskList:
         r = kwargs
         r["timestamp"] = datetime.now()
         self._logger.info(r)
-        self._get_coll(collection_name="actions").insert_one(r)
+        self.get_coll(collection_name="actions").insert_one(r)
 
     def get_task(self, uuid_text=None, index=None):
         assert sum([x is not None for x in [index, uuid_text]]) == 1
@@ -91,7 +91,7 @@ class TaskList:
             index, r = slice_[0]
         return r, index
 
-    def _get_coll(self, collection_name=None):
+    def get_coll(self, collection_name=None):
         if collection_name is None:
             collection_name = self._collection_name
         return self._mongo_client[self._database_name][collection_name]
@@ -113,9 +113,9 @@ class TaskList:
         # exit(1)
         log_kwargs = {}
         if action == "replacing":
-            log_kwargs["previous_r"] = self._get_coll().find_one(
+            log_kwargs["previous_r"] = self.get_coll().find_one(
                 {"uuid": r["uuid"]})
         self._log(action=action, r=r, **log_kwargs)
-        self._get_coll().replace_one(
+        self.get_coll().replace_one(
             filter={"uuid": r["uuid"]}, replacement=r, upsert=True)
         print(r["uuid"])

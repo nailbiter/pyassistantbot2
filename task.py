@@ -20,7 +20,7 @@ ORGANIZATION:
 ==============================================================================="""
 
 import click
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 import os
 from os import path
 import logging
@@ -178,7 +178,7 @@ def show(ctx, tag, cutoff):
 
 
 if __name__ == "__main__":
-    #    if path.isfile(".env"):
-    #        logging.warning("loading .env")
-    #        load_dotenv()
+    if path.isfile(".env"):
+        logging.warning("loading .env")
+        load_dotenv()
     task()
