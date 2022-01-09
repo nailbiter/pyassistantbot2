@@ -63,10 +63,11 @@ def get_sleeping_state(mongo_client):
         return cat == "sleeping", cat
 
 
-def to_utc_date(date=None):
+def to_utc_datetime(date=None, inverse=False):
     if date is None:
         date = datetime.now()
-    return date-timedelta(hours=9)
+    td = timedelta(hours=9)
+    return date-td if not inverse else date+td
 
 
 def get_remote_mongo_client(mongo_pass):

@@ -42,11 +42,11 @@ def ttask(index, mongo_url):
         click.echo("all done!")
         return
     df.date += timedelta(hours=9)
-    click.echo(df.drop(columns=["_id"]))
+    click.echo(df.drop(columns=["_id"]).to_string())
     for i in index:
         r = df.loc[i]
         coll.update_one({"_id": r._id}, {
-                        "$set": {"status": "DONE", "_last_modification": _common.to_utc_date()}})
+                        "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
         click.echo(f"done {r._id} ({r.content})")
 
 

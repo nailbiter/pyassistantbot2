@@ -55,7 +55,7 @@ def add_money(text, send_message_cb=None, mongo_client=None):
     comment = " ".join(other[i:])
     assert category is not None
     mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
-        "date": _common.to_utc_date(date),
+        "date": _common.to_utc_datetime(date),
         "comment": comment,
         "tags": sorted(list(tags)),
         "category": category,
@@ -86,7 +86,7 @@ def sleepend(_, send_message_cb=None, mongo_client=None):
         return
     _now = datetime.now()
     mongo_coll.update_one(
-        {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _common.to_utc_date(_now)}})
+        {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _common.to_utc_datetime(_now)}})
     heartbeat_time.SendKeyboard(
         mongo_url=os.environ["MONGO_URL"], is_create_bot=False).sanitize_mongo(cat)
     send_message_cb(
@@ -96,7 +96,7 @@ def sleepend(_, send_message_cb=None, mongo_client=None):
 def ttask(content, send_message_cb=None, mongo_client=None):
     mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
         "content": content,
-        "date": _common.to_utc_date(),
+        "date": _common.to_utc_datetime(),
     })
     send_message_cb(f"log \"{content}\"")
 
@@ -115,13 +115,13 @@ def sleepstart(cat, send_message_cb=None, mongo_client=None):
 
     mongo_coll = mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
     mongo_coll.insert_one(
-        {"category": cat, "startsleep": _common.to_utc_date()})
+        {"category": cat, "startsleep": _common.to_utc_datetime()})
     send_message_cb(f"start sleeping \"{cat}\"")
 
 
 def note(content, send_message_cb=None, mongo_client=None):
     mongo_client[_common.MONGO_COLL_NAME]["alex.notes"].insert_one({
         "content": content,
-        "date": _common.to_utc_date(),
+        "date": _common.to_utc_datetime(),
     })
     send_message_cb(f"note \"{content}\"")

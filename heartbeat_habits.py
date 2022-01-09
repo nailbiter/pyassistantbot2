@@ -157,7 +157,7 @@ class SendKeyboard():
         coll = self._get_habits_punch_coll()
         _now = datetime.now()
         habits_to_fail_df = pd.DataFrame(coll.find({"$and": [
-            {"due": {"$lt": _common.to_utc_date(_now)}},
+            {"due": {"$lt": _common.to_utc_datetime(_now)}},
             {"status": {"$exists": False}},
         ]}))
         if len(habits_to_fail_df) > 0:

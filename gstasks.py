@@ -187,7 +187,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
             webbrowser.get(web_browser).open(url)
 
 
-def _process_tag(tag,coll):
+def _process_tag(tag, coll):
     # TODO
     return tag
 
@@ -213,9 +213,13 @@ def edit(ctx, uuid_text, index, **kwargs):
 
     task_list = ctx.obj["task_list"]
     kwargs["URL"] = kwargs.pop("url")
-    kwargs["tags"] = [_process_tag(tag,coll=task_list.get_coll("tags")) for tag in kwargs.pop("tag")]
-    print(kwargs)
-    exit(0)
+    if False:
+        kwargs["tags"] = [_process_tag(tag, coll=task_list.get_coll(
+            "tags")) for tag in kwargs.pop("tag")]
+        print(kwargs)
+        exit(0)
+    else:
+        kwargs.pop("tag")
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_date(s),
