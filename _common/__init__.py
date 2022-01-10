@@ -82,40 +82,47 @@ def get_coll(mongo_pass, collection_name):
     return coll
 
 
-def parse_cmdline_date(s):
-    if s is None:
-        return None
-    elif s == "tomorrow":
-        res = datetime.now().date()+timedelta(days=1)
-        res = datetime(**{k: getattr(res, k)
-                       for k in "year,month,day".split(",")})
-        return res
-    elif s == "yesterday":
-        res = datetime.now().date()-timedelta(days=1)
-        res = datetime(**{k: getattr(res, k)
-                       for k in "year,month,day".split(",")})
-        return res
-    elif s == "today":
-        res = datetime.now().date()
-        res = datetime(**{k: getattr(res, k)
-                       for k in "year,month,day".split(",")})
-        return res
-    elif (m := re.match(r"next (mon|tue|wed|thu|fri|sat|sun)", s)) is not None:
-        weekday = "mon|tue|wed|thu|fri|sat|sun".split("|").index(m.group(1))
-        res = datetime.now().date()
-        while res.weekday() != weekday:
-            res += timedelta(days=1)
-        return datetime(**{k: getattr(res, k)
+def parse_cmdline_datetime(s, fail_callback=None):
+    try:
+        if s is None:
+            return None
+        elif s == "tomorrow":
+            res = datetime.now().date()+timedelta(days=1)
+            res = datetime(**{k: getattr(res, k)
                            for k in "year,month,day".split(",")})
-    elif re.match(r"[\+-](\d+)d", s) is not None:
-        m = re.match(r"([\+-])(\d+)d", s)
-        res = datetime.now().date()
-        res += (1 if m.group(1) == "+" else -1)*timedelta(days=int(m.group(2)))
-        res = datetime(**{k: getattr(res, k)
-                       for k in "year,month,day".split(",")})
-        return res
-    else:
-        return datetime.strptime(s, "%Y-%m-%d")
+            return res
+        elif s == "yesterday":
+            res = datetime.now().date()-timedelta(days=1)
+            res = datetime(**{k: getattr(res, k)
+                           for k in "year,month,day".split(",")})
+            return res
+        elif s == "today":
+            res = datetime.now().date()
+            res = datetime(**{k: getattr(res, k)
+                           for k in "year,month,day".split(",")})
+            return res
+        elif (m := re.match(r"next (mon|tue|wed|thu|fri|sat|sun)", s)) is not None:
+            weekday = "mon|tue|wed|thu|fri|sat|sun".split(
+                "|").index(m.group(1))
+            res = datetime.now().date()
+            while res.weekday() != weekday:
+                res += timedelta(days=1)
+            return datetime(**{k: getattr(res, k)
+                               for k in "year,month,day".split(",")})
+        elif re.match(r"[\+-](\d+)d", s) is not None:
+            m = re.match(r"([\+-])(\d+)d", s)
+            res = datetime.now().date()
+            res += (1 if m.group(1) == "+" else -1) * \
+                timedelta(days=int(m.group(2)))
+            res = datetime(**{k: getattr(res, k)
+                           for k in "year,month,day".split(",")})
+            return res
+        else:
+            return datetime.strptime(s, "%Y-%m-%d")
+    except Exception:
+        if fail_callback is not None:
+            fail_callback(f"cannot parse {s}")
+        raise
 
 
 _DEFAULT_TRELLO_PACKAGE_PATH = "/Users/nailbiter/for/forpython/trello"

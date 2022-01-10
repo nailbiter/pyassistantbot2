@@ -33,6 +33,8 @@ import subprocess
 import hashlib
 import sys
 from pymongo import MongoClient
+import click
+import _common
 
 
 def _parse_date(s):
@@ -119,3 +121,13 @@ class TaskList:
         self.get_coll().replace_one(
             filter={"uuid": r["uuid"]}, replacement=r, upsert=True)
         print(r["uuid"])
+
+
+class ConvenientCliDatetimeParamType(click.ParamType):
+    name = "convenient_cli_datetime"
+
+    def convert(self, value, param, ctx):
+        return _common.parse_cmdline_datetime(value, fail_callback=lambda msg: self.fail(msg, param, ctx))
+
+
+CLI_DATETIME = ConvenientCliDatetimeParamType()

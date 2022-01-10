@@ -24,12 +24,13 @@ from dotenv import load_dotenv
 import os
 from os import path
 import logging
-from _common import run_trello_cmd, get_coll
+from _common import run_trello_cmd, get_coll, to_utc_datetime
 import json
 import pandas as pd
 from datetime import datetime, timedelta
 from jinja2 import Template
 import itertools
+import tqdm
 
 _SEP_TEXT = "------------------------------"
 
@@ -83,28 +84,26 @@ def new_(ctx, tag, name, open_url):
 
 
 @task.command(name="m")
-@click.argument("assistantbot_hash")
+@click.argument("assistantbot_hash", nargs=-1)
 @click.option("-t", "--tag", multiple=True)
 @click.option("-r", "--repeat-count", type=int, default=1)
+@click.option("-d", "--done", is_flag=True, default=False)
+@click.option("-a", "--archive", is_flag=True, default=False)
 @click.pass_context
-def modify(ctx, assistantbot_hash, tag, repeat_count):
+def modify(ctx, assistantbot_hash, tag, repeat_count, done, archive):
     labels_df = _get_labels(ctx)
     labels_to_use = {k: set(
         slice_.id) for k, slice_ in labels_df.reset_index().groupby("name") if k in tag}
 
-    for _ in range(repeat_count):
+    for ah, _ in tqdm.tqdm(list(itertools.product(assistantbot_hash, range(repeat_count)))):
         df = _get_tasks(ctx, labels_df=labels_df, reduce_cols=False)
-    #    task = df.set_index("assistantbot_hash").loc[assistantbot_hash]
         task = [r for r in df.to_dict(
-            orient="records") if r["assistantbot_hash"] == assistantbot_hash][0]
+            orient="records") if r["assistantbot_hash"] == ah][0]
 
-    #    print(task)
         d = dict(task)
         if pd.isna(d["due"]):
             d["due"] = None
-    #    print({k:type(v) for k,v in task.items()})
         d = json.loads(json.dumps(d))
-    #    print(d)
 
         mongo_coll = get_coll(ctx.obj["mongo_pass"], "alex.taskLog")
 
@@ -116,7 +115,15 @@ def modify(ctx, assistantbot_hash, tag, repeat_count):
                 f"low {'add-label-to-card' if is_set else 'remove-label-from-card'} -c {task['id']} -l {min(labels_to_use[t])}")
             if t == "engage":
                 mongo_coll.insert_one({"message": (
-                    "add engage" if is_set else "rm engage"), "date": datetime.now()-timedelta(hours=9), "obj": d})
+                    "add engage" if is_set else "rm engage"), "date": to_utc_datetime(), "obj": d})
+
+        if archive:
+            print(f"archive task \"{d['name']}\"")
+            run_trello_cmd(f"low update-card {task['id']} --closed true")
+        if done:
+            print(f"done task \"{d['name']}\"")
+            mongo_coll.insert_one(
+                {"message": "taskdone", "date": to_utc_datetime(), "obj": d})
 #    data = run_trello_cmd(
 #        f"low get-cards-of-list {ctx.obj['trello_list_id']} --include-assistantbot-hash")
 #    data = json.loads(data)

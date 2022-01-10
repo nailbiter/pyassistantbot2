@@ -31,18 +31,10 @@ from datetime import datetime, timedelta
 import inspect
 import types
 from typing import cast
+import subprocess
 
 
-@click.command()
-@click.option("-i", "--index", type=int, multiple=True)
-@click.option("--mongo-url", envvar="MONGO_URL", required=True)
-@click.option("-g", "--gstasks-line")
-def ttask(index, mongo_url, gstasks_line):
-    # taken from https://stackoverflow.com/a/13514318
-    this_function_name = cast(
-        types.FrameType, inspect.currentframe()).f_code.co_name
-    logger = logging.getLogger(__name__).getChild(this_function_name)
-
+def _ttask(mongo_url):
     client = pymongo.MongoClient(mongo_url)
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
@@ -52,6 +44,22 @@ def ttask(index, mongo_url, gstasks_line):
         return
     df.date += timedelta(hours=9)
     click.echo(df.drop(columns=["_id"]).to_string())
+    click.echo(f"{len(df)} tasks")
+    return df, coll
+
+
+@click.command()
+@click.option("-i", "--index", type=int, multiple=True)
+@click.option("--mongo-url", envvar="MONGO_URL", required=True)
+@click.option("-g", "--gstasks-line")
+@click.option("--repeat/--no-repeat", default=False)
+def ttask(index, mongo_url, gstasks_line, repeat):
+    # taken from https://stackoverflow.com/a/13514318
+    this_function_name = cast(
+        types.FrameType, inspect.currentframe()).f_code.co_name
+    logger = logging.getLogger(__name__).getChild(this_function_name)
+
+    df, coll = _ttask(mongo_url)
     for i in index:
         r = df.loc[i]
         coll.update_one({"_id": r._id}, {
@@ -60,7 +68,11 @@ def ttask(index, mongo_url, gstasks_line):
         if gstasks_line is not None:
             cmd = f"./gstasks.py add -n \"{r.content}\" {gstasks_line}"
             logger.warning(f"> {cmd}")
-            os.system(cmd)
+            ec, out = subprocess.getstatusoutput(cmd)
+            assert ec == 0, (ec, out)
+            click.echo(out)
+    if repeat:
+        _ttask(mongo_url)
 
 
 if __name__ == "__main__":

@@ -246,8 +246,14 @@ def show_habits(ctx, index, status, name, show_failed, count):
     click.echo(f"{l} habits")
 
 #    print(df.loc[0])
-    new_idxs = [df[[_n.startswith(n)
-                    for _n in df.name]].index[0] for n in name]
+#    new_idxs = [df[[_n.startswith(n)
+#                    for _n in df.name]].index[0] for n in name]
+    new_idxs = []
+    for n in name:
+        idxs = df[[_n.startswith(n) for _n in df.name]].index
+        assert len(idxs) == 1, (n, idxs)
+        new_idxs.append(idxs[0])
+
 #    print(new_idxs)
 #    exit(0)
     for i in set(list(index)+new_idxs):

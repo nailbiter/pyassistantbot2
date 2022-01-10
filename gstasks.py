@@ -32,10 +32,10 @@ import pickle
 import logging
 import re
 import random
-from _common import parse_cmdline_date, run_trello_cmd
+from _common import parse_cmdline_datetime, run_trello_cmd
 import string
 import uuid
-from _gstasks import TaskList
+from _gstasks import TaskList, CLI_DATETIME
 import webbrowser
 import subprocess
 from jinja2 import Template
@@ -109,7 +109,7 @@ def mv(ctx, tags, contains, not_contains):
 @click.pass_context
 def mv_task(ctx, task_hash, when, scheduled_date, archive):
     task_list = ctx.obj["task_list"]
-    scheduled_date = parse_cmdline_date(scheduled_date)
+    scheduled_date = parse_cmdline_datetime(scheduled_date)
 #    r, _ = task_list.get_task(uuid_text=uuid_text, index=index)
     url = run_trello_cmd(f"assistantbot open-task {task_hash} --no-open-url")
     m = re.match(r"https://trello.com/c/([a-zA-Z0-9]+)/", url)
@@ -201,7 +201,7 @@ def _process_tag(tag, coll):
 @click.option("-s", "--scheduled-date")
 @click.option("--tag", multiple=True)
 @click.option("--url")
-# FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_date`)
+# FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
 @click.option("-d", "--due", type=click.DateTime())
 @click.pass_context
@@ -222,7 +222,7 @@ def edit(ctx, uuid_text, index, **kwargs):
         kwargs.pop("tag")
 
     _PROCESSORS = {
-        "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_date(s),
+        "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
     }
     _UNSET = "***UNSET***"
     for k, v in _PROCESSORS.items():
@@ -245,13 +245,13 @@ def edit(ctx, uuid_text, index, **kwargs):
 @click.option("-n", "--name", required=True)
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")), required=True)
 @click.option("-u", "--url")
-@click.option("-s", "--scheduled-date")
+@click.option("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
 @click.option("--tags", multiple=True)
-@click.option("-d", "--due", type=click.DateTime())
+@click.option("-d", "--due", type=CLI_DATETIME)
 @click.pass_context
 def add(ctx, name, when, url, scheduled_date, due, status, tags):
-    scheduled_date = parse_cmdline_date(scheduled_date)
+    #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
     r = {
         "name": name,
@@ -278,7 +278,7 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format)
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
     before_date, after_date = map(
-        parse_cmdline_date, [before_date, after_date])
+        parse_cmdline_datetime, [before_date, after_date])
     _when = set()
     for w in when:
         if w == "appropriate":
