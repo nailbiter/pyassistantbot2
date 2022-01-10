@@ -76,8 +76,9 @@ def _ctx_obj_to_filter(obj):
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
+@click.option("-g", "--grep", type=click.Choice(_TIME_CATEGORIES))
 @click.pass_context
-def show(ctx, remote_filter, local_filter):
+def show(ctx, remote_filter, local_filter, grep):
     coll = _get_coll(ctx.obj["mongo_pass"])
     filter_ = _ctx_obj_to_filter(ctx.obj)
     if remote_filter is not None:
@@ -87,7 +88,14 @@ def show(ctx, remote_filter, local_filter):
     df = df[["_id", "date", "category"]]
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
-    print(df.to_csv())
+    if grep is None:
+        print(df.to_csv())
+    else:
+        df = df.query(f"category=='{grep}'")
+        if len(df) > 0:
+            print(df.to_csv())
+        else:
+            print(f"no category \"{grep}\"")
 
 
 @time_kostil.command()

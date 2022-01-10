@@ -105,7 +105,7 @@ class SendKeyboard():
                     f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
             else:
                 self._send_message(
-                    f"don't forget to execute!:\n`{upserts_df.to_dict(orient='records')[0]}`", parse_mode="Markdown")
+                    f"don't forget to execute!: ```{upserts_df.to_dict(orient='records')[0]}```", parse_mode="Markdown")
                 pass
         self._sanitize_mongo()
 
@@ -174,7 +174,7 @@ class SendKeyboard():
         print(f"set status \"{status}\" for {(_id,name,date)}")
         res = coll.update_one(
             {"_id": _id},
-            {"$set": {"status": status}},
+            {"$set": {"status": status, "_last_modification": _common.to_utc_datetime()}},
         )
         print((res.matched_count, res.modified_count))
 

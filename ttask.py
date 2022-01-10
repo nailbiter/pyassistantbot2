@@ -28,12 +28,21 @@ import _common
 import pymongo
 import pandas as pd
 from datetime import datetime, timedelta
+import inspect
+import types
+from typing import cast
 
 
 @click.command()
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("--mongo-url", envvar="MONGO_URL", required=True)
-def ttask(index, mongo_url):
+@click.option("-g", "--gstasks-line")
+def ttask(index, mongo_url, gstasks_line):
+    # taken from https://stackoverflow.com/a/13514318
+    this_function_name = cast(
+        types.FrameType, inspect.currentframe()).f_code.co_name
+    logger = logging.getLogger(__name__).getChild(this_function_name)
+
     client = pymongo.MongoClient(mongo_url)
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
@@ -48,6 +57,10 @@ def ttask(index, mongo_url):
         coll.update_one({"_id": r._id}, {
                         "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
         click.echo(f"done {r._id} ({r.content})")
+        if gstasks_line is not None:
+            cmd = f"./gstasks.py add -n \"{r.content}\" {gstasks_line}"
+            logger.warning(f"> {cmd}")
+            os.system(cmd)
 
 
 if __name__ == "__main__":
