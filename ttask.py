@@ -41,7 +41,7 @@ def _ttask(mongo_url):
                       ("date", pymongo.DESCENDING)]))
     if len(df) == 0:
         click.echo("all done!")
-        return
+        exit(0)
     df.date += timedelta(hours=9)
     click.echo(df.drop(columns=["_id"]).to_string())
     click.echo(f"{len(df)} tasks")

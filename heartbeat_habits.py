@@ -52,62 +52,67 @@ class SendKeyboard():
         _now = datetime.now()
         print(f"working at {_now.isoformat()}")
 
-        habits_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habits"]
-        habits_df = pd.DataFrame(habits_coll.find({"enabled": True, }))
-        print(habits_df)
-        # sanity checks
-        assert len(habits_df) == habits_df.name.nunique()
+        with _common.TimerContextManager("get habits"):
+            habits_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habits"]
+            habits_df = pd.DataFrame(habits_coll.find({"enabled": True, }))
+            print(habits_df)
+            # sanity checks
+            assert len(habits_df) == habits_df.name.nunique()
 
-        habits_punch_df = []
-        for habit in habits_df.to_dict(orient="records"):
-            if "start_date" in habit and not pd.isna(habit["start_date"]):
-                base = habit["start_date"]+timedelta(hours=9)
-            else:
-                base = _START_DATE
-            it = croniter(habit["cronline"], base)
-            while (ds := it.get_next(datetime)) <= _now:
-                habits_punch_df.append({
-                    **{k: habit[k] for k in ["name", "onFailed", "info"]},
-                    "date": ds-timedelta(hours=9),
-                    "due": ds+timedelta(minutes=habit["delaymin"])-timedelta(hours=9),
-                })
-        habits_punch_df = pd.DataFrame(habits_punch_df)
-        print(habits_punch_df)
+        with _common.TimerContextManager("generate habits_punch_df"):
+            habits_punch_df = []
+            for habit in habits_df.to_dict(orient="records"):
+                if "start_date" in habit and not pd.isna(habit["start_date"]):
+                    base = habit["start_date"]+timedelta(hours=9)
+                else:
+                    base = _START_DATE
+                it = croniter(habit["cronline"], base)
+                while (ds := it.get_next(datetime)) <= _now:
+                    habits_punch_df.append({
+                        **{k: habit[k] for k in ["name", "onFailed", "info"]},
+                        "date": ds-timedelta(hours=9),
+                        "due": ds+timedelta(minutes=habit["delaymin"])-timedelta(hours=9),
+                    })
+            habits_punch_df = pd.DataFrame(habits_punch_df)
+            print(habits_punch_df)
 
-        habits_punch_coll = self._get_habits_punch_coll()
-        modified_count, matched_count = [0]*2
-        upserts = []
-        for dhp in habits_punch_df.to_dict(orient="records"):
-            result = habits_punch_coll.update_one(
-                {k: dhp[k] for k in ["name", "date"]},
-                {"$set": {k: dhp[k] for k in ["due", "onFailed", "info"]}},
-                upsert=True,
-            )
-            modified_count += result.modified_count
-            matched_count += result.matched_count
-            if result.upserted_id is not None:
-                upserts.append({**dhp, "mongo_id": result.upserted_id})
+        with _common.TimerContextManager("generate and insert upserts"):
+            habits_punch_coll = self._get_habits_punch_coll()
+            modified_count, matched_count = [0]*2
+            upserts = []
+            for dhp in habits_punch_df.to_dict(orient="records"):
+                result = habits_punch_coll.update_one(
+                    {k: dhp[k] for k in ["name", "date"]},
+                    {"$set": {k: dhp[k] for k in ["due", "onFailed", "info"]}},
+                    upsert=True,
+                )
+                modified_count += result.modified_count
+                matched_count += result.matched_count
+                if result.upserted_id is not None:
+                    upserts.append({**dhp, "mongo_id": result.upserted_id})
 
         upserts_df = pd.DataFrame(upserts)
         click.echo(f"upsert: {pd.DataFrame(upserts)}")
         click.echo(f"{matched_count} matched, {modified_count} modified")
 
-        if len(upserts_df) > 0:
-            upserts_df.due += timedelta(hours=9)
-            upserts_df.due = upserts_df.due.apply(
-                lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
-            upserts_df = upserts_df[["name", "due", "info"]]
-#            for k in ["date", "duo"]:
-#                upserts_df[k] = upserts_df[k].apply(
-#                    lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
-            if len(upserts_df) > 1:
-                self._send_message(
-                    f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
-            else:
-                self._send_message(
-                    f"don't forget to execute!: ```{upserts_df.to_dict(orient='records')[0]}```", parse_mode="Markdown")
-                pass
-        self._sanitize_mongo()
+        with _common.TimerContextManager("sending messages"):
+            if len(upserts_df) > 0:
+                upserts_df.due += timedelta(hours=9)
+                upserts_df.due = upserts_df.due.apply(
+                    lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
+                upserts_df = upserts_df[["name", "due", "info"]]
+    #            for k in ["date", "duo"]:
+    #                upserts_df[k] = upserts_df[k].apply(
+    #                    lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
+                if len(upserts_df) > 1:
+                    self._send_message(
+                        f"don't forget to execute!:\n```{upserts_df[['name','due']]}```", parse_mode="Markdown")
+                else:
+                    self._send_message(
+                        f"don't forget to execute!: ```{upserts_df.to_dict(orient='records')[0]}```", parse_mode="Markdown")
+
+        with _common.TimerContextManager("sanitize mongo"):
+            self._sanitize_mongo()
 
     def _send_message(self, text, **kwargs):
         mess = self._bot.sendMessage(

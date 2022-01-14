@@ -29,6 +29,8 @@ from jinja2 import Template
 import logging
 import subprocess
 import os
+import logging
+import time
 
 TIME_CATS = [
     "sleeping",
@@ -152,3 +154,23 @@ def run_trello_cmd(cmd, trello_path=None):
     ec, out = subprocess.getstatusoutput(cmd)
     assert ec == 0, (cmd, out, ec)
     return out.strip()
+
+
+class TimerContextManager:
+    def __init__(self, name, printer=None):
+        self._name = name
+        if printer is None:
+            printer = logging.warning
+        self._printer = printer
+
+    def __enter__(self):
+        self._start_time = time.time()
+        self._printer(
+            f"start block \"{self._name}\" at {datetime.fromtimestamp(self._start_time)}")
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self._end_time = time.time()
+        self._printer(
+            f"end block \"{self._name}\" at {datetime.fromtimestamp(self._end_time)}")
+        self._printer(
+            f"it took {str(timedelta(seconds=self._end_time-self._start_time))}")

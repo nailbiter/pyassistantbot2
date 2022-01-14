@@ -27,6 +27,7 @@ from pytz import timezone
 from bson.codec_options import CodecOptions
 import logging
 from datetime import datetime, timedelta
+import numpy as np
 
 _TIME_CATEGORIES = [
     "useless",
@@ -76,7 +77,7 @@ def _ctx_obj_to_filter(obj):
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
-@click.option("-g", "--grep", type=click.Choice(_TIME_CATEGORIES))
+@click.option("-g", "--grep", type=(click.Choice(_TIME_CATEGORIES), int))
 @click.pass_context
 def show(ctx, remote_filter, local_filter, grep):
     coll = _get_coll(ctx.obj["mongo_pass"])
@@ -91,11 +92,11 @@ def show(ctx, remote_filter, local_filter, grep):
     if grep is None:
         print(df.to_csv())
     else:
-        df = df.query(f"category=='{grep}'")
-        if len(df) > 0:
-            print(df.to_csv())
+        _df = np.array(df.query(f"category=='{grep[0]}'").index)
+        if len(_df) > 0:
+            print(df[[min(abs(_df-i)) <= grep[1] for i in df.index]].to_csv())
         else:
-            print(f"no category \"{grep}\"")
+            print(f"no category \"{grep}\"!")
 
 
 @time_kostil.command()

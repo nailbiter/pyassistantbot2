@@ -174,13 +174,12 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
             "list_id": list_id,
         })
         url = run_trello_cmd(cmd)
-#    print(f"out: \"{out}\"")
         logger.info(f"url: {url}")
 
         if url_to_add is not None:
             logger.debug(f"url_to_add: {url_to_add}")
             res = run_trello_cmd(
-                f"assistantbot add-url-link \"{url}\" \"{url_to_add}\"")
+                f"assistantbot add-url-link '{url}' '{url_to_add}'")
             logger.debug(f"res: {res}")
         task_list.insert_or_replace_record({**r, "URL": url}, index=idx)
         if open_url:
@@ -273,8 +272,10 @@ def add(ctx, name, when, url, scheduled_date, due, status, tags):
 @click.option("-u", "--un-scheduled", is_flag=True, default=False)
 @click.option("-o", "--out-format", type=click.Choice(["str", "csv"]))
 @click.option("-h", "--head", type=int)
+@click.option("-s", "--sample", type=int)
+@click.option("--name-lenght-limit", type=int, default=50)
 @click.pass_context
-def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format):
+def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
     before_date, after_date = map(
@@ -312,6 +313,13 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format)
                         False, True, True, True], kind="stable")
     if head is not None:
         df = df.head(head)
+    if sample is not None:
+        click.echo(f"{len(df)} tasks initially")
+        df = df.sample(n=sample)
+
+    if name_lenght_limit > 0:
+        df.name = df.name.apply(lambda s: s if len(
+            s) < name_lenght_limit else f"{s[:name_lenght_limit]}...")
 
     if out_format is None:
         click.echo(df)

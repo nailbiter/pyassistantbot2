@@ -20,7 +20,7 @@ ORGANIZATION:
 ==============================================================================="""
 
 import click
-from _common import get_remote_mongo_client
+from _common import get_remote_mongo_client, to_utc_datetime
 import pandas as pd
 from pytz import timezone
 from bson.codec_options import CodecOptions
@@ -28,7 +28,7 @@ from bson.codec_options import CodecOptions
 
 def _get_coll(mongo_pass):
     client = get_remote_mongo_client(mongo_pass)
-    coll = client.logistics["alex.habitspunch"].with_options(
+    coll = client.logistics["alex.habitspunch2"].with_options(
         codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
     return coll
 
@@ -37,16 +37,16 @@ def _get_coll(mongo_pass):
 @click.option("-r", "--regex")
 @click.option("--mongo_pass", envvar="MONGO_PASS", required=True)
 @click.option("-l", "--limit", type=int, default=10)
-@click.option("-i", "--index",multiple=True,type=int)
+@click.option("-i", "--index", multiple=True, type=int)
 @click.option("--dry-run/--no-dry-run", default=True)
-@click.option("--set-success/--no-set-success",default=True)
-def fix_habits(regex, mongo_pass, limit, index, dry_run,set_success):
+@click.option("--set-success/--no-set-success", default=True)
+def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success):
     assert mongo_pass is not None
     assert limit > 0
-    if len(index)==0:
+    if len(index) == 0:
         index = (0,)
     for index_ in index:
-        assert limit> index_ >= 0
+        assert limit > index_ >= 0
         filter_ = {}
         if regex is not None:
             filter_["name"] = {"$regex": regex}
@@ -56,12 +56,13 @@ def fix_habits(regex, mongo_pass, limit, index, dry_run,set_success):
             filter_, sort=[("date", -1)], limit=limit))
         print(df.drop(columns=["_id"]))
         o = df.to_dict(orient="records")[index_]
-        status = "SUCCESS" if set_success else "FAILURE"
+        status = "DONE" if set_success else "FAILED"
         print(o)
         print(f"{o['status']} => {status}")
         if not dry_run:
-            set_ = {"status":status}
-            coll.update_one({"_id": o["_id"]}, {"$set": set_})
+            set_ = {"status": status, "_last_modification": to_utc_datetime()}
+            coll.update_one({"_id": o["_id"]}, {
+                            "$set": set_, })
             print("no dry run")
         else:
             print("dry run")
