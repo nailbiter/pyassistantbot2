@@ -33,6 +33,7 @@ from pymongo import MongoClient
 import _common
 import pandas as pd
 from croniter import croniter
+import functools
 
 _START_DATE = datetime(2021, 12, 14)
 
@@ -47,6 +48,11 @@ class SendKeyboard():
         self._mongo_client = MongoClient(mongo_url)
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    def _get_anchor_dates(self):
+        anchor_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habits_anchors"]
+        return {r["name"]: _common.to_utc_datetime(
+            r["date"], inverse=True) for r in anchor_coll.find()}
+
     def __call__(self):
         assert self._bot is not None
         _now = datetime.now()
@@ -59,13 +65,21 @@ class SendKeyboard():
             # sanity checks
             assert len(habits_df) == habits_df.name.nunique()
 
+        anchor_dates = self._get_anchor_dates()
+        print(f"anchor_dates: {anchor_dates}")
+
         with _common.TimerContextManager("generate habits_punch_df"):
             habits_punch_df = []
             for habit in habits_df.to_dict(orient="records"):
-                if "start_date" in habit and not pd.isna(habit["start_date"]):
-                    base = habit["start_date"]+timedelta(hours=9)
+                if habit["name"] in anchor_dates:
+                    base = anchor_dates[habit["name"]]+timedelta(seconds=1)
+                elif "start_date" in habit and not pd.isna(habit["start_date"]):
+                    base = _common.to_utc_datetime(
+                        habit["start_date"], inverse=True)
                 else:
                     base = _START_DATE
+
+                print(f"base for {habit['name']} is {base.isoformat()}")
                 it = croniter(habit["cronline"], base)
                 while (ds := it.get_next(datetime)) <= _now:
                     habits_punch_df.append({
@@ -77,6 +91,7 @@ class SendKeyboard():
             print(habits_punch_df)
 
         with _common.TimerContextManager("generate and insert upserts"):
+            # FIXME: this takes very long time
             habits_punch_coll = self._get_habits_punch_coll()
             modified_count, matched_count = [0]*2
             upserts = []
@@ -95,9 +110,22 @@ class SendKeyboard():
         click.echo(f"upsert: {pd.DataFrame(upserts)}")
         click.echo(f"{matched_count} matched, {modified_count} modified")
 
+        anchor_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.habits_anchors"]
+        updated_habits = set() if len(upserts_df) == 0 else set(upserts_df.name)
+        for habit in habits_df.to_dict(orient="records"):
+            if habit["name"] in updated_habits:
+                print(f"update anchor for {habit['name']}")
+                anchor_coll.update_one(
+                    {"name": habit["name"]},
+                    {"$set": {"date": _common.to_utc_datetime(_now)}},
+                    upsert=True,
+                )
+
         with _common.TimerContextManager("sending messages"):
             if len(upserts_df) > 0:
-                upserts_df.due += timedelta(hours=9)
+                #                upserts_df.due += timedelta(hours=9)
+                upserts_df.due = upserts_df.due.apply(
+                    functools.partial(_common.to_utc_datetime, inverse=True))
                 upserts_df.due = upserts_df.due.apply(
                     lambda ds: ds.strftime("%Y-%m-%d %H:%M"))
                 upserts_df = upserts_df[["name", "due", "info"]]

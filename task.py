@@ -124,20 +124,6 @@ def modify(ctx, assistantbot_hash, tag, repeat_count, done, archive):
             print(f"done task \"{d['name']}\"")
             mongo_coll.insert_one(
                 {"message": "taskdone", "date": to_utc_datetime(), "obj": d})
-#    data = run_trello_cmd(
-#        f"low get-cards-of-list {ctx.obj['trello_list_id']} --include-assistantbot-hash")
-#    data = json.loads(data)
-#    df = pd.DataFrame(data)
-#
-#    sep_idx = [i for i, n in enumerate(df.name) if n == _SEP_TEXT][0]
-#    new_pos = df.iloc[sep_idx:sep_idx+2].pos.mean()
-#
-#    run_trello_cmd(Template("""high create-card -n "{{name}}" {%for l in labels_to_use%}-l {{l}} {%endfor%} {{"--open-url" if open_url}} --pos {{pos}}""").render({
-#        "name": name,
-#        "labels_to_use": list(map(min, labels_to_use.values())),
-#        "open_url": open_url,
-#        "pos":new_pos,
-#    }))
 
 
 def _get_tasks(ctx, labels_to_use={}, labels_df=None, reduce_cols=True):
@@ -159,7 +145,7 @@ def _get_tasks(ctx, labels_to_use={}, labels_df=None, reduce_cols=True):
     df.due = df.due.apply(
         lambda s: None if s is None else datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ"))
     if reduce_cols:
-        df = df[["assistantbot_hash", "name", "labels", "due"]]
+        df = df[["assistantbot_hash", "name", "labels", "due", "shortUrl"]]
     return df
 
 

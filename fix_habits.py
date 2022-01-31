@@ -20,17 +20,11 @@ ORGANIZATION:
 ==============================================================================="""
 
 import click
-from _common import get_remote_mongo_client, to_utc_datetime
+from _common import get_remote_mongo_client, to_utc_datetime, get_coll
 import pandas as pd
 from pytz import timezone
 from bson.codec_options import CodecOptions
-
-
-def _get_coll(mongo_pass):
-    client = get_remote_mongo_client(mongo_pass)
-    coll = client.logistics["alex.habitspunch2"].with_options(
-        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
-    return coll
+import logging
 
 
 @click.command()
@@ -40,7 +34,10 @@ def _get_coll(mongo_pass):
 @click.option("-i", "--index", multiple=True, type=int)
 @click.option("--dry-run/--no-dry-run", default=True)
 @click.option("--set-success/--no-set-success", default=True)
-def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success):
+@click.option("--debug/--no-debug", default=False)
+def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success, debug):
+    if debug:
+        logging.basicConfig(level=logging.INFO)
     assert mongo_pass is not None
     assert limit > 0
     if len(index) == 0:
@@ -51,7 +48,7 @@ def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success):
         if regex is not None:
             filter_["name"] = {"$regex": regex}
 
-        coll = _get_coll(mongo_pass)
+        coll = get_coll(mongo_pass, "alex.habits")
         df = pd.DataFrame(coll.find(
             filter_, sort=[("date", -1)], limit=limit))
         print(df.drop(columns=["_id"]))

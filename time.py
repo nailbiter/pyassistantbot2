@@ -22,12 +22,11 @@ ORGANIZATION:
 import click
 import pandas as pd
 import pymongo
-from _common import get_remote_mongo_client
-from pytz import timezone
-from bson.codec_options import CodecOptions
+import _common
 import logging
 from datetime import datetime, timedelta
 import numpy as np
+import functools
 
 _TIME_CATEGORIES = [
     "useless",
@@ -41,13 +40,6 @@ _TIME_CATEGORIES = [
     "rest",
     "reading",
 ]
-
-
-def _get_coll(mongo_pass):
-    client = get_remote_mongo_client(mongo_pass)
-    coll = client.logistics["alex.time"].with_options(
-        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
-    return coll
 
 
 @click.group()
@@ -77,26 +69,30 @@ def _ctx_obj_to_filter(obj):
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
-@click.option("-g", "--grep", type=(click.Choice(_TIME_CATEGORIES), int))
+@click.option("-g", "--grep", type=(click.Choice(_TIME_CATEGORIES), int), default=(None, None))
 @click.pass_context
 def show(ctx, remote_filter, local_filter, grep):
-    coll = _get_coll(ctx.obj["mongo_pass"])
+    coll = _common.get_coll(ctx.obj["mongo_pass"], apply_options=False)
     filter_ = _ctx_obj_to_filter(ctx.obj)
     if remote_filter is not None:
         filter_["category"] = remote_filter
     df = pd.DataFrame(
         coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
     df = df[["_id", "date", "category"]]
+    df.date = df.date.apply(functools.partial(
+        _common.to_utc_datetime, inverse=True))
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
-    if grep is None:
+
+    grep_cat, grep_cnt = grep
+    if grep_cat is None:
         print(df.to_csv())
     else:
-        _df = np.array(df.query(f"category=='{grep[0]}'").index)
+        _df = np.array(df.query(f"category=='{grep_cat}'").index)
         if len(_df) > 0:
-            print(df[[min(abs(_df-i)) <= grep[1] for i in df.index]].to_csv())
+            print(df[[min(abs(_df-i)) <= grep_cnt for i in df.index]].to_csv())
         else:
-            print(f"no category \"{grep}\"!")
+            print(f"no category \"{grep_cat}\"!")
 
 
 @time_kostil.command()
@@ -109,7 +105,7 @@ def edit(ctx, category, start, endpoint_inclusive):
     if endpoint_inclusive is None:
         endpoint_inclusive = start
     assert 0 <= start <= endpoint_inclusive
-    coll = _get_coll(ctx.obj["mongo_pass"])
+    coll = _common.get_coll(ctx.obj["mongo_pass"])
     df = pd.DataFrame(
         coll.find(sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
     records = df.to_dict(orient="records")[start:endpoint_inclusive+1]
@@ -125,7 +121,7 @@ def edit(ctx, category, start, endpoint_inclusive):
 @click.option("--dry-run/--no-dry-run", default=False)
 @click.option("--category", default="useless", type=click.Choice(_TIME_CATEGORIES))
 def fix_db(ctx, start, dry_run, category):
-    coll = _get_coll(ctx.obj["mongo_pass"])
+    coll = _common.get_coll(ctx.obj["mongo_pass"])
     df = pd.DataFrame(
         coll.find(
             filter={"date": {"$gt": start}},

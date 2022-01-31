@@ -20,19 +20,20 @@ ORGANIZATION:
 ==============================================================================="""
 
 import click
-from _common import get_remote_mongo_client
+import _common
 import pandas as pd
 from pytz import timezone
 from bson.codec_options import CodecOptions
 from datetime import datetime, timedelta
 import re
+import functools
 
 
-def _get_coll(mongo_pass):
-    client = get_remote_mongo_client(mongo_pass)
-    coll = client.logistics["alex.taskLog"].with_options(
-        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
-    return coll
+#def _get_coll(mongo_pass):
+#    client = _common.get_remote_mongo_client(mongo_pass)
+#    coll = client.logistics["alex.taskLog"].with_options(
+#        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
+#    return coll
 
 
 @click.command()
@@ -43,11 +44,12 @@ def _get_coll(mongo_pass):
 @click.option("--dry-run/--no-dry-run",default=False)
 @click.option("--remove/--no-remove",default=False)
 def fix_time(mongo_pass, index, time, limit,dry_run,remove):
-    coll = _get_coll(mongo_pass)
+    coll = _common.get_coll(mongo_pass,"alex.taskLog",apply_options=False)
     df = pd.DataFrame(coll.find(
         {"message": "add engage"}, sort=[("date", -1)], limit=limit))
     df["name"] = df["obj"].apply(lambda o:o["name"])
     df = df.drop(columns=["obj","message"])
+    df.date = df.date.apply(functools.partial(_common.to_utc_datetime,inverse=True))
     click.echo(df)
 
     o = df.to_dict(orient="records")[index]
@@ -62,7 +64,7 @@ def fix_time(mongo_pass, index, time, limit,dry_run,remove):
             })
             click.echo(f"{o['date']} => {date}")
             if not dry_run:
-                coll.update_one({"_id": o["_id"]}, {"$set": {"date":date-timedelta(hours=9)}})
+                coll.update_one({"_id": o["_id"]}, {"$set": {"date":_common.to_utc_datetime(date)}})
         elif remove:
             click.echo(f"delete {o}")
             if not dry_run:

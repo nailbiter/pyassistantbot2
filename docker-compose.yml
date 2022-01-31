@@ -4,12 +4,15 @@ services:
     heartbeat_habits:
         build:
             context: .
-            dockerfile: Dockerfile.heartbeat_habits  
+            dockerfile: Dockerfile  
+        command: python3 heartbeat_habits.py heartbeat
     heartbeat_time:
         build:
             context: .
-            dockerfile: Dockerfile.heartbeat_time  
+            dockerfile: Dockerfile  
+        command: python3 heartbeat_time.py
     actor:
         build:
             context: .
-            dockerfile: Dockerfile.actor  
+            dockerfile: Dockerfile  
+        command: python3 actor.py

@@ -21,6 +21,7 @@ import pymongo
 from datetime import datetime, timedelta
 from pytz import timezone
 from bson.codec_options import CodecOptions
+from pytz import timezone
 import re
 import types
 from typing import cast
@@ -31,6 +32,7 @@ import subprocess
 import os
 import logging
 import time
+from bson.codec_options import CodecOptions
 
 TIME_CATS = [
     "sleeping",
@@ -68,20 +70,13 @@ def get_sleeping_state(mongo_client):
 def to_utc_datetime(date=None, inverse=False):
     if date is None:
         date = datetime.now()
-    td = timedelta(hours=9)
+    td = timedelta(hours=_get_current_offset())
     return date-td if not inverse else date+td
 
 
 def get_remote_mongo_client(mongo_pass):
     return pymongo.MongoClient(
         f"mongodb+srv://nailbiter:{mongo_pass}@cluster0.gaq9o.mongodb.net/logistics?authSource=admin&replicaSet=atlas-1372ty-shard-0&w=majority&readPreference=primary&appname=MongoDB%20Compass&retryWrites=true&ssl=true")
-
-
-def get_coll(mongo_pass, collection_name):
-    client = get_remote_mongo_client(mongo_pass)
-    coll = client.logistics[collection_name].with_options(
-        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
-    return coll
 
 
 def parse_cmdline_datetime(s, fail_callback=None):
@@ -174,3 +169,22 @@ class TimerContextManager:
             f"end block \"{self._name}\" at {datetime.fromtimestamp(self._end_time)}")
         self._printer(
             f"it took {str(timedelta(seconds=self._end_time-self._start_time))}")
+
+
+def _get_current_offset():
+    # code below is adapted from https://stackoverflow.com/a/10854983
+    offset = time.timezone if (
+        time.localtime().tm_isdst == 0) else time.altzone
+    offset_hour = int(offset / 60 / 60 * -1)
+    return offset_hour
+
+
+def get_coll(mongo_pass, collection_name="alex.time", apply_options=False):
+    if apply_options:
+        logging.warning(f"`apply_options=True` is deprecated")
+    client = get_remote_mongo_client(mongo_pass)
+    coll = client.logistics[collection_name]
+    if apply_options:
+        coll = coll.with_options(codec_options=CodecOptions(
+            tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
+    return coll
