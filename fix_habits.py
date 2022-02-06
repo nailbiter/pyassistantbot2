@@ -48,7 +48,7 @@ def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success, debug):
         if regex is not None:
             filter_["name"] = {"$regex": regex}
 
-        coll = get_coll(mongo_pass, "alex.habits")
+        coll = get_coll(mongo_pass, "alex.habitspunch2")
         df = pd.DataFrame(coll.find(
             filter_, sort=[("date", -1)], limit=limit))
         print(df.drop(columns=["_id"]))

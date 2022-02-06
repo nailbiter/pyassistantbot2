@@ -69,9 +69,10 @@ def _ctx_obj_to_filter(obj):
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
-@click.option("-g", "--grep", type=(click.Choice(_TIME_CATEGORIES), int), default=(None, None))
+@click.option("-g", "--grep", type=click.Choice(_TIME_CATEGORIES))
+@click.option("--grep-size", type=int, default=1)
 @click.pass_context
-def show(ctx, remote_filter, local_filter, grep):
+def show(ctx, remote_filter, local_filter, grep, grep_size):
     coll = _common.get_coll(ctx.obj["mongo_pass"], apply_options=False)
     filter_ = _ctx_obj_to_filter(ctx.obj)
     if remote_filter is not None:
@@ -84,7 +85,7 @@ def show(ctx, remote_filter, local_filter, grep):
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
 
-    grep_cat, grep_cnt = grep
+    grep_cat, grep_cnt = grep, grep_size
     if grep_cat is None:
         print(df.to_csv())
     else:
