@@ -43,7 +43,8 @@ def _ttask(mongo_url):
     if len(df) == 0:
         click.echo("all done!")
         exit(0)
-    df.date = df.date.apply(functools.partial(_common.to_utc_datetime,inverse=True))
+    df.date = df.date.apply(functools.partial(
+        _common.to_utc_datetime, inverse=True))
     click.echo(df.drop(columns=["_id"]).to_string())
     click.echo(f"{len(df)} tasks")
     return df, coll
@@ -51,11 +52,11 @@ def _ttask(mongo_url):
 
 @click.command()
 @click.option("-i", "--index", type=int, multiple=True)
-@click.option("-f", "--from-to", type=(int,int), multiple=True)
+@click.option("-f", "--from-to", type=(int, int), multiple=True)
 @click.option("--mongo-url", envvar="MONGO_URL", required=True)
 @click.option("-g", "--gstasks-line")
 @click.option("--repeat/--no-repeat", default=False)
-def ttask(index, mongo_url, gstasks_line, repeat,from_to):
+def ttask(index, mongo_url, gstasks_line, repeat, from_to):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(
         types.FrameType, inspect.currentframe()).f_code.co_name
@@ -64,23 +65,23 @@ def ttask(index, mongo_url, gstasks_line, repeat,from_to):
     df, coll = _ttask(mongo_url)
 
     index = set(index)
-    for a,b in from_to:
-        index |= set(range(a,b+1))
+    for a, b in from_to:
+        index |= set(range(a, b+1))
     index = sorted(index)
 #    print(index)
 #    exit(0)
 
     for i in index:
         r = df.loc[i]
-        coll.update_one({"_id": r._id}, {
-                        "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
-        click.echo(f"done {r._id} ({r.content})")
         if gstasks_line is not None:
             cmd = f"./gstasks.py add -n \"{r.content}\" {gstasks_line}"
             logger.warning(f"> {cmd}")
             ec, out = subprocess.getstatusoutput(cmd)
             assert ec == 0, (ec, out)
             click.echo(out)
+        coll.update_one({"_id": r._id}, {
+                        "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
+        click.echo(f"done {r._id} ({r.content})")
     if repeat:
         _ttask(mongo_url)
 
