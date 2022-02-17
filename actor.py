@@ -141,17 +141,18 @@ def actor(telegram_token, chat_id, mongo_url):
         bot,
         commands={
             "money": _actor.add_money,
-            None: _actor.ttask,
             #        if text.startswith("/habits"):
             "habits": functools.partial(_actor.os_command, command="python3 heartbeat_habits.py show-habits"),
             "tasks": functools.partial(_actor.os_command, command="python3 task.py s"),
             "tasknew": functools.partial(_actor.os_command, command="python3 task.py n"),
             #            # TODO
             #        elif text.startswith("/done"):
-            "sleepstart": _actor.sleepstart,
-            "sleepend": _actor.sleepend,
-            "ttask": _actor.ttask,
-            "note": _actor.note,
+            **{
+                k: getattr(_actor, k)
+                for k
+                in "sleepstart,sleepend,ttask,note,rand".split(",")
+            },
+            None: _actor.ttask,
         }
     )
     updater.dispatcher.add_handler(

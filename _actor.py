@@ -27,6 +27,8 @@ import _common.simple_math_eval
 import heartbeat_time
 import os
 import logging
+import random
+import string
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
@@ -125,3 +127,20 @@ def note(content, send_message_cb=None, mongo_client=None):
         "date": _common.to_utc_datetime(),
     })
     send_message_cb(f"note \"{content}\"")
+
+
+def _rand(length, code):
+    d = {}
+    for _s in [string.ascii_lowercase, string.ascii_uppercase, string.digits]:
+        for x in _s:
+            d[x] = _s
+    s = set()
+    for x in code:
+        s.add(d[x])
+    s = "".join(s)
+    return "".join(random.choices(s, k=length))
+
+
+def rand(content, send_message_cb=None, mongo_client=None):
+    length, code = re.split(r"\s+", content)
+    send_message_cb(f"`{_rand(int(length),code)}`", parse_mode="Markdown")
