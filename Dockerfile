@@ -27,7 +27,7 @@ COPY _common/simple_math_eval.py _common
 COPY _actor.py .
 
 COPY actor.py .
-COPY task.py .
+COPY tr-task.py task.py
 COPY heartbeat_habits.py .
 COPY heartbeat_time.py .
 
