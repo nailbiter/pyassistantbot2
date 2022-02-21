@@ -74,11 +74,12 @@ def new_(ctx, tag, name, open_url):
     sep_idx = [i for i, n in enumerate(df.name) if n == _SEP_TEXT][0]
     new_pos = df.iloc[sep_idx:sep_idx+2].pos.mean()
 
-    card_url = run_trello_cmd(Template("""high create-card -n "{{name}}" {%for l in labels_to_use%}-l {{l}} {%endfor%} {{"--open-url" if open_url}} --pos {{pos}}""").render({
+    card_url = run_trello_cmd(Template("""high create-card -n "{{name}}" {%for l in labels_to_use%}-l {{l}} {%endfor%} {{"--open-url" if open_url}} --pos {{pos}} --list-id {{trello_list_id}}""").render({
         "name": name,
         "labels_to_use": list(map(min, labels_to_use.values())),
         "open_url": open_url,
         "pos": new_pos,
+        "trello_list_id": ctx.obj["trello_list_id"],
     }))
     click.echo(card_url)
 
