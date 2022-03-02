@@ -1,7 +1,7 @@
 #!/bin/sh
 
 FILE=/tmp/tasks.txt
-source .envrc
+. ./.envrc
 
 rm -rf $FILE
 echo '```'>>$FILE
