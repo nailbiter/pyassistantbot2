@@ -34,8 +34,8 @@ import re
 import random
 from _common import parse_cmdline_datetime, run_trello_cmd
 import string
-import uuid
-from _gstasks import TaskList, CLI_DATETIME
+#import uuid
+from _gstasks import TaskList, CLI_DATETIME, TagProcessor
 import webbrowser
 import subprocess
 from jinja2 import Template
@@ -186,11 +186,6 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
             webbrowser.get(web_browser).open(url)
 
 
-def _process_tag(tag, coll):
-    # TODO
-    return tag
-
-
 @gstasks.command()
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
@@ -212,13 +207,8 @@ def edit(ctx, uuid_text, index, **kwargs):
 
     task_list = ctx.obj["task_list"]
     kwargs["URL"] = kwargs.pop("url")
-    if False:
-        kwargs["tags"] = [_process_tag(tag, coll=task_list.get_coll(
-            "tags")) for tag in kwargs.pop("tag")]
-        print(kwargs)
-        exit(0)
-    else:
-        kwargs.pop("tag")
+    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    kwargs["tags"] = [_process_tag(tag) for tag in kwargs.pop("tag")]
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
@@ -274,8 +264,9 @@ def add(ctx, name, when, url, scheduled_date, due, status, tags):
 @click.option("-h", "--head", type=int)
 @click.option("-s", "--sample", type=int)
 @click.option("--name-lenght-limit", type=int, default=50)
+@click.option("--tag", "tags", multiple=True)
 @click.pass_context
-def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit):
+def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit, tags):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
     before_date, after_date = map(
@@ -296,7 +287,12 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
             _when.add(w)
     when = _when
 
+    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    tags = [_process_tag(tag) for tag in tags]
+
     df = df.query("status!='DONE' and status!='FAILED'")
+    if len(tags) > 0:
+        df = df[[set(_tags) == set(tags) for _tags in df.tags]]
     if un_scheduled:
         df = df[[pd.isna(sd) for sd in df.scheduled_date]]
     if len(when) > 0:
@@ -307,8 +303,9 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         df = df[[sd <= before_date for sd in df.scheduled_date]]
     if after_date is not None:
         df = df[[sd >= after_date for sd in df.scheduled_date]]
+    df.tags = df.tags.apply(lambda tags: ", ".join(
+        sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
 
-#    df = df.sort_values(by=["scheduled_date", "due",  "uuid"])
     df = df.sort_values(by=["status", "due", "when", "uuid"], ascending=[
                         False, True, True, True], kind="stable")
     if head is not None:

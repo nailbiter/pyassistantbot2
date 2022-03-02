@@ -4,7 +4,7 @@ services:
     heartbeat_habits:
         build:
             context: .
-            dockerfile: Dockerfile  
+            dockerfile: Dockerfile
         command: python3 heartbeat_habits.py heartbeat
     heartbeat_time:
         build:

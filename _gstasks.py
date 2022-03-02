@@ -131,3 +131,61 @@ class ConvenientCliDatetimeParamType(click.ParamType):
 
 
 CLI_DATETIME = ConvenientCliDatetimeParamType()
+
+
+class TagProcessor:
+    def __init__(self, coll):
+        self._coll = coll
+        self._cache = {}
+
+    def _get_tag_imputation_record(self, tag):
+        return {
+            "name": tag,
+            "uuid": str(uuid.uuid4()),
+        }
+
+    def _fetch_tag(self, **kwargs):
+        assert set(kwargs) <= {"uuid", "name"}
+        assert sum([v is not None for v in kwargs.values()]) == 1, kwargs
+        df = pd.DataFrame(self._coll.find(kwargs))
+        assert len(df) <= 1, (tag, df)
+        if len(df) == 0:
+            assert kwargs["tag"] is not None, kwargs
+            tag_r = self._get_tag_imputation_record(kwargs["tag"])
+            logger.warning(f"insert {tag_r}")
+            self._coll.insert_one(tag_r)
+        else:
+            tag_r = df.to_dict(orient="records")[0]
+        return tag_r
+
+    def _get_tag_record_or_impute(self, tag=None, uuid=None):
+        this_function_name = cast(
+            types.FrameType, inspect.currentframe()).f_code.co_name
+        logger = logging.getLogger(__name__).getChild(this_function_name)
+
+        if uuid is not None:
+            _res = [k for k, v in self._cache.items() if v == uuid]
+            assert len(_res) <= 1, (_res, uuid, self._cache)
+            if len(_res) == 0:
+                _res = [self._fetch_tag(uuid=uuid)["name"]]
+            return _res[0]
+        if tag is not None:
+            if tag in self._cache:
+                tag_r = self._cache[tag]
+            else:
+                tag_r = self._fetch_tag(name=tag)
+                self._cache[tag] = tag_r
+
+            return tag_r
+        else:
+            raise NotImplementedError()
+
+    def __call__(self, tag):
+        """
+        return tag_uuid
+        """
+        tag_r = self._get_tag_record_or_impute(tag=tag)
+        return tag_r["uuid"]
+
+    def tag_uuid_to_tag_name(self, uuid):
+        return self._get_tag_record_or_impute(uuid=uuid)
