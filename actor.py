@@ -145,6 +145,7 @@ def actor(telegram_token, chat_id, mongo_url):
             "habits": functools.partial(_actor.os_command, command="python3 heartbeat_habits.py show-habits"),
             "tasks": functools.partial(_actor.os_command, command="python3 task.py s"),
             "tasknew": functools.partial(_actor.os_command, command="python3 task.py n"),
+            "tasmodify": functools.partial(_actor.os_command, command="python3 task.py m"),
             #            # TODO
             #        elif text.startswith("/done"):
             **{
