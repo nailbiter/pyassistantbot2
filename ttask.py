@@ -35,7 +35,7 @@ import subprocess
 import functools
 
 
-def _ttask(mongo_url):
+def _ttask(mongo_url, head=None):
     client = pymongo.MongoClient(mongo_url)
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
@@ -45,8 +45,11 @@ def _ttask(mongo_url):
         exit(0)
     df.date = df.date.apply(functools.partial(
         _common.to_utc_datetime, inverse=True))
+    l = len(df)
+    if head is not None:
+        df = df.head(head)
     click.echo(df.drop(columns=["_id"]).to_string())
-    click.echo(f"{len(df)} tasks")
+    click.echo(f"{l} tasks")
     return df, coll
 
 
@@ -55,14 +58,15 @@ def _ttask(mongo_url):
 @click.option("-f", "--from-to", type=(int, int), multiple=True)
 @click.option("--mongo-url", envvar="MONGO_URL", required=True)
 @click.option("-g", "--gstasks-line")
+@click.option("-h", "--head", type=int)
 @click.option("--repeat/--no-repeat", default=False)
-def ttask(index, mongo_url, gstasks_line, repeat, from_to):
+def ttask(index, mongo_url, gstasks_line, repeat, from_to, head):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(
         types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
-    df, coll = _ttask(mongo_url)
+    df, coll = _ttask(mongo_url, head=head)
 
     index = set(index)
     for a, b in from_to:
@@ -83,7 +87,7 @@ def ttask(index, mongo_url, gstasks_line, repeat, from_to):
                         "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
         click.echo(f"done {r._id} ({r.content})")
     if repeat:
-        _ttask(mongo_url)
+        _ttask(mongo_url, head=head)
 
 
 if __name__ == "__main__":
