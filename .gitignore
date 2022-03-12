@@ -132,3 +132,4 @@ dmypy.json
 *.swp
 *.sqlite3
 .envrc
+.uuid_cache.db

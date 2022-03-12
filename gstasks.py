@@ -34,8 +34,7 @@ import re
 import random
 from _common import parse_cmdline_datetime, run_trello_cmd
 import string
-#import uuid
-from _gstasks import TaskList, CLI_DATETIME, TagProcessor
+from _gstasks import TaskList, CLI_DATETIME, TagProcessor, UuidCacher
 import webbrowser
 import subprocess
 from jinja2 import Template
@@ -143,6 +142,13 @@ def open_url(ctx, index, uuid_text, web_browser, open_url):
             click.echo(r["URL"])
 
 
+def _fetch_uuid(uuid):
+    if re.match(r"-?\d+", uuid) is not None:
+        uuids_df = UuidCacher().get_all()
+        uuid = uuids_df.uuid.iloc[int(uuid)]
+    return uuid
+
+
 @gstasks.command()
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
@@ -159,7 +165,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 
     task_list, list_id = [ctx.obj[k] for k in "task_list,list_id".split(",")]
 
-    for _uuid_text, _index in tqdm.tqdm([(x, None) for x in uuid_text]+[(None, x)for x in index]):
+    for _uuid_text, _index in tqdm.tqdm([(_fetch_uuid(x), None) for x in uuid_text]+[(None, x)for x in index]):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         #FIXME: later
         url_to_add = None
@@ -204,6 +210,7 @@ def edit(ctx, uuid_text, index, **kwargs):
     this_function_name = cast(
         types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
+    uuid_text = list(map(_fetch_uuid, uuid_text))
 
     task_list = ctx.obj["task_list"]
     kwargs["URL"] = kwargs.pop("url")
@@ -242,6 +249,7 @@ def edit(ctx, uuid_text, index, **kwargs):
 def add(ctx, name, when, url, scheduled_date, due, status, tags):
     #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
+    _process_tag = TagProcessor(task_list.get_coll("tags"))
     r = {
         "name": name,
         "URL": url,
@@ -249,9 +257,20 @@ def add(ctx, name, when, url, scheduled_date, due, status, tags):
         "status": status,
         "when": when,
         "due": due,
-        "tags": tags,
+        "tags": [_process_tag(tag) for tag in tags],
     }
-    task_list.insert_or_replace_record(r)
+    uuid = task_list.insert_or_replace_record(r)
+    UuidCacher().add(uuid, name)
+
+
+@gstasks.command()
+def show_uuid_cache():
+    print(UuidCacher().get_all())
+
+
+@gstasks.command()
+def show_tags():
+    raise NotImplementedError()
 
 
 @gstasks.command()

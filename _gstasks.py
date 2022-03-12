@@ -35,6 +35,7 @@ import sys
 from pymongo import MongoClient
 import click
 import _common
+import sqlite3
 
 
 def _parse_date(s):
@@ -121,6 +122,7 @@ class TaskList:
         self.get_coll().replace_one(
             filter={"uuid": r["uuid"]}, replacement=r, upsert=True)
         print(r["uuid"])
+        return r["uuid"]
 
 
 class ConvenientCliDatetimeParamType(click.ParamType):
@@ -137,6 +139,7 @@ class TagProcessor:
     def __init__(self, coll):
         self._coll = coll
         self._cache = {}
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_tag_imputation_record(self, tag):
         return {
@@ -145,13 +148,14 @@ class TagProcessor:
         }
 
     def _fetch_tag(self, **kwargs):
+        logger = self._logger
         assert set(kwargs) <= {"uuid", "name"}
         assert sum([v is not None for v in kwargs.values()]) == 1, kwargs
         df = pd.DataFrame(self._coll.find(kwargs))
         assert len(df) <= 1, (tag, df)
         if len(df) == 0:
-            assert kwargs["tag"] is not None, kwargs
-            tag_r = self._get_tag_imputation_record(kwargs["tag"])
+            assert kwargs["name"] is not None, kwargs
+            tag_r = self._get_tag_imputation_record(kwargs["name"])
             logger.warning(f"insert {tag_r}")
             self._coll.insert_one(tag_r)
         else:
@@ -189,3 +193,31 @@ class TagProcessor:
 
     def tag_uuid_to_tag_name(self, uuid):
         return self._get_tag_record_or_impute(uuid=uuid)
+
+
+class UuidCacher:
+    def __init__(self, cache_database_filename=".uuid_cache.db"):
+        self._cache_database_filename = cache_database_filename
+        self._db_name = "uuid_cache"
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def _get_conn(self):
+        conn = sqlite3.connect(self._cache_database_filename)
+        return conn
+
+    def add(self, uuid, name):
+        df = pd.DataFrame(
+            [{"uuid": uuid, "datetime": datetime.now().isoformat(), "name": name}])
+        conn = self._get_conn()
+        df.to_sql(self._db_name, conn, if_exists="append", index=None)
+        conn.close()
+        self._logger.warning(f"add \"{uuid}\" to cache")
+
+    def get_all(self):
+        conn = self._get_conn()
+        df = pd.read_sql(f"select * from {self._db_name}", conn)
+        conn.close()
+
+        df.datetime = df.datetime.apply(datetime.fromisoformat)
+        df = df.sort_values(by="datetime")
+        return df
