@@ -245,8 +245,9 @@ def edit(ctx, uuid_text, index, **kwargs):
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
 @click.option("-g", "--tags", multiple=True)
 @click.option("-d", "--due", type=CLI_DATETIME)
+@click.option("--create-new-tag/--no-create-new-tag", default=True)
 @click.pass_context
-def add(ctx, name, when, url, scheduled_date, due, status, tags):
+def add(ctx, name, when, url, scheduled_date, due, status, tags, create_new_tag):
     #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
     _process_tag = TagProcessor(task_list.get_coll("tags"))
@@ -280,14 +281,16 @@ def show_tags(ctx):
     tags_df = _process_tag.get_all_tags()
 
     tasks_df = pd.DataFrame({"uuid": tasks_df.tags, "name": tasks_df.name})
-    tasks_df = tasks_df.set_index("uuid").join(
-        tags_df.set_index("uuid"), rsuffix="_tag")
-    assert "NONE" not in list(tags_df.name)
-
-    _df = pd.DataFrame(tasks_df.name_tag.fillna("NONE").value_counts())
-    _df = _df.sort_values(by="name_tag", ascending=False)
-    _df["frac (%)"] = _df.name_tag/_df.name_tag.sum()*100
-    print(_df)
+    tasks_df = tags_df.set_index("uuid").join(
+        tasks_df.set_index("uuid"), lsuffix="_tag", how="outer")
+    _TAG_NONE = "NONE"
+    assert _TAG_NONE not in list(tags_df.name)
+    tasks_df.name_tag = tasks_df.name_tag.fillna(_TAG_NONE)
+    tasks_df = tasks_df.groupby("name_tag").count()
+    tasks_df = tasks_df.reset_index().drop(columns=["_id"])
+    tasks_df["frac (%)"] = tasks_df.name/tasks_df.name.sum()*100
+    tasks_df = tasks_df.sort_values(by="name", ascending=False)
+    print(tasks_df)
 
 
 @gstasks.command()
