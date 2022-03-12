@@ -329,16 +329,19 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
     df = df.query("status!='DONE' and status!='FAILED'")
     if len(tags) > 0:
         df = df[[set(_tags) == set(tags) for _tags in df.tags]]
-    if un_scheduled:
-        df = df[[pd.isna(sd) for sd in df.scheduled_date]]
-    if len(when) > 0:
+#    print(df)
+#    print(list(df))
+#    print(df["scheduled_date"])
+    if un_scheduled and len(df) > 0:
+        df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
+    if len(when) > 0 and len(df) > 0:
         df = df[[w in when for w in df.when]]
-    if text is not None:
+    if text is not None and len(df) > 0:
         df = df[[text in n for n in df.name]]
-    if before_date is not None:
-        df = df[[sd <= before_date for sd in df.scheduled_date]]
-    if after_date is not None:
-        df = df[[sd >= after_date for sd in df.scheduled_date]]
+    if before_date is not None and len(df) > 0:
+        df = df[[sd <= before_date for sd in df["scheduled_date"]]]
+    if after_date is not None and len(df) > 0:
+        df = df[[sd >= after_date for sd in df["scheduled_date"]]]
     df.tags = df.tags.apply(lambda tags: ", ".join(
         sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
 
