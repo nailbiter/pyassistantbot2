@@ -269,8 +269,25 @@ def show_uuid_cache():
 
 
 @gstasks.command()
-def show_tags():
-    raise NotImplementedError()
+@click.pass_context
+def show_tags(ctx):
+    task_list = ctx.obj["task_list"]
+    tasks_df = task_list.get_all_tasks()
+    tasks_df = tasks_df.query("status!='DONE'")
+    tasks_df = tasks_df.explode("tags")
+
+    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    tags_df = _process_tag.get_all_tags()
+
+    tasks_df = pd.DataFrame({"uuid": tasks_df.tags, "name": tasks_df.name})
+    tasks_df = tasks_df.set_index("uuid").join(
+        tags_df.set_index("uuid"), rsuffix="_tag")
+    assert "NONE" not in list(tags_df.name)
+
+    _df = pd.DataFrame(tasks_df.name_tag.fillna("NONE").value_counts())
+    _df = _df.sort_values(by="name_tag", ascending=False)
+    _df["frac (%)"] = _df.name_tag/_df.name_tag.sum()*100
+    print(_df)
 
 
 @gstasks.command()

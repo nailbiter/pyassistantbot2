@@ -141,6 +141,8 @@ class TagProcessor:
         self._cache = {}
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    def get_all_tags(self):
+        return pd.DataFrame(self._coll.find())
     def _get_tag_imputation_record(self, tag):
         return {
             "name": tag,
