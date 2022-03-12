@@ -143,7 +143,7 @@ def open_url(ctx, index, uuid_text, web_browser, open_url):
 
 
 def _fetch_uuid(uuid):
-    if re.match(r"-?\d+", uuid) is not None:
+    if re.match(r"^-?\d+$", uuid) is not None:
         uuids_df = UuidCacher().get_all()
         uuid = uuids_df.uuid.iloc[int(uuid)]
     return uuid
@@ -199,7 +199,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-t", "--status", type=click.Choice(["DONE", "FAILED", "REGULAR"]))
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
-@click.option("--tag", multiple=True)
+@click.option("-g", "--tag", multiple=True)
 @click.option("--url")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
@@ -243,7 +243,7 @@ def edit(ctx, uuid_text, index, **kwargs):
 @click.option("-u", "--url")
 @click.option("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
-@click.option("--tags", multiple=True)
+@click.option("-g", "--tags", multiple=True)
 @click.option("-d", "--due", type=CLI_DATETIME)
 @click.pass_context
 def add(ctx, name, when, url, scheduled_date, due, status, tags):
@@ -296,11 +296,11 @@ def show_tags(ctx):
 @click.option("-b", "--before-date")
 @click.option("-a", "--after-date")
 @click.option("-u", "--un-scheduled", is_flag=True, default=False)
-@click.option("-o", "--out-format", type=click.Choice(["str", "csv"]))
+@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
 @click.option("-h", "--head", type=int)
 @click.option("-s", "--sample", type=int)
 @click.option("--name-lenght-limit", type=int, default=50)
-@click.option("--tag", "tags", multiple=True)
+@click.option("-g", "--tag", "tags", multiple=True)
 @click.pass_context
 def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit, tags):
     task_list = ctx.obj["task_list"]
@@ -358,9 +358,12 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         click.echo(df)
     elif out_format == "str":
         click.echo(df.to_string())
+    elif out_format == "json":
+        click.echo(df.to_json(orient="records"))
     elif out_format == "csv":
         click.echo(df.to_csv())
-    click.echo(f"{len(df)} tasks matched")
+    if out_format != "json":
+        click.echo(f"{len(df)} tasks matched")
 
 
 if __name__ == "__main__":
