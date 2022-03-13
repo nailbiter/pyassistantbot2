@@ -197,6 +197,9 @@ class TagProcessor:
     def tag_uuid_to_tag_name(self, uuid):
         return self._get_tag_record_or_impute(uuid=uuid)
 
+    def remove_tag_by_uuid(self, uuid):
+        return self._coll.delete_one({"uuid": uuid})
+
 
 class UuidCacher:
     def __init__(self, cache_database_filename=".uuid_cache.db"):

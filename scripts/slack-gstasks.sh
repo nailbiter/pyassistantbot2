@@ -10,5 +10,5 @@ echo '```'>>$FILE
 ./gstasks.py ls -w $1 -b today --tag ! -o json|jq -r '.[]|.uuid'>$UUID_FILE
 echo '```'>>$FILE
 
-cat $UUID_FILE|parallel --jobs 1 ./gstasks.py edit -u {}
+cat $UUID_FILE|parallel --jobs 1 ./gstasks.py edit -u {} -g!
 cat $FILE | /snap/bin/jq -Rs '{text:.}'|curl -X POST -H 'Content-type: application/json' --data @- $SLACK_WEBHOOK

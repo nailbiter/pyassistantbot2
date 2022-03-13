@@ -5,14 +5,14 @@
 
        USAGE: ./forhabits/kostil/gstasks.py
 
- DESCRIPTION: 
+ DESCRIPTION:
 
      OPTIONS: ---
 REQUIREMENTS: ---
         BUGS: ---
        NOTES: ---
       AUTHOR: Alex Leontiev (alozz1991@gmail.com)
-ORGANIZATION: 
+ORGANIZATION:
      VERSION: ---
      CREATED: 2021-08-31T18:48:17.691280
     REVISION: ---
@@ -27,7 +27,7 @@ import logging
 import os
 from os import path
 from datetime import datetime
-#from __future__ import print_function
+# from __future__ import print_function
 import pickle
 import logging
 import re
@@ -167,7 +167,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 
     for _uuid_text, _index in tqdm.tqdm([(_fetch_uuid(x), None) for x in uuid_text]+[(None, x)for x in index]):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
-        #FIXME: later
+        # FIXME: later
         url_to_add = None
         if r["URL"]:
             url_to_add = r["URL"]
@@ -215,7 +215,7 @@ def edit(ctx, uuid_text, index, **kwargs):
     task_list = ctx.obj["task_list"]
     kwargs["URL"] = kwargs.pop("url")
     _process_tag = TagProcessor(task_list.get_coll("tags"))
-    kwargs["tags"] = [_process_tag(tag) for tag in kwargs.pop("tag")]
+    kwargs["tags"] = {_process_tag(tag) for tag in kwargs.pop("tag")}
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
@@ -233,7 +233,10 @@ def edit(ctx, uuid_text, index, **kwargs):
         logger.debug((r, idx))
         for k, v in kwargs.items():
             if v is not None:
-                r[k] = None if v == _UNSET else v
+                if k == "tags":
+                    r["tags"] = sorted(set(r["tags"]) ^ kwargs["tags"])
+                else:
+                    r[k] = None if v == _UNSET else v
         task_list.insert_or_replace_record(r, index=idx)
 
 
@@ -269,7 +272,13 @@ def show_uuid_cache():
     print(UuidCacher().get_all())
 
 
-@gstasks.command()
+@gstasks.group()
+@click.pass_context
+def tags(ctx):
+    pass
+
+
+@tags.command(name="show")
 @click.pass_context
 def show_tags(ctx):
     task_list = ctx.obj["task_list"]
@@ -293,18 +302,43 @@ def show_tags(ctx):
     print(tasks_df)
 
 
-@gstasks.command()
-@click.option("-w", "--when", multiple=True, type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")))
-@click.option("-x", "--text")
-@click.option("-b", "--before-date")
-@click.option("-a", "--after-date")
-@click.option("-u", "--un-scheduled", is_flag=True, default=False)
-@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
-@click.option("-h", "--head", type=int)
-@click.option("-s", "--sample", type=int)
-@click.option("--name-lenght-limit", type=int, default=50)
-@click.option("-g", "--tag", "tags", multiple=True)
+@tags.command(name="mv")
+@click.argument("tag_from")
+@click.argument("tag_to")
+@click.option("--remove-tag-from/--no-remove-tag-from", default=False)
 @click.pass_context
+def move_tags(ctx, tag_from, tag_to, remove_tag_from):
+    task_list = ctx.obj["task_list"]
+    tasks_df = task_list.get_all_tasks()
+    tasks_df = tasks_df.query("status!='DONE'")
+#    tasks_df = tasks_df.explode("tags")
+
+    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    tag_uuid_from, tag_uuid_to = [_process_tag(t) for t in [tag_from, tag_to]]
+
+    print((tag_uuid_from, tag_uuid_to))
+    tasks_df = tasks_df[tasks_df.tags.apply(lambda s:tag_uuid_from in s)]
+    for uuid_text in tqdm.tqdm(tasks_df.uuid):
+        r, idx = task_list.get_task(uuid_text=uuid_text, index=None)
+        r["tags"] = set(r["tags"])
+        r["tags"] = sorted(set(r["tags"])-{tag_uuid_from, } | {tag_uuid_to, })
+        task_list.insert_or_replace_record(r, index=idx)
+    if remove_tag_from:
+        print(_process_tag.remove_tag_by_uuid(tag_uuid_from))
+
+
+@ gstasks.command()
+@ click.option("-w", "--when", multiple=True, type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")))
+@ click.option("-x", "--text")
+@ click.option("-b", "--before-date")
+@ click.option("-a", "--after-date")
+@ click.option("-u", "--un-scheduled", is_flag=True, default=False)
+@ click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
+@ click.option("-h", "--head", type=int)
+@ click.option("-s", "--sample", type=int)
+@ click.option("--name-lenght-limit", type=int, default=50)
+@ click.option("-g", "--tag", "tags", multiple=True)
+@ click.pass_context
 def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit, tags):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
@@ -331,7 +365,7 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
 
     df = df.query("status!='DONE' and status!='FAILED'")
     if len(tags) > 0:
-        df = df[[set(_tags) == set(tags) for _tags in df.tags]]
+        df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
 #    print(df)
 #    print(list(df))
 #    print(df["scheduled_date"])
@@ -349,7 +383,7 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
 
     df = df.sort_values(by=["status", "due", "when", "uuid"], ascending=[
-                        False, True, True, True], kind="stable")
+        False, True, True, True], kind="stable")
     if head is not None:
         df = df.head(head)
     if sample is not None:
