@@ -188,3 +188,9 @@ def get_coll(mongo_pass, collection_name="alex.time", apply_options=False):
         coll = coll.with_options(codec_options=CodecOptions(
             tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
     return coll
+
+
+def spl(s, sep=None):
+    if sep is None:
+        s, sep = s[:-1], s[-1]
+    return s.split(sep)

@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 import subprocess
 import pymongo
 import _common
+from _common import spl
 import _common.simple_math_eval
 import heartbeat_time
 import os
@@ -50,6 +51,9 @@ def add_money(text, send_message_cb=None, mongo_client=None):
                 date = datetime.strptime(x, "%Y%m%d%H%M")
             elif len(x) == 6:
                 date = datetime.strptime(x, "%d%H%M")
+                now = datetime.now()
+                date = date.replace(**{k: getattr(now, k)
+                                    for k in spl("year,month")})
         else:
             break
     i += 1

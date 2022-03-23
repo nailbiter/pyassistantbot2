@@ -39,8 +39,11 @@ _SEP_TEXT = "------------------------------"
 @click.option("--todo-trello-list-id", default=os.environ["TODO_TRELLO_LIST_ID"])
 @click.option("--todo-trello-board-id", default=os.environ["TODO_BOARD_ID"])
 @click.option("--mongo-pass", envvar="MONGO_PASS")
+@click.option("--debug/--no-debug", default=False)
 @click.pass_context
-def task(ctx, todo_trello_list_id, mongo_pass, todo_trello_board_id):
+def task(ctx, todo_trello_list_id, mongo_pass, todo_trello_board_id, debug):
+    if debug:
+        logging.basicConfig(level=logging.INFO)
     ctx.ensure_object(dict)
     ctx.obj["trello_list_id"] = todo_trello_list_id
     ctx.obj["trello_board_id"] = todo_trello_board_id
