@@ -7,7 +7,9 @@ UUID_FILE=/tmp/task_uuids.txt
 rm -rf $FILE
 echo '```'>>$FILE
 ./gstasks.py ls -w $1 -b today --tag ! -o str>>$FILE
-./gstasks.py ls -w $1 -b today --tag ! -o json|jq -r '.[]|.uuid'>$UUID_FILE
+./gstasks.py ls -w $1 -b today --tag ! -o json|/snap/bin/jq -r '.[]|.uuid'>$UUID_FILE
+cat $UUID_FILE
+wc $UUID_FILE
 echo '```'>>$FILE
 
 cat $UUID_FILE|parallel --jobs 1 ./gstasks.py edit -u {} -g!
