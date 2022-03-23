@@ -53,7 +53,7 @@ def add_money(text, send_message_cb=None, mongo_client=None):
                 date = datetime.strptime(x, "%d%H%M")
                 now = datetime.now()
                 date = date.replace(**{k: getattr(now, k)
-                                    for k in spl("year,month")})
+                                    for k in spl("year,month,")})
         else:
             break
     i += 1
