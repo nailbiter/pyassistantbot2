@@ -35,7 +35,7 @@ import string
 def add_money(text, send_message_cb=None, mongo_client=None):
     amount, *other = re.split(r" +", text)
     amount = _common.simple_math_eval.simple_math_eval(amount)
-    assert amount != 0
+    assert amount != 0, "amount==0"
     tags = set()
     date = datetime.now()
     category = None
@@ -59,7 +59,7 @@ def add_money(text, send_message_cb=None, mongo_client=None):
             break
     i += 1
     comment = " ".join(other[i:])
-    assert category is not None
+    assert category is not None, "no category"
     mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
         "date": _common.to_utc_datetime(date),
         "comment": comment,
