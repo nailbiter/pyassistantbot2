@@ -35,6 +35,7 @@ import string
 def add_money(text, send_message_cb=None, mongo_client=None):
     amount, *other = re.split(r" +", text)
     amount = _common.simple_math_eval.simple_math_eval(amount)
+    assert amount != 0
     tags = set()
     date = datetime.now()
     category = None
@@ -57,7 +58,6 @@ def add_money(text, send_message_cb=None, mongo_client=None):
         else:
             break
     i += 1
-#    logging.warning((i, other[i:]))
     comment = " ".join(other[i:])
     assert category is not None
     mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
