@@ -66,7 +66,7 @@ def tags(mongo_pass):
         for t in r["tags"]:
             tags[t] = tags.get(t, 0) + 1
     df = pd.DataFrame([{"tag": k, "count": v}for k, v in tags.items()])
-    click.echo(df.to_string())
+    click.echo(df.sort_values(by="tag").to_string())
 
 
 @money.command()

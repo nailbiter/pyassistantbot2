@@ -106,16 +106,20 @@ def parse_cmdline_datetime(s, fail_callback=None):
                 res += timedelta(days=1)
             return datetime(**{k: getattr(res, k)
                                for k in "year,month,day".split(",")})
-        elif re.match(r"[\+-](\d+)d", s) is not None:
-            m = re.match(r"([\+-])(\d+)d", s)
+        elif (m := re.match(r"([\+-])(\d+)d", s)) is not None:
             res = datetime.now().date()
             res += (1 if m.group(1) == "+" else -1) * \
                 timedelta(days=int(m.group(2)))
             res = datetime(**{k: getattr(res, k)
                            for k in "year,month,day".split(",")})
             return res
-        else:
+        elif (m := re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", s)) is not None:
+            return datetime.strptime(s, "%Y-%m-%d %H:%M")
+        elif (m := re.match(r"\d{4}-\d{2}-\d{2}", s)) is not None:
             return datetime.strptime(s, "%Y-%m-%d")
+        else:
+            raise NotImplementedError(
+                f"cannot parse parse_cmdline_datetime \"{s}\"")
     except Exception:
         if fail_callback is not None:
             fail_callback(f"cannot parse {s}")

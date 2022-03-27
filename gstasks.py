@@ -248,12 +248,12 @@ def edit(ctx, uuid_text, index, **kwargs):
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
 @click.option("-g", "--tags", multiple=True)
 @click.option("-d", "--due", type=CLI_DATETIME)
-@click.option("--create-new-tag/--no-create-new-tag", default=True)
+@click.option("--create-new-tag/--no-create-new-tag", default=False)
 @click.pass_context
 def add(ctx, name, when, url, scheduled_date, due, status, tags, create_new_tag):
     #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
-    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    _process_tag = TagProcessor(task_list.get_coll("tags"), create_new_tag=create_new_tag)
     r = {
         "name": name,
         "URL": url,
@@ -366,9 +366,6 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
     df = df.query("status!='DONE' and status!='FAILED'")
     if len(tags) > 0:
         df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
-#    print(df)
-#    print(list(df))
-#    print(df["scheduled_date"])
     if un_scheduled and len(df) > 0:
         df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
     if len(when) > 0 and len(df) > 0:
@@ -381,6 +378,7 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         df = df[[sd >= after_date for sd in df["scheduled_date"]]]
     df.tags = df.tags.apply(lambda tags: ", ".join(
         sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
+    df.tags = df.tags.apply(lambda s:f"\"{s}\"")
 
     df = df.sort_values(by=["status", "due", "when", "uuid"], ascending=[
         False, True, True, True], kind="stable")
