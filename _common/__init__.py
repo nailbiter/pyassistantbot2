@@ -198,3 +198,19 @@ def spl(s, sep=None):
     if sep is None:
         s, sep = s[:-1], s[-1]
     return s.split(sep)
+
+
+def split_long_text(text, max_len, line_sep="\n"):
+    res = []
+    accum, buf = 0, []
+    for line in text.split(line_sep):
+        assert len(line) <= max_len, f"len(\"{line}\")={len(line)}>{max_len}"
+        if accum+len(line) > max_len:
+            res.append(line_sep.join(buf))
+            accum, buf = len(line), [line]
+        else:
+            accum += (len(line)+len(line_sep))
+            buf.append(line)
+    if len(buf) > 0:
+        res.append(line_sep.join(buf))
+    return res
