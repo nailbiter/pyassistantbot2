@@ -72,7 +72,8 @@ def add_money(text, send_message_cb=None, mongo_client=None):
 
 
 # https://dev-qa.com/320717/sending-large-messages-telegram-bot
-_TELEGRAM_MESSAGE_LEN_LIM = 4096
+#_TELEGRAM_MESSAGE_LEN_LIM = 4096
+_TELEGRAM_MESSAGE_LEN_LIM = 4000
 
 
 def os_command(text, send_message_cb=None, command=None, **_):
