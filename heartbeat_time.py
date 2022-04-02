@@ -32,6 +32,7 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageH
 from pymongo import MongoClient
 import _common
 import pandas as pd
+from telegram.error import RetryAfter, TimedOut
 
 
 class SendKeyboard():
@@ -73,9 +74,12 @@ class SendKeyboard():
                 is_no_bother, cat = sleeping_state
                 if not is_no_bother:
                     mess = self._send_message(f"""
-    got: {cat}
-    remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
+got: {cat}
+remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
                 """.strip())
+        except TimedOut as e:
+            self._logger.error(e)
+
             message_id = mess.message_id
 
         self._logger.warning("before sanitize")
