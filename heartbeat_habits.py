@@ -287,12 +287,16 @@ def show_habits(ctx, index, status, name, show_failed, count):
         assert len(idxs) == 1, (n, idxs)
         new_idxs.append(idxs[0])
 
+    remaining_counts = {}
     for i in set(list(index)+new_idxs):
         r = df.loc[i]
         _count = len(r["_ids"]) if count == 0 else count
+        remaining_counts[r["name"]] = len(r["_ids"])-_count
         for _id in r["_ids"][:_count]:
             job.set_status(
                 _id, status, name=r["name"], date=r.date.to_pydatetime())
+    if show_failed and len(list(index)+new_idxs) > 0:
+        print(f"remains: {remaining_counts}")
 
 
 if __name__ == "__main__":

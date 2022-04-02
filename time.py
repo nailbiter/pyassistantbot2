@@ -80,6 +80,8 @@ def show(ctx, remote_filter, local_filter, grep, grep_size):
     df = pd.DataFrame(
         coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
     df = df[["_id", "date", "category"]]
+    # server write date in JST <-- maybe, better to be changed to UTC?
+    df.date = df.date-timedelta(hours=9)
     df.date = df.date.apply(functools.partial(
         _common.to_utc_datetime, inverse=True))
     if local_filter:

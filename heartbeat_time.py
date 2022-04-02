@@ -51,28 +51,33 @@ class SendKeyboard():
         print(f"working at {_now.isoformat()}", flush=True)
         sleeping_state = _common.get_sleeping_state(self._mongo_client)
         self._logger.warning(f"sleeping_state: {sleeping_state}")
-        if sleeping_state is None:
-            mess = self._send_message("北鼻，你在幹什麼？",
-                                      parse_mode="Markdown",
-                                      reply_markup=InlineKeyboardMarkup([
-                                          [
-                                                 InlineKeyboardButton(
-                                                     self._keyboard[i+j], callback_data=str(i+j))
-                                                 for j in
-                                                 range(self._columns)
-                                                 if i+j < len(self._keyboard)
-                                          ]
-                                          for i
-                                          in range(0, len(self._keyboard), self._columns)
-                                      ]),
-                                      )
-        else:
-            is_no_bother, cat = sleeping_state
-            if not is_no_bother:
-                mess = self._send_message(f"""
-got: {cat}
-remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
-            """.strip())
+
+        message_id = "FAILURE"
+        try:
+            if sleeping_state is None:
+                mess = self._send_message("北鼻，你在幹什麼？",
+                                          parse_mode="Markdown",
+                                          reply_markup=InlineKeyboardMarkup([
+                                              [
+                                                     InlineKeyboardButton(
+                                                         self._keyboard[i+j], callback_data=str(i+j))
+                                                     for j in
+                                                     range(self._columns)
+                                                     if i+j < len(self._keyboard)
+                                              ]
+                                              for i
+                                              in range(0, len(self._keyboard), self._columns)
+                                          ]),
+                                          )
+            else:
+                is_no_bother, cat = sleeping_state
+                if not is_no_bother:
+                    mess = self._send_message(f"""
+    got: {cat}
+    remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
+                """.strip())
+            message_id = mess.message_id
+
         self._logger.warning("before sanitize")
         self.sanitize_mongo(
             "useless" if sleeping_state is None else sleeping_state[1])
@@ -80,7 +85,7 @@ remaining time to live: {str(datetime(1991+70,12,24)-_now)}
         res = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"].insert_one({
             "date": _now,
             "category": None,
-            "telegram_message_id": mess.message_id if sleeping_state is None else sleeping_state[1],
+            "telegram_message_id": message_id if sleeping_state is None else sleeping_state[1],
         })
         self._logger.warning(f"after insert: {res.inserted_id}")
 
