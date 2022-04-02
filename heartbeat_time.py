@@ -77,10 +77,9 @@ class SendKeyboard():
 got: {cat}
 remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
                 """.strip())
+            message_id = mess.message_id
         except TimedOut as e:
             self._logger.error(e)
-
-            message_id = mess.message_id
 
         self._logger.warning("before sanitize")
         self.sanitize_mongo(
