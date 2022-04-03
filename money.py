@@ -48,6 +48,17 @@ def _add_logger(f):
     return _f
 
 
+def _get_last_week_boundaries(day):
+    """
+    return (last_week_start_inc,last_week_end_exc) <-- both mondays
+    """
+    last_week_start_inc = day-timedelta(days=7)
+    last_week_start_inc = last_week_start_inc.replace(
+        hour=0, minute=0, second=0, microsecond=0)
+    last_week_start_inc -= timedelta(days=last_week_start_inc.weekday())
+    return last_week_start_inc, last_week_start_inc+timedelta(days=7)
+
+
 @click.group()
 @click.option("--debug/--no-debug", default=False)
 def money(debug):
@@ -71,13 +82,14 @@ def tags(mongo_pass):
 
 @money.command()
 @click.option("-d", "--day", type=click.DateTime(["%Y-%m-%d"]))
-@click.option("-m", "--mode", type=click.Choice(["daily", "monthly"]), default="daily")
+@click.option("-m", "--mode", type=click.Choice(["daily", "monthly", "weekly"]), default="daily")
 @click.option("--mongo-pass", envvar="MONGO_PASS", required=True)
 @click.option("--monthly-regular-payments-file-name", type=click.Path(), default=".monthly_regular_payments.json")
 @click.option("--monthly-channel-webhook", envvar="MONTHLY_CHANNEL_WEBHOOK")
+@click.option("--weekly-channel-webhook", envvar="WEEKLY_CHANNEL_WEBHOOK")
 @click.option("--send-slack-message/--no-send-slack-message", default=True)
 @_add_logger
-def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_channel_webhook, send_slack_message, logger=None):
+def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_channel_webhook, send_slack_message, weekly_channel_webhook, logger=None):
     if day is None:
         day = datetime.now()
     coll = _get_coll(mongo_pass)
@@ -121,6 +133,26 @@ def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_chan
         click.echo(money_df.to_string())
         if send_slack_message:
             requests.post(monthly_channel_webhook, json.dumps({
+                "text": f"""```{day.strftime("%Y-%m")}\n{money_df.to_string()}```"""
+            }),
+                headers={
+                    "Content-type": "application/json"
+            })
+    elif mode == "weekly":
+        assert weekly_channel_webhook is not None
+        last_week_start_inc, last_week_end_exc = _get_last_week_boundaries(day)
+        money_df = pd.DataFrame(
+            coll.find({"$and": [{"date": {"$gte": last_week_start_inc}}, {"date": {"$lt": last_week_end_exc}}]}, sort=[("date", pymongo.DESCENDING)]))
+        logger.info(money_df.to_csv())
+
+        money_df = money_df.groupby("category").agg({"amount": np.sum})
+        money_df = money_df.reset_index()
+        money_df = money_df.append(
+            {"category": "_total", "amount": money_df.amount.sum()}, ignore_index=True)
+        money_df = money_df.set_index("category")
+        click.echo(money_df.to_string())
+        if send_slack_message:
+            requests.post(weekly_channel_webhook, json.dumps({
                 "text": f"""```{day.strftime("%Y-%m")}\n{money_df.to_string()}```"""
             }),
                 headers={
