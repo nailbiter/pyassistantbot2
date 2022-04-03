@@ -167,5 +167,5 @@ def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_chan
 if __name__ == "__main__":
     if path.isfile(".envrc"):
         logging.warning("loading .envrc")
-        load_dotenv()
+        load_dotenv(".envrc")
     money()
