@@ -30,6 +30,8 @@ import pymongo
 import logging
 import json
 import requests
+from os import path
+from dotenv import load_dotenv
 
 
 def _get_coll(mongo_pass):
@@ -163,4 +165,7 @@ def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_chan
 
 
 if __name__ == "__main__":
+    if path.isfile(".envrc"):
+        logging.warning("loading .envrc")
+        load_dotenv()
     money()
