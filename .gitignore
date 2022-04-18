@@ -133,3 +133,5 @@ dmypy.json
 *.sqlite3
 .envrc
 .uuid_cache.db
+*.swo
+.german_grammar.db
