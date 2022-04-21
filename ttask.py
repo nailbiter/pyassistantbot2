@@ -35,7 +35,7 @@ import subprocess
 import functools
 
 
-def _ttask(mongo_url, head=None):
+def _ttask(mongo_url, head=None, grep=None):
     client = pymongo.MongoClient(mongo_url)
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
@@ -45,6 +45,8 @@ def _ttask(mongo_url, head=None):
         exit(0)
     df.date = df.date.apply(functools.partial(
         _common.to_utc_datetime, inverse=True))
+    if grep is not None:
+        df = df[df.content.apply(lambda s:grep in s)]
     l = len(df)
     if head is not None:
         df = df.head(head)
@@ -60,13 +62,14 @@ def _ttask(mongo_url, head=None):
 @click.option("-g", "--gstasks-line")
 @click.option("-h", "--head", type=int)
 @click.option("--repeat/--no-repeat", default=False)
-def ttask(index, mongo_url, gstasks_line, repeat, from_to, head):
+@click.option("-r", "--grep")
+def ttask(index, mongo_url, gstasks_line, repeat, from_to, head, grep):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(
         types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
-    df, coll = _ttask(mongo_url, head=head)
+    df, coll = _ttask(mongo_url, head=head, grep=grep)
 
     index = set(index)
     for a, b in from_to:
@@ -87,7 +90,7 @@ def ttask(index, mongo_url, gstasks_line, repeat, from_to, head):
                         "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
         click.echo(f"done {r._id} ({r.content})")
     if repeat:
-        _ttask(mongo_url, head=head)
+        _ttask(mongo_url, head=head, grep=grep)
 
 
 if __name__ == "__main__":
