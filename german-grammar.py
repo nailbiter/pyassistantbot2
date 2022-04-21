@@ -32,20 +32,15 @@ import _common.requests_cache
 #from lxml import html
 import pandas as pd
 from jinja2 import Template
-import requests_cache
 
 _PROCESSORS = {
     "prateritum": {
         "tpl": "https://www.verbformen.de/konjugation/indikativ/praeteritum/?w={{word}}",
         "sel": """#vVdBx > div.vTbl > table""",
     },
-    "konjunktiv2": {
-        "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)""",
-    },
     "perfekt": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": """section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
+        "sel":"""section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
     }
 }
 
@@ -55,18 +50,10 @@ _PROCESSORS = {
 @click.option("-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum")
 @click.argument("word")
 def german_grammar(mongo_url, type_, word):
-    logging.basicConfig(level='DEBUG')
     #    print(mongo_url)
-    session = requests_cache.CachedSession(
-        'demo_cache', expire_after=timedelta(days=1))
-
-#    get = _common.requests_cache.RequestGet(10, ".german_grammar.db")
-    get = session.get
-
+    get = _common.requests_cache.RequestGet(10, ".german_grammar.db")
     p = _PROCESSORS[type_]
-    r = get(Template(p["tpl"]).render({"word": word}))
-    status_code = r.status_code
-    text = r.text
+    status_code, text = get(Template(p["tpl"]).render({"word": word}))
     assert status_code == 200, (status_code, text)
     soup = BeautifulSoup(text, 'html.parser')
 #    logging.warning(text)
