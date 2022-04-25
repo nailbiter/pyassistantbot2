@@ -38,10 +38,18 @@ _PROCESSORS = {
         "tpl": "https://www.verbformen.de/konjugation/indikativ/praeteritum/?w={{word}}",
         "sel": """#vVdBx > div.vTbl > table""",
     },
+    "konjunktiv2-vergangenheit": {
+        "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
+        "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)""",
+    },
+    "konjunktiv2": {
+        "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
+        "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)""",
+    },
     "perfekt": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel":"""section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
-    }
+        "sel": """section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
+    },
 }
 
 
@@ -50,8 +58,7 @@ _PROCESSORS = {
 @click.option("-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum")
 @click.argument("word")
 def german_grammar(mongo_url, type_, word):
-    #    print(mongo_url)
-    get = _common.requests_cache.RequestGet(10, ".german_grammar.db")
+    get = _common.requests_cache.RequestGet(-1, ".german_grammar.db")
     p = _PROCESSORS[type_]
     status_code, text = get(Template(p["tpl"]).render({"word": word}))
     assert status_code == 200, (status_code, text)
