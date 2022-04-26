@@ -31,8 +31,11 @@ _REQUEST_GET_TABLE_NAME = "requests_get"
 
 class RequestGet:
     def __init__(self, cache_lifetime_min, cache_db, requests_kwargs={}):
+        """
+        @param cache_lifetime_min 0, -1 or >0 (0 means no cache, -1 means endless)
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
-        assert cache_lifetime_min >= 0
+        assert cache_lifetime_min >= 0 or cache_lifetime_min == -1
         self._cache_lifetime_min = cache_lifetime_min
         self._cache_db = cache_db
         self._requests_kwargs = requests_kwargs
@@ -65,15 +68,17 @@ class RequestGet:
         df.datetime = df.datetime.apply(datetime.fromisoformat)
         df.reply_json = df.reply_json.apply(json.loads)
         now = datetime.now()
-        if len(df) == 0 or ((now-df.datetime.iloc[0]).total_seconds()/60 >= self._cache_lifetime_min):
+        if len(df) == 0 or ((now-df.datetime.iloc[0]).total_seconds()/60 >= self._cache_lifetime_min > 0):
             r = self._get_url(url)
             r = self._r_to_json(r)
             pd.DataFrame([
                 {"datetime": now.isoformat(), "reply_json": json.dumps(r), "url": url}
             ]).to_sql(_REQUEST_GET_TABLE_NAME, conn, if_exists='append', index=None)
         else:
+            active_for = str(
+                now-df.datetime.iloc[0]) if self._cache_lifetime_min > 0 else "∞"
             self._logger.warning(
-                f"use cache (active for {str(now-df.datetime.iloc[0])})")
+                f"use cache (active for {active_for})")
             r = df.reply_json.iloc[0]
         conn.close()
         return r["status_code"], r["text"]
