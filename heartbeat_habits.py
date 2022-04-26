@@ -246,7 +246,7 @@ def heartbeat(ctx):
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-n", "--name", multiple=True)
 @click.option("-s", "--status", type=click.Choice(["DONE"]), default="DONE")
-@click.option("--show-failed/--no-show-failed", default=False)
+@click.option("--show-failed/--no-show-failed","-f/ ", default=False)
 @click.option("-c", "--count", default=1, type=int)
 @click.pass_context
 def show_habits(ctx, index, status, name, show_failed, count):

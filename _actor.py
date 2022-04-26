@@ -114,6 +114,22 @@ def ttask(content, send_message_cb=None, mongo_client=None):
     send_message_cb(f"log \"{content}\"")
 
 
+def nutrition(text, send_message_cb=None, mongo_client=None):
+    """
+    FIXME:
+        1. computation
+        2. show amount
+    """
+    amount, *tail = re.split(r"\s+", text, 1)
+    amount_kcal = _common.simple_math_eval.simple_math_eval(amount)
+    mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].insert_one({
+        "amount_kcal": amount_kcal
+        "tail": None if len(tail) == 0 else tail[0]
+        "date": _common.to_utc_datetime(),
+    })
+    send_message_cb(f"nutrition \"{(amount,tail)}\"")
+
+
 def sleepstart(cat, send_message_cb=None, mongo_client=None):
     if cat not in _SLEEP_CATS:
         send_message_cb(

@@ -151,7 +151,7 @@ def actor(telegram_token, chat_id, mongo_url):
             **{
                 k: getattr(_actor, k)
                 for k
-                in "sleepstart,sleepend,ttask,note,rand".split(",")
+                in "sleepstart,sleepend,ttask,note,rand,nutrition".split(",")
             },
             None: _actor.ttask,
         }
