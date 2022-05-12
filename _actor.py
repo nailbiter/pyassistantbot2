@@ -31,6 +31,7 @@ import logging
 import random
 import string
 import pandas as pd
+import functools
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
@@ -135,7 +136,9 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
 
     # FIXME: filter on server-side
     nutrition_df = pd.DataFrame(
-        mongo_client.logistics["alex.nutrition"].find())
+        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].find())
+    nutrition_df.date = nutrition_df.date.apply(
+        functools.partial(common.to_utc_datetime, inverse=True))
     nutrition_df = nutrition_df[nutrition_df.date.apply(
         lambda dt:dt.date()) == datetime.now().date()]
 
