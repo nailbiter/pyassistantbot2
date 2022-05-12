@@ -30,6 +30,7 @@ import os
 import logging
 import random
 import string
+import pandas as pd
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
