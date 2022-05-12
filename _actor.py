@@ -114,6 +114,10 @@ def ttask(content, send_message_cb=None, mongo_client=None):
     send_message_cb(f"log \"{content}\"")
 
 
+# https://www.nhs.uk/common-health-questions/food-and-diet/what-should-my-daily-intake-of-calories-be/
+_MAX_CAL_DAY = 2500
+
+
 def nutrition(text, send_message_cb=None, mongo_client=None):
     """
     FIXME:
@@ -127,7 +131,15 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
         "tail": None if len(tail) == 0 else tail[0],
         "date": _common.to_utc_datetime(),
     })
-    send_message_cb(f"nutrition \"{(amount_kcal,tail)}\"")
+
+    # FIXME: filter on server-side
+    nutrition_df = pd.DataFrame(
+        mongo_client.logistics["alex.nutrition"].find())
+    nutrition_df = nutrition_df[nutrition_df.date.apply(
+        lambda dt:dt.date()) == datetime.now().date()]
+
+    send_message_cb(
+        f"nutrition \"{(amount_kcal,tail)}\"; {_MAX_CAL_DAY-nutrition_df.amount_kcal.sum()} still remains")
 
 
 def sleepstart(cat, send_message_cb=None, mongo_client=None):
