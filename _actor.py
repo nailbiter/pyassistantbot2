@@ -138,7 +138,7 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
     nutrition_df = pd.DataFrame(
         mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].find())
     nutrition_df.date = nutrition_df.date.apply(
-        functools.partial(common.to_utc_datetime, inverse=True))
+        functools.partial(_common.to_utc_datetime, inverse=True))
     nutrition_df = nutrition_df[nutrition_df.date.apply(
         lambda dt:dt.date()) == datetime.now().date()]
 
