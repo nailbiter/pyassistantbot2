@@ -126,13 +126,16 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
         1. computation
         2. show amount
     """
-    amount, *tail = re.split(r"\s+", text, 1)
-    amount_kcal = _common.simple_math_eval.eval_expr(amount)
-    mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].insert_one({
-        "amount_kcal": amount_kcal,
-        "tail": None if len(tail) == 0 else tail[0],
-        "date": _common.to_utc_datetime(),
-    })
+    msgs = []
+    if len(text) > 0:
+        amount, *tail = re.split(r"\s+", text, 1)
+        amount_kcal = _common.simple_math_eval.eval_expr(amount)
+        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].insert_one({
+            "amount_kcal": amount_kcal,
+            "tail": None if len(tail) == 0 else tail[0],
+            "date": _common.to_utc_datetime(),
+        })
+        msgs.append(f"nutrition \"{(amount_kcal,tail)}\"")
 
     # FIXME: filter on server-side
     nutrition_df = pd.DataFrame(
@@ -141,9 +144,9 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
         functools.partial(_common.to_utc_datetime, inverse=True))
     nutrition_df = nutrition_df[nutrition_df.date.apply(
         lambda dt:dt.date()) == datetime.now().date()]
+    msgs.append(f"{_MAX_CAL_DAY-nutrition_df.amount_kcal.sum()} still remains")
 
-    send_message_cb(
-        f"nutrition \"{(amount_kcal,tail)}\"; {_MAX_CAL_DAY-nutrition_df.amount_kcal.sum()} still remains")
+    send_message_cb("; ".join(msgs))
 
 
 def sleepstart(cat, send_message_cb=None, mongo_client=None):
