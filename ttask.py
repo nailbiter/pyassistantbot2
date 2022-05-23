@@ -35,7 +35,7 @@ import subprocess
 import functools
 
 
-def _ttask(mongo_url, head=None, grep=None):
+def _ttask(mongo_url, head=None, grep=None, is_print=True):
     client = pymongo.MongoClient(mongo_url)
     coll = client[_common.MONGO_COLL_NAME]["alex.ttask"]
     df = pd.DataFrame(coll.find(filter={"status": {"$ne": "DONE"}}, sort=[
@@ -50,8 +50,9 @@ def _ttask(mongo_url, head=None, grep=None):
     l = len(df)
     if head is not None:
         df = df.head(head)
-    click.echo(df.drop(columns=["_id"]).to_string())
-    click.echo(f"{l} tasks")
+    if is_print:
+        click.echo(df.drop(columns=["_id"]).to_string())
+        click.echo(f"{l} tasks")
     return df, coll
 
 
@@ -69,14 +70,12 @@ def ttask(index, mongo_url, gstasks_line, repeat, from_to, head, grep):
         types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
-    df, coll = _ttask(mongo_url, head=head, grep=grep)
+    df, coll = _ttask(mongo_url, head=head, grep=grep, is_print=not repeat)
 
     index = set(index)
     for a, b in from_to:
         index |= set(range(a, b+1))
     index = sorted(index)
-#    print(index)
-#    exit(0)
 
     for i in index:
         r = df.loc[i]

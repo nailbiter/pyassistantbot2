@@ -90,8 +90,9 @@ def tags(mongo_pass):
 @click.option("--monthly-channel-webhook", envvar="MONTHLY_CHANNEL_WEBHOOK")
 @click.option("--weekly-channel-webhook", envvar="WEEKLY_CHANNEL_WEBHOOK")
 @click.option("--send-slack-message/--no-send-slack-message", default=True)
+@click.option("--show-top-expenses", type=int)
 @_add_logger
-def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_channel_webhook, send_slack_message, weekly_channel_webhook, logger=None):
+def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_channel_webhook, send_slack_message, weekly_channel_webhook, show_top_expenses, logger=None):
     if day is None:
         day = datetime.now()
     coll = _get_coll(mongo_pass)
@@ -147,15 +148,24 @@ def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_chan
             coll.find({"$and": [{"date": {"$gte": last_week_start_inc}}, {"date": {"$lt": last_week_end_exc}}]}, sort=[("date", pymongo.DESCENDING)]))
         logger.info(money_df.to_csv())
 
+        if show_top_expenses is not None:
+            show_top_expenses = money_df.sort_values(by="amount", ascending=False)[
+                :show_top_expenses]
         money_df = money_df.groupby("category").agg({"amount": np.sum})
         money_df = money_df.reset_index()
         money_df = money_df.append(
             {"category": "_total", "amount": money_df.amount.sum()}, ignore_index=True)
         money_df = money_df.set_index("category")
         click.echo(money_df.to_string())
+        if show_top_expenses is not None:
+            click.echo(show_top_expenses)
         if send_slack_message:
+            text = f"""{day.strftime("%Y-%m")}\n{money_df.to_string()}"""
+            if show_top_expenses is not None:
+                text += "\n"+show_top_expenses.to_string()
+            text = f"```{text}```"
             requests.post(weekly_channel_webhook, json.dumps({
-                "text": f"""```{day.strftime("%Y-%m")}\n{money_df.to_string()}```"""
+                "text": text,
             }),
                 headers={
                     "Content-type": "application/json"
