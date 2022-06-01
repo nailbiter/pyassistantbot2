@@ -160,7 +160,7 @@ def show(day, mongo_pass, mode, monthly_regular_payments_file_name, monthly_chan
         if show_top_expenses is not None:
             click.echo(show_top_expenses)
         if send_slack_message:
-            text = f"""{day.strftime("%Y-%m")}\n{money_df.to_string()}"""
+            text = f"""{day.strftime("%Y-%m-%d")}\n{money_df.to_string()}"""
             if show_top_expenses is not None:
                 text += "\n"+show_top_expenses.to_string()
             text = f"```{text}```"

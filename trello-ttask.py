@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """===============================================================================
 
-        FILE: fordatawise/non-reusable/ttask.py
+        FILE: ./non-reusable/ttask.py
 
-       USAGE: ./fordatawise/non-reusable/ttask.py
+       USAGE: ./non-reusable/ttask.py
 
  DESCRIPTION: 
 
