@@ -66,13 +66,33 @@ def _ctx_obj_to_filter(obj):
     return res
 
 
+def _align_dt(dt, td, align_logic="left"):
+    assert align_logic in ["left"]
+    ts = td.total_seconds()
+    return datetime.fromtimestamp((dt.timestamp()//ts)*ts)
+
+
+def _fill_gaps(dates, td=timedelta(minutes=30)):
+    """
+    return sorted values
+    """
+#    click.echo(dates)
+    dates = sorted({_align_dt(dt, td) for dt in dates})
+    full_dates = [dates[0]]
+    while full_dates[-1] < dates[-1]:
+        full_dates.append(full_dates[-1]+td)
+    assert set(full_dates) >= set(dates), set(dates)-set(full_dates)
+    return sorted(set(full_dates)-set(dates))
+
+
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-g", "--grep", type=click.Choice(_TIME_CATEGORIES))
 @click.option("--grep-size", type=int, default=1)
+@click.option("-i", "--impute", type=click.Choice(_TIME_CATEGORIES))
 @click.pass_context
-def show(ctx, remote_filter, local_filter, grep, grep_size):
+def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
     coll = _common.get_coll(ctx.obj["mongo_pass"], apply_options=False)
     filter_ = _ctx_obj_to_filter(ctx.obj)
     if remote_filter is not None:
@@ -84,6 +104,22 @@ def show(ctx, remote_filter, local_filter, grep, grep_size):
     df.date = df.date-timedelta(hours=9)
     df.date = df.date.apply(functools.partial(
         _common.to_utc_datetime, inverse=True))
+
+#    click.echo(df)
+    to_impute = _fill_gaps(df.date)
+    if len(to_impute) > 0:
+        to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
+        logging.warning(
+            f"{len(to_impute)} dates can be imputed ({to_impute[0]}..{to_impute[-1]})")
+        if impute is None:
+            logging.warning(f"use `-i useless` to perform imputation")
+        else:
+            logging.warning(f"perform imputation with \"{impute}\"")
+            res = coll.insert_many(
+                [{"date": dt, "category": impute, "telegram_message_id": "imputation"} for dt in to_impute])
+            logging.warning(f"exit {res} after imputation")
+            exit(0)
+
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
 
