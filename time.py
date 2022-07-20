@@ -27,6 +27,10 @@ import logging
 from datetime import datetime, timedelta
 import numpy as np
 import functools
+import inspect
+import types
+from typing import cast
+#import logging
 
 _TIME_CATEGORIES = [
     "useless",
@@ -107,18 +111,6 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
 
 #    click.echo(df)
     to_impute = _fill_gaps(df.date)
-    if len(to_impute) > 0:
-        to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
-        logging.warning(
-            f"{len(to_impute)} dates can be imputed ({to_impute[0]}..{to_impute[-1]})")
-        if impute is None:
-            logging.warning(f"use `-i useless` to perform imputation")
-        else:
-            logging.warning(f"perform imputation with \"{impute}\"")
-            res = coll.insert_many(
-                [{"date": dt, "category": impute, "telegram_message_id": "imputation"} for dt in to_impute])
-            logging.warning(f"exit {res} after imputation")
-            exit(0)
 
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
@@ -133,6 +125,20 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
         else:
             print(f"no category \"{grep_cat}\"!")
 
+    if len(to_impute) > 0:
+        to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
+        # FIXME: print consecutive periods
+        logging.warning(
+            f"{len(to_impute)} dates can be imputed [{to_impute[0]}..{to_impute[-1]}]")
+        if impute is None:
+            logging.warning(f"use `-i useless` to perform imputation")
+        else:
+            logging.warning(f"perform imputation with \"{impute}\"")
+            res = coll.insert_many(
+                [{"date": dt, "category": impute, "telegram_message_id": "imputation"} for dt in to_impute])
+            logging.warning(f"exit {res} after imputation")
+#            exit(0)
+
 
 @time_kostil.command()
 @click.pass_context
@@ -140,13 +146,25 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
 @click.argument("start", type=int)
 @click.option("-e", "--endpoint-inclusive", type=int)
 def edit(ctx, category, start, endpoint_inclusive):
-    logger = logging.getLogger("edit")
+    #    logger = logging.getLogger("edit")
+
+    # taken from https://stackoverflow.com/a/13514318
+    this_function_name = cast(
+        types.FrameType, inspect.currentframe()).f_code.co_name
+    logger = logging.getLogger(__name__).getChild(this_function_name)
+
     if endpoint_inclusive is None:
         endpoint_inclusive = start
     assert 0 <= start <= endpoint_inclusive
     coll = _common.get_coll(ctx.obj["mongo_pass"])
+
+    limit = ctx.obj["limit"]
+    if endpoint_inclusive+1 > limit:
+        logger.warning(f"update limit: {limit} --> {endpoint_inclusive+1}")
+        limit = endpoint_inclusive+1
+
     df = pd.DataFrame(
-        coll.find(sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
+        coll.find(sort=[("date", pymongo.DESCENDING)], limit=limit))
     records = df.to_dict(orient="records")[start:endpoint_inclusive+1]
     logger.info(records)
     for r in records:
