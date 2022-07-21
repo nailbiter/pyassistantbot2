@@ -214,3 +214,47 @@ def split_long_text(text, max_len, line_sep="\n"):
     if len(buf) > 0:
         res.append(line_sep.join(buf))
     return res
+
+
+def _align_dt(dt, td, align_logic="left"):
+    assert align_logic in ["left"]
+    ts = td.total_seconds()
+    return datetime.fromtimestamp((dt.timestamp()//ts)*ts)
+
+
+def consecutive_periods(dates, td, is_normalize=True):
+    if is_normalize:
+        dates = sorted({_align_dt(dt, td) for dt in dates})
+    res = [{"start": dates[0]}]
+    res[-1]["anchor"] = res[-1]["start"]
+    while True:
+        if res[-1]["anchor"]+td in dates:
+            #            print(res)
+            res[-1]["anchor"] += td
+#            print(res)
+            # exit(1)
+        else:
+            res[-1]["end"] = res[-1].pop("anchor")
+            #print((res[-1], dates[-1], len(dates), min(dates),len(res)))
+            if res[-1]["end"] >= dates[-1]:
+                break
+            else:
+                res.append({"start": res[-1]["end"]+td})
+                while res[-1]["start"] not in dates:
+                    res[-1]["start"] += td
+                res[-1]["anchor"] = res[-1]["start"]
+    return res
+
+
+def fill_gaps(dates, td, is_normalize=True):
+    """
+    return sorted values
+    """
+#    click.echo(dates)
+    if is_normalize:
+        dates = sorted({_align_dt(dt, td) for dt in dates})
+    full_dates = [dates[0]]
+    while full_dates[-1] < dates[-1]:
+        full_dates.append(full_dates[-1]+td)
+    assert set(full_dates) >= set(dates), set(dates)-set(full_dates)
+    return sorted(set(full_dates)-set(dates))

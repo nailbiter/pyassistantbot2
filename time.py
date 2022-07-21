@@ -45,6 +45,8 @@ _TIME_CATEGORIES = [
     "reading",
 ]
 
+_TD = timedelta(minutes=30)
+
 
 @click.group()
 @click.option("--mongo_pass", envvar="MONGO_PASS", required=True)
@@ -70,25 +72,6 @@ def _ctx_obj_to_filter(obj):
     return res
 
 
-def _align_dt(dt, td, align_logic="left"):
-    assert align_logic in ["left"]
-    ts = td.total_seconds()
-    return datetime.fromtimestamp((dt.timestamp()//ts)*ts)
-
-
-def _fill_gaps(dates, td=timedelta(minutes=30)):
-    """
-    return sorted values
-    """
-#    click.echo(dates)
-    dates = sorted({_align_dt(dt, td) for dt in dates})
-    full_dates = [dates[0]]
-    while full_dates[-1] < dates[-1]:
-        full_dates.append(full_dates[-1]+td)
-    assert set(full_dates) >= set(dates), set(dates)-set(full_dates)
-    return sorted(set(full_dates)-set(dates))
-
-
 @time_kostil.command()
 @click.option("-r", "--remote-filter", type=click.Choice(_TIME_CATEGORIES))
 @click.option("-l", "--local-filter", type=click.Choice(_TIME_CATEGORIES))
@@ -110,7 +93,7 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
         _common.to_utc_datetime, inverse=True))
 
 #    click.echo(df)
-    to_impute = _fill_gaps(df.date)
+    to_impute = _common.fill_gaps(df.date, _TD)
 
     if local_filter:
         df = df[[category == local_filter for category in df["category"]]]
@@ -129,7 +112,7 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
         to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
         # FIXME: print consecutive periods
         logging.warning(
-            f"{len(to_impute)} dates can be imputed [{to_impute[0]}..{to_impute[-1]}]")
+            f"{len(to_impute)} dates can be imputed {_common.consecutive_periods(to_impute,_TD)}")
         if impute is None:
             logging.warning(f"use `-i useless` to perform imputation")
         else:
