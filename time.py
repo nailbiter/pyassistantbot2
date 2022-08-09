@@ -112,7 +112,7 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
         to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
         # FIXME: print consecutive periods
         logging.warning(
-            f"{len(to_impute)} dates can be imputed {_common.consecutive_periods(to_impute,_TD)}")
+            f"{len(to_impute)} dates can be imputed {[(r['start'].strftime('%Y-%m-%d %H:%M'), r['end'].strftime('%Y-%m-%d %H:%M')) for r in _common.consecutive_periods(to_impute,_TD)]}")
         if impute is None:
             logging.warning(f"use `-i useless` to perform imputation")
         else:

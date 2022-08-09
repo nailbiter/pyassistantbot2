@@ -229,3 +229,16 @@ class UuidCacher:
         df.datetime = df.datetime.apply(datetime.fromisoformat)
         df = df.sort_values(by="datetime")
         return df
+
+
+class StringContractor:
+    def __init__(self, maxlen=20, ellipsis_symbol="..."):
+        assert maxlen > len(ellipsis_symbol)
+        self._maxlen = maxlen
+        self._ellipsis_symbol = ellipsis_symbol
+
+    def __call__(self, s):
+        if len(s) > self._maxlen:
+            s = s[:self._maxlen-len(self._ellipsis_symbol)
+                  ] + self._ellipsis_symbol
+        return s

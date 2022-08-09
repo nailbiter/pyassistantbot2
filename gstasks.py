@@ -27,7 +27,6 @@ import logging
 import os
 from os import path
 from datetime import datetime
-# from __future__ import print_function
 import pickle
 import logging
 import re
@@ -253,7 +252,8 @@ def edit(ctx, uuid_text, index, **kwargs):
 def add(ctx, name, when, url, scheduled_date, due, status, tags, create_new_tag):
     #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
-    _process_tag = TagProcessor(task_list.get_coll("tags"), create_new_tag=create_new_tag)
+    _process_tag = TagProcessor(task_list.get_coll(
+        "tags"), create_new_tag=create_new_tag)
     r = {
         "name": name,
         "URL": url,
@@ -327,18 +327,18 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
         print(_process_tag.remove_tag_by_uuid(tag_uuid_from))
 
 
-@ gstasks.command()
-@ click.option("-w", "--when", multiple=True, type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")))
-@ click.option("-x", "--text")
-@ click.option("-b", "--before-date")
-@ click.option("-a", "--after-date")
-@ click.option("-u", "--un-scheduled", is_flag=True, default=False)
-@ click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
-@ click.option("-h", "--head", type=int)
-@ click.option("-s", "--sample", type=int)
-@ click.option("--name-lenght-limit", type=int, default=50)
-@ click.option("-g", "--tag", "tags", multiple=True)
-@ click.pass_context
+@gstasks.command()
+@click.option("-w", "--when", multiple=True, type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")))
+@click.option("-x", "--text")
+@click.option("-b", "--before-date")
+@click.option("-a", "--after-date")
+@click.option("-u", "--un-scheduled", is_flag=True, default=False)
+@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
+@click.option("-h", "--head", type=int)
+@click.option("-s", "--sample", type=int)
+@click.option("--name-lenght-limit", type=int, default=50)
+@click.option("-g", "--tag", "tags", multiple=True)
+@click.pass_context
 def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit, tags):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
@@ -378,7 +378,7 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         df = df[[sd >= after_date for sd in df["scheduled_date"]]]
     df.tags = df.tags.apply(lambda tags: ", ".join(
         sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
-    df.tags = df.tags.apply(lambda s:f"\"{s}\"")
+    df.tags = df.tags.apply(lambda s: f"\"{s}\"")
 
     df = df.sort_values(by=["status", "due", "when", "uuid"], ascending=[
         False, True, True, True], kind="stable")
