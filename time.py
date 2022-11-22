@@ -30,6 +30,7 @@ import functools
 import inspect
 import types
 from typing import cast
+from _common.simple_math_eval import eval_expr
 #import logging
 
 _TIME_CATEGORIES = [
@@ -48,13 +49,24 @@ _TIME_CATEGORIES = [
 _TD = timedelta(minutes=30)
 
 
+def _process_limit(limit_str):
+    coeff = 1
+    for suff, hours_in_unit in {"d": 24}.items():
+        if limit_str.endswith(suff):
+            limit_str = limit_str[:-1]
+            coeff = hours_in_unit*(timedelta(hours=1)/_TD)
+            break
+    return int(eval_expr(limit_str)*coeff)
+
+
 @click.group()
 @click.option("--mongo_pass", envvar="MONGO_PASS", required=True)
-@click.option("-l", "--limit", type=int, default=24*2, envvar="TIME_KOSTIL_LIMIT")
+@click.option("-l", "--limit", default="24*2", envvar="TIME_KOSTIL_LIMIT")
 @click.option("-d", "--day", type=click.DateTime(["%Y-%m-%d"]))
 @click.pass_context
 def time_kostil(ctx, **kwargs):
     logging.basicConfig(level=logging.INFO)
+    kwargs["limit"] = _process_limit(kwargs["limit"])
     ctx.ensure_object(dict)
     for k, v in kwargs.items():
         ctx.obj[k] = v
