@@ -53,18 +53,25 @@ class RequestGet:
         r = {"status_code": status_code, "text": text}
         return r
 
-    def __call__(self, url):
+    def __call__(self, url, is_force_cache_miss=False):
         """
         return (return_code, text)
         """
         if self._cache_lifetime_min == 0:
+            # FIXME: should return 2 arguments to satisfy the interface contract
             return self._get_url(url)
+
         conn = self._get_conn()
-        try:
-            df = pd.read_sql_query(
-                f'SELECT reply_json, datetime FROM {_REQUEST_GET_TABLE_NAME} where url="{url}" order by datetime desc', conn)
-        except pd.io.sql.DatabaseError:
-            df = pd.DataFrame([], columns=["reply_json", "datetime"])
+        _NULL_ANSWER = pd.DataFrame([], columns=["reply_json", "datetime"])
+        if is_force_cache_miss:
+            df = _NULL_ANSWER
+        else:
+            try:
+                df = pd.read_sql_query(
+                    f'SELECT reply_json, datetime FROM {_REQUEST_GET_TABLE_NAME} where url="{url}" order by datetime desc', conn)
+            except pd.io.sql.DatabaseError:
+                df = _NULL_ANSWER
+
         df.datetime = df.datetime.apply(datetime.fromisoformat)
         df.reply_json = df.reply_json.apply(json.loads)
         now = datetime.now()

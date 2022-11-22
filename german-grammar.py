@@ -32,42 +32,76 @@ import _common.requests_cache
 #from lxml import html
 import pandas as pd
 from jinja2 import Template
+from lxml import html, etree
 
 _PROCESSORS = {
     "prateritum": {
         "tpl": "https://www.verbformen.de/konjugation/indikativ/praeteritum/?w={{word}}",
         "sel": """#vVdBx > div.vTbl > table""",
+        "method": "css-select",
     },
     "konjunktiv2-vergangenheit": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
         "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)""",
+        "method": "css-select",
     },
     "konjunktiv2": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
         "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)""",
+        "method": "css-select",
     },
     "perfekt": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
         "sel": """section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
+        "method": "css-select",
+    },
+    "partizip2": {
+        "tpl": "https://www.verbformen.de/konjugation/{{word}}.htm",
+        "sel": "/html/body/article/div[1]/div[2]/div/section[7]/div[2]/div[4]/table",
+        "method": "xpath",
     },
 }
+
+
+def fetch_element(text, sel, method):
+    assert method in "xpath css-select".split(), method
+    if method == "css-select":
+        soup = BeautifulSoup(text, 'html.parser')
+        return str(soup.select(sel))
+    elif method == "xpath":
+        el = html.fromstring(text)
+        els = el.xpath(sel)
+        return "\n".join([etree.tostring(el).decode() for el in els])
+    else:
+        raise NotImplementedError(method)
 
 
 @click.command()
 @click.option("--mongo-url", required=True, envvar="PYASSISTANTBOT_MONGO_URL")
 @click.option("-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum")
 @click.argument("word")
-def german_grammar(mongo_url, type_, word):
-    get = _common.requests_cache.RequestGet(-1, ".german_grammar.db")
+@click.option("-c", "--cache-lifetime-min", type=int, default=-1)
+@click.option("--force-cache-miss/--no-force-cache-miss", "-f/ ", default=False)
+def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss):
+    get = _common.requests_cache.RequestGet(
+        cache_lifetime_min,
+        ".german_grammar.db",
+    )
     p = _PROCESSORS[type_]
-    status_code, text = get(Template(p["tpl"]).render({"word": word}))
+    res = get(
+        Template(p["tpl"]).render({"word": word}),
+        is_force_cache_miss=force_cache_miss,
+    )
+#    logging.warning(res)
+    status_code, text = res
     assert status_code == 200, (status_code, text)
-    soup = BeautifulSoup(text, 'html.parser')
-#    logging.warning(text)
 
     with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
         f.write(text)
-    df, = pd.read_html(str(soup.select(p["sel"])))
+    text = fetch_element(text, p["sel"], p["method"])
+    with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
+        f.write(text)
+    df, = pd.read_html(text)
     print(df)
 
 
