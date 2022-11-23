@@ -42,25 +42,32 @@ _PROCESSORS = {
     },
     "konjunktiv2-vergangenheit": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)""",
+        "sel": ["""section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)"""],
         "method": "css-select",
     },
     "konjunktiv2": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)""",
+        "sel": ["""section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)"""],
         "method": "css-select",
     },
     "perfekt": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": """section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)""",
+        "sel": ["""section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)"""],
         "method": "css-select",
     },
     "partizip2": {
         "tpl": "https://www.verbformen.de/konjugation/{{word}}.htm",
-        "sel": "/html/body/article/div[1]/div[2]/div/section[7]/div[2]/div[4]/table",
+        "sel": [
+            "/html/body/article/div[1]/div[2]/div/section[7]/div[2]/div[4]/table",
+            "/html/body/article/div[1]/div[4]/div/section[7]/div[2]/div[4]/table"
+        ],
         "method": "xpath",
     },
 }
+
+
+class FetchElementException(Exception):
+    pass
 
 
 def fetch_element(text, sel, method):
@@ -69,9 +76,13 @@ def fetch_element(text, sel, method):
         soup = BeautifulSoup(text, 'html.parser')
         return str(soup.select(sel))
     elif method == "xpath":
-        el = html.fromstring(text)
-        els = el.xpath(sel)
-        return "\n".join([etree.tostring(el).decode() for el in els])
+        try:
+            el = html.fromstring(text)
+            els = el.xpath(sel)
+            assert len(els) > 0
+            return "\n".join([etree.tostring(el).decode() for el in els])
+        except (AssertionError, etree.ParserError) as e:
+            raise FetchElementException(e)
     else:
         raise NotImplementedError(method)
 
@@ -98,7 +109,13 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss)
 
     with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
         f.write(text)
-    text = fetch_element(text, p["sel"], p["method"])
+    for sel in p["sel"]:
+        try:
+            text = fetch_element(text, sel, p["method"])
+            break
+        except FetchElementException:
+            logging.error(f"attempt with sel=\"{sel}\" failed")
+            pass
     with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
         f.write(text)
     df, = pd.read_html(text)
