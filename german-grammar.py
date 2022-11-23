@@ -93,7 +93,8 @@ def fetch_element(text, sel, method):
 @click.argument("word")
 @click.option("-c", "--cache-lifetime-min", type=int, default=-1)
 @click.option("--force-cache-miss/--no-force-cache-miss", "-f/ ", default=False)
-def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss):
+@click.option("-o", "--output-format", type=click.Choice("def json".split()), default="def")
+def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss, output_format):
     get = _common.requests_cache.RequestGet(
         cache_lifetime_min,
         ".german_grammar.db",
@@ -119,7 +120,11 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss)
     with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
         f.write(text)
     df, = pd.read_html(text)
-    print(df)
+
+    if output_format == "def":
+        click.echo(df)
+    elif output_format == "json":
+        click.echo(df.to_json(force_ascii=False))
 
 
 if __name__ == "__main__":
