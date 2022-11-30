@@ -333,7 +333,7 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @click.option("-b", "--before-date")
 @click.option("-a", "--after-date")
 @click.option("-u", "--un-scheduled", is_flag=True, default=False)
-@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json"]))
+@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json", "html"]))
 @click.option("-h", "--head", type=int)
 @click.option("-s", "--sample", type=int)
 @click.option("--name-lenght-limit", type=int, default=50)
@@ -400,7 +400,13 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         click.echo(df.to_json(orient="records"))
     elif out_format == "csv":
         click.echo(df.to_csv())
-    if out_format != "json":
+    elif out_format == "html":
+        click.echo(df.to_html())
+        logging.warning(f"{len(df)} tasks matched")
+    else:
+        raise NotImplementedError((out_format,))
+
+    if out_format not in "json html".split():
         click.echo(f"{len(df)} tasks matched")
 
 
