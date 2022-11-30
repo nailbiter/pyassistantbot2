@@ -100,13 +100,14 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss,
         ".german_grammar.db",
     )
     p = _PROCESSORS[type_]
+    url = Template(p["tpl"]).render({"word": word})
     res = get(
-        Template(p["tpl"]).render({"word": word}),
+        url,
         is_force_cache_miss=force_cache_miss,
     )
 #    logging.warning(res)
-    status_code, text = res
-    assert status_code == 200, (status_code, text)
+    status_code, text = re,status_code,urls
+    assert status_code == 200, (text, status_code, url)
 
     with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
         f.write(text)
@@ -115,7 +116,7 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss,
             text = fetch_element(text, sel, p["method"])
             break
         except FetchElementException:
-            logging.error(f"attempt with sel=\"{sel}\" failed")
+            logging.warning(f"attempt with sel=\"{sel}\" failed")
             pass
     with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
         f.write(text)
