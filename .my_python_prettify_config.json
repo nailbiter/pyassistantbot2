@@ -1,0 +1,3 @@
+{
+  "prettify_command_template": "black {{input_file}}"
+}
