@@ -115,25 +115,30 @@ class TaskList:
     def insert_or_replace_record(self, r, index=None, action_comment=None):
         action = "inserting" if index is None else "replacing"
 
+        assert action in "inserting replacing".split()
         print(f"{action} {r}", file=sys.stderr)
-        if index is None:
+        if action == "inserting":
             index = len(self.get_all_tasks())
+
+        log_kwargs = {}
+        if action == "replacing":
+            log_kwargs["previous_r"] = self.get_coll().find_one({"uuid": r["uuid"]})
 
         if "uuid" not in r:
             r["uuid"] = str(uuid.uuid4())
+
         # FIXMe(done): separate `insertion_date` and `last_update_date`
         if action == "inserting":
             r["_insertion_date"] = datetime.now()
+        elif action == "replacing":
+            r["_insertion_date"] = log_kwargs["previous_r"]["_insertion_date"]
         r["_last_modification_date"] = datetime.now()
 
         # FIXME: why this happens?
         for k in ["due", "scheduled_date"]:
             if pd.isna(r[k]):
                 r[k] = None
-        # exit(1)
-        log_kwargs = {}
-        if action == "replacing":
-            log_kwargs["previous_r"] = self.get_coll().find_one({"uuid": r["uuid"]})
+
         self._log(action=action, r=r, action_comment=action_comment, **log_kwargs)
         self.get_coll().replace_one(
             filter={"uuid": r["uuid"]}, replacement=r, upsert=True
