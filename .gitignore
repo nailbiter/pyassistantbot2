@@ -136,3 +136,6 @@ dmypy.json
 *.swo
 .german_grammar.db
 demo_cache.sqlite
+
+#gstasks ls html's output
+tasks.html

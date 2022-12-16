@@ -41,6 +41,8 @@ from jinja2 import Template
 
 from _common import parse_cmdline_datetime, run_trello_cmd
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
+from _gstasks.html_formatter import format_html
+from _gstasks.additional_states import ADDITIONAL_STATES
 
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
@@ -49,6 +51,7 @@ _SCOPES = [
 ]
 
 
+# @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
 @click.option("--debug/--no-debug", default=False)
 @click.option("--list-id", envvar="TODO_TRELLO_LIST_ID", required=True)
@@ -212,7 +215,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-n", "--name")
-@click.option("-t", "--status", type=click.Choice(["DONE", "FAILED", "REGULAR"]))
+@click.option("-t", "--status", type=click.Choice(["DONE", "FAILED", "REGULAR",*ADDITIONAL_STATES]))
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
 @click.option("-g", "--tag", multiple=True)
@@ -266,30 +269,23 @@ def edit(ctx, uuid_text, index, action_comment, **kwargs):
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
     required=True,
 )
-@click.option("-u", "--url")
+@click.option("-u", "--url", "URL")
 @click.option("-s", "--scheduled-date", type=CLI_DATETIME)
-@click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
+@click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE",*ADDITIONAL_STATES]))
 @click.option("-g", "--tags", multiple=True)
 @click.option("-d", "--due", type=CLI_DATETIME)
+@click.option("-c", "--comment")
 @click.option("--create-new-tag/--no-create-new-tag", default=False)
 @click.pass_context
-def add(ctx, name, when, url, scheduled_date, due, status, tags, create_new_tag):
-    #    scheduled_date = parse_cmdline_datetime(scheduled_date)
+def add(ctx, create_new_tag, **kwargs):
     task_list = ctx.obj["task_list"]
     _process_tag = TagProcessor(
         task_list.get_coll("tags"), create_new_tag=create_new_tag
     )
-    r = {
-        "name": name,
-        "URL": url,
-        "scheduled_date": scheduled_date,
-        "status": status,
-        "when": when,
-        "due": due,
-        "tags": [_process_tag(tag) for tag in tags],
-    }
-    uuid = task_list.insert_or_replace_record(r)
-    UuidCacher().add(uuid, name)
+
+    kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
+    uuid = task_list.insert_or_replace_record({**kwargs})
+    UuidCacher().add(uuid, kwargs["name"])
 
 
 @gstasks.command()
@@ -377,6 +373,12 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @click.option("-s", "--sample", type=int)
 @click.option("--name-lenght-limit", type=int, default=50)
 @click.option("-g", "--tag", "tags", multiple=True)
+@click.option(
+    "--html-out-config",
+    type=click.Path(dir_okay=False, exists=True),
+    show_envvar=True,
+    envvar="GSTASKS_LS_HTML_OUT_CONFIG",
+)
 @click.pass_context
 def ls(
     ctx,
@@ -390,9 +392,13 @@ def ls(
     sample,
     name_lenght_limit,
     tags,
+    html_out_config,
 ):
     task_list = ctx.obj["task_list"]
-    df = task_list.get_all_tasks()
+    df = task_list.get_all_tasks(
+        is_post_processing=out_format not in ["html"],
+        is_drop_hidden_fields=out_format not in ["html"],
+    )
     before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
     _when = set()
     for w in when:
@@ -419,50 +425,55 @@ def ls(
     if un_scheduled and len(df) > 0:
         df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
     if len(when) > 0 and len(df) > 0:
-        df = df[[w in when for w in df.when]]
+        df = df[df["when"].isin(when)]
     if text is not None and len(df) > 0:
         df = df[[text in n for n in df.name]]
     if before_date is not None and len(df) > 0:
         df = df[[sd <= before_date for sd in df["scheduled_date"]]]
     if after_date is not None and len(df) > 0:
         df = df[[sd >= after_date for sd in df["scheduled_date"]]]
-    df.tags = df.tags.apply(
-        lambda tags: ", ".join(sorted(map(_process_tag.tag_uuid_to_tag_name, tags)))
-    )
-    df.tags = df.tags.apply(lambda s: f'"{s}"')
 
-    df = df.sort_values(
-        by=["status", "due", "when", "uuid"],
-        ascending=[False, True, True, True],
-        kind="stable",
+    df["tags"] = df["tags"].apply(
+        lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags))
     )
+
     if head is not None:
         df = df.head(head)
     if sample is not None:
         click.echo(f"{len(df)} tasks initially")
         df = df.sample(n=sample)
 
+    df = df.sort_values(
+        by=["status", "due", "when", "uuid"],
+        ascending=[False, True, True, True],
+        kind="stable",
+    )
+
+    pretty_df = df.copy()
+    pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
+    pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
+
     if name_lenght_limit > 0:
-        df.name = df.name.apply(
+        pretty_df.name = pretty_df.name.apply(
             lambda s: s if len(s) < name_lenght_limit else f"{s[:name_lenght_limit]}..."
         )
 
     if out_format is None:
-        click.echo(df)
+        click.echo(pretty_df)
     elif out_format == "str":
-        click.echo(df.to_string())
+        click.echo(pretty_df.to_string())
     elif out_format == "json":
-        click.echo(df.to_json(orient="records"))
+        click.echo(pretty_df.to_json(orient="records"))
     elif out_format == "csv":
-        click.echo(df.to_csv())
+        click.echo(pretty_df.to_csv())
     elif out_format == "html":
-        click.echo(df.to_html())
-        logging.warning(f"{len(df)} tasks matched")
+        format_html(df, html_out_config, print_callback=click.echo)
+        logging.warning(f"{len(pretty_df)} tasks matched")
     else:
         raise NotImplementedError((out_format,))
 
     if out_format not in "json html".split():
-        click.echo(f"{len(df)} tasks matched")
+        click.echo(f"{len(pretty_df)} tasks matched")
 
 
 if __name__ == "__main__":

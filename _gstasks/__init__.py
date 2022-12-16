@@ -77,11 +77,12 @@ class TaskList:
         self._collection_name = collection_name
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def get_all_tasks(self, post_processing=True):
+    def get_all_tasks(self, is_post_processing=True, is_drop_hidden_fields=True):
         df = pd.DataFrame(self.get_coll().find())
         #        df = df.sort_values(by=["_insertion_date", "_id"])
-        df = df.drop(columns=[x for x in list(df) if x.startswith("_")])
-        if post_processing:
+        if is_drop_hidden_fields:
+            df.drop(columns=[x for x in list(df) if x.startswith("_")], inplace=True)
+        if is_post_processing:
             df.insert(1, "U", df.pop("URL").apply(_format_url))
 
         return df
