@@ -18,24 +18,26 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-import pandas as pd
-from datetime import datetime, timedelta
-import re
-import string
-import uuid
-import inspect
-import types
-from typing import cast
-import logging
-import json
-from jinja2 import Template
-import subprocess
 import hashlib
-import sys
-from pymongo import MongoClient
-import click
-import _common
+import inspect
+import json
+import logging
+import re
 import sqlite3
+import string
+import subprocess
+import sys
+import types
+import uuid
+from datetime import datetime, timedelta
+from typing import cast
+
+import click
+import pandas as pd
+from jinja2 import Template
+from pymongo import MongoClient
+
+import _common
 
 
 def _parse_date(s):
@@ -43,9 +45,17 @@ def _parse_date(s):
         return None
     else:
         m = re.match(
-            r"(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+) (?P<hour>\d+):(?P<minute>\d+)(\:(?P<second>\d+))?", s)
+            r"(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+) (?P<hour>\d+):(?P<minute>\d+)(\:(?P<second>\d+))?",
+            s,
+        )
         assert m is not None, s
-        return datetime(**{k: int(m.group(k)) for k in "year,month,day,hour,minute,second".split(",") if m.group(k) is not None})
+        return datetime(
+            **{
+                k: int(m.group(k))
+                for k in "year,month,day,hour,minute,second".split(",")
+                if m.group(k) is not None
+            }
+        )
 
 
 def _format_url(url):
@@ -69,7 +79,7 @@ class TaskList:
 
     def get_all_tasks(self, post_processing=True):
         df = pd.DataFrame(self.get_coll().find())
-#        df = df.sort_values(by=["_insertion_date", "_id"])
+        #        df = df.sort_values(by=["_insertion_date", "_id"])
         df = df.drop(columns=[x for x in list(df) if x.startswith("_")])
         if post_processing:
             df.insert(1, "U", df.pop("URL").apply(_format_url))
@@ -88,8 +98,11 @@ class TaskList:
         if index is not None:
             r = df.to_dict(orient="records")[index]
         elif uuid_text is not None:
-            slice_ = [(i, r) for i, r in enumerate(df.to_dict(
-                orient="records")) if r["uuid"].startswith(uuid_text)]
+            slice_ = [
+                (i, r)
+                for i, r in enumerate(df.to_dict(orient="records"))
+                if r["uuid"].startswith(uuid_text)
+            ]
             assert len(slice_) == 1, (uuid_text, slice_)
             index, r = slice_[0]
         return r, index
@@ -101,14 +114,18 @@ class TaskList:
 
     def insert_or_replace_record(self, r, index=None):
         action = "inserting" if index is None else "replacing"
+
         print(f"{action} {r}", file=sys.stderr)
         if index is None:
             index = len(self.get_all_tasks())
 
         if "uuid" not in r:
             r["uuid"] = str(uuid.uuid4())
-        # FIXME: separate `insertion_date` and `last_update_date`
-        r["_insertion_date"] = datetime.now()
+        # FIXMe(done): separate `insertion_date` and `last_update_date`
+        if action == "inserting":
+            r["_insertion_date"] = datetime.now()
+        r["_last_modification_date"] = datetime.now()
+
         # FIXME: why this happens?
         for k in ["due", "scheduled_date"]:
             if pd.isna(r[k]):
@@ -116,11 +133,11 @@ class TaskList:
         # exit(1)
         log_kwargs = {}
         if action == "replacing":
-            log_kwargs["previous_r"] = self.get_coll().find_one(
-                {"uuid": r["uuid"]})
+            log_kwargs["previous_r"] = self.get_coll().find_one({"uuid": r["uuid"]})
         self._log(action=action, r=r, **log_kwargs)
         self.get_coll().replace_one(
-            filter={"uuid": r["uuid"]}, replacement=r, upsert=True)
+            filter={"uuid": r["uuid"]}, replacement=r, upsert=True
+        )
         print(r["uuid"])
         return r["uuid"]
 
@@ -129,7 +146,9 @@ class ConvenientCliDatetimeParamType(click.ParamType):
     name = "convenient_cli_datetime"
 
     def convert(self, value, param, ctx):
-        return _common.parse_cmdline_datetime(value, fail_callback=lambda msg: self.fail(msg, param, ctx))
+        return _common.parse_cmdline_datetime(
+            value, fail_callback=lambda msg: self.fail(msg, param, ctx)
+        )
 
 
 CLI_DATETIME = ConvenientCliDatetimeParamType()
@@ -158,7 +177,7 @@ class TagProcessor:
         df = pd.DataFrame(self._coll.find(kwargs))
         assert len(df) <= 1, (tag, df)
         if len(df) == 0:
-            assert self._create_new_tag, f"cannot create new tag \"{kwargs}\""
+            assert self._create_new_tag, f'cannot create new tag "{kwargs}"'
             assert kwargs["name"] is not None, kwargs
             tag_r = self._get_tag_imputation_record(kwargs["name"])
             logger.warning(f"insert {tag_r}")
@@ -169,7 +188,8 @@ class TagProcessor:
 
     def _get_tag_record_or_impute(self, tag=None, uuid=None):
         this_function_name = cast(
-            types.FrameType, inspect.currentframe()).f_code.co_name
+            types.FrameType, inspect.currentframe()
+        ).f_code.co_name
         logger = logging.getLogger(__name__).getChild(this_function_name)
 
         if uuid is not None:
@@ -215,11 +235,12 @@ class UuidCacher:
 
     def add(self, uuid, name):
         df = pd.DataFrame(
-            [{"uuid": uuid, "datetime": datetime.now().isoformat(), "name": name}])
+            [{"uuid": uuid, "datetime": datetime.now().isoformat(), "name": name}]
+        )
         conn = self._get_conn()
         df.to_sql(self._db_name, conn, if_exists="append", index=None)
         conn.close()
-        self._logger.warning(f"add \"{uuid}\" to cache")
+        self._logger.warning(f'add "{uuid}" to cache')
 
     def get_all(self):
         conn = self._get_conn()
@@ -239,6 +260,5 @@ class StringContractor:
 
     def __call__(self, s):
         if len(s) > self._maxlen:
-            s = s[:self._maxlen-len(self._ellipsis_symbol)
-                  ] + self._ellipsis_symbol
+            s = s[: self._maxlen - len(self._ellipsis_symbol)] + self._ellipsis_symbol
         return s

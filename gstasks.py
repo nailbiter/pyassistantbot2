@@ -19,34 +19,33 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-import click
+import inspect
 import json
-import subprocess
-import pandas as pd
 import logging
 import os
-from os import path
-from datetime import datetime
 import pickle
-import logging
-import re
 import random
-from _common import parse_cmdline_datetime, run_trello_cmd
+import re
 import string
-from _gstasks import TaskList, CLI_DATETIME, TagProcessor, UuidCacher
-import webbrowser
 import subprocess
-from jinja2 import Template
-import inspect
 import types
+import webbrowser
+from datetime import datetime
+from os import path
 from typing import cast
-import tqdm
 
+import click
+import pandas as pd
+import tqdm
+from jinja2 import Template
+
+from _common import parse_cmdline_datetime, run_trello_cmd
+from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
 
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
     #    'https://www.googleapis.com/auth/spreadsheets.readonly',
-    'https://www.googleapis.com/auth/spreadsheets',
+    "https://www.googleapis.com/auth/spreadsheets",
 ]
 
 
@@ -61,7 +60,8 @@ def gstasks(ctx, debug, list_id, mongo_url):
 
     ctx.ensure_object(dict)
     ctx.obj["task_list"] = TaskList(
-        mongo_url=mongo_url, database_name="gstasks", collection_name="tasks")
+        mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
+    )
     ctx.obj["list_id"] = list_id
 
 
@@ -77,11 +77,11 @@ def mv(ctx, tags, contains, not_contains):
     else:
         tags = []
     out = subprocess.getoutput(
-        f"~/for/forpython/trello/trello.py low get-cards-of-list {list_id}")
+        f"~/for/forpython/trello/trello.py low get-cards-of-list {list_id}"
+    )
     cards_df = json.loads(out)
     cards_df = pd.DataFrame(cards_df)
-    cards_df.labels = cards_df.labels.apply(
-        lambda l: list(map(lambda r: r["name"], l)))
+    cards_df.labels = cards_df.labels.apply(lambda l: list(map(lambda r: r["name"], l)))
 
     cards_df = cards_df[[tags <= l for l in cards_df.labels]]
     if contains is not None:
@@ -89,13 +89,24 @@ def mv(ctx, tags, contains, not_contains):
     if not_contains is not None:
         cards_df = cards_df[[not_contains not in n for n in cards_df.name]]
 
-    tasks_df = pd.DataFrame({
-        "name": [f"=HYPERLINK(\"{shortUrl}\",\"{name}\")" for name, shortUrl in zip(cards_df.name, cards_df.shortUrl)],
-        "scheduled date": "",
-        "status": "",
-        "when": "PARTTIME",
-        "due": cards_df.due.apply(lambda s: "" if pd.isna(s) else datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y/%m/%d %H:%M:%S"))
-    })
+    tasks_df = pd.DataFrame(
+        {
+            "name": [
+                f'=HYPERLINK("{shortUrl}","{name}")'
+                for name, shortUrl in zip(cards_df.name, cards_df.shortUrl)
+            ],
+            "scheduled date": "",
+            "status": "",
+            "when": "PARTTIME",
+            "due": cards_df.due.apply(
+                lambda s: ""
+                if pd.isna(s)
+                else datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
+                    "%Y/%m/%d %H:%M:%S"
+                )
+            ),
+        }
+    )
     click.echo(tasks_df.to_csv(sep="\t", index=None, header=None))
 
 
@@ -108,7 +119,7 @@ def mv(ctx, tags, contains, not_contains):
 def mv_task(ctx, task_hash, when, scheduled_date, archive):
     task_list = ctx.obj["task_list"]
     scheduled_date = parse_cmdline_datetime(scheduled_date)
-#    r, _ = task_list.get_task(uuid_text=uuid_text, index=index)
+    #    r, _ = task_list.get_task(uuid_text=uuid_text, index=index)
     url = run_trello_cmd(f"assistantbot open-task {task_hash} --no-open-url")
     m = re.match(r"https://trello.com/c/([a-zA-Z0-9]+)/", url)
     assert m is not None
@@ -132,7 +143,9 @@ def mv_task(ctx, task_hash, when, scheduled_date, archive):
 @click.pass_context
 def open_url(ctx, index, uuid_text, web_browser, open_url):
     task_list = ctx.obj["task_list"]
-    for _uuid_text, _index in tqdm.tqdm([(x, None) for x in uuid_text]+[(None, x)for x in index]):
+    for _uuid_text, _index in tqdm.tqdm(
+        [(x, None) for x in uuid_text] + [(None, x) for x in index]
+    ):
         r, _ = task_list.get_task(uuid_text=_uuid_text, index=_index)
         assert r["URL"], r
         if open_url:
@@ -158,33 +171,37 @@ def _fetch_uuid(uuid):
 @click.pass_context
 def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_browser):
     # taken from https://stackoverflow.com/a/13514318
-    this_function_name = cast(
-        types.FrameType, inspect.currentframe()).f_code.co_name
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     task_list, list_id = [ctx.obj[k] for k in "task_list,list_id".split(",")]
 
-    for _uuid_text, _index in tqdm.tqdm([(_fetch_uuid(x), None) for x in uuid_text]+[(None, x)for x in index]):
+    for _uuid_text, _index in tqdm.tqdm(
+        [(_fetch_uuid(x), None) for x in uuid_text] + [(None, x) for x in index]
+    ):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         # FIXME: later
         url_to_add = None
         if r["URL"]:
             url_to_add = r["URL"]
-        cmd = Template("""
+        cmd = Template(
+            """
         high create-card {%for label in labels%}--label {{label}} {%endfor%} --name '{{r.name}}' {%if create_archived%}--create-archived{%else%}--no-create-archived{%endif%} --list-id {{list_id}}
-        """).render({
-            "labels": label,
-            "r": r,
-            "create_archived": create_archived,
-            "list_id": list_id,
-        })
+        """
+        ).render(
+            {
+                "labels": label,
+                "r": r,
+                "create_archived": create_archived,
+                "list_id": list_id,
+            }
+        )
         url = run_trello_cmd(cmd)
         logger.info(f"url: {url}")
 
         if url_to_add is not None:
             logger.debug(f"url_to_add: {url_to_add}")
-            res = run_trello_cmd(
-                f"assistantbot add-url-link '{url}' '{url_to_add}'")
+            res = run_trello_cmd(f"assistantbot add-url-link '{url}' '{url_to_add}'")
             logger.debug(f"res: {res}")
         task_list.insert_or_replace_record({**r, "URL": url}, index=idx)
         if open_url:
@@ -206,8 +223,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.pass_context
 def edit(ctx, uuid_text, index, **kwargs):
     # taken from https://stackoverflow.com/a/13514318
-    this_function_name = cast(
-        types.FrameType, inspect.currentframe()).f_code.co_name
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
     uuid_text = list(map(_fetch_uuid, uuid_text))
 
@@ -227,7 +243,9 @@ def edit(ctx, uuid_text, index, **kwargs):
             else:
                 kwargs[k] = v(kwargs[k])
 
-    for _uuid_text, _index in tqdm.tqdm([(x, None) for x in uuid_text]+[(None, x)for x in index]):
+    for _uuid_text, _index in tqdm.tqdm(
+        [(x, None) for x in uuid_text] + [(None, x) for x in index]
+    ):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         logger.debug((r, idx))
         for k, v in kwargs.items():
@@ -241,7 +259,12 @@ def edit(ctx, uuid_text, index, **kwargs):
 
 @gstasks.command()
 @click.option("-n", "--name", required=True)
-@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")), required=True)
+@click.option(
+    "-w",
+    "--when",
+    type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
+    required=True,
+)
 @click.option("-u", "--url")
 @click.option("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE"]))
@@ -252,8 +275,9 @@ def edit(ctx, uuid_text, index, **kwargs):
 def add(ctx, name, when, url, scheduled_date, due, status, tags, create_new_tag):
     #    scheduled_date = parse_cmdline_datetime(scheduled_date)
     task_list = ctx.obj["task_list"]
-    _process_tag = TagProcessor(task_list.get_coll(
-        "tags"), create_new_tag=create_new_tag)
+    _process_tag = TagProcessor(
+        task_list.get_coll("tags"), create_new_tag=create_new_tag
+    )
     r = {
         "name": name,
         "URL": url,
@@ -291,13 +315,14 @@ def show_tags(ctx):
 
     tasks_df = pd.DataFrame({"uuid": tasks_df.tags, "name": tasks_df.name})
     tasks_df = tags_df.set_index("uuid").join(
-        tasks_df.set_index("uuid"), lsuffix="_tag", how="outer")
+        tasks_df.set_index("uuid"), lsuffix="_tag", how="outer"
+    )
     _TAG_NONE = "NONE"
     assert _TAG_NONE not in list(tags_df.name)
     tasks_df.name_tag = tasks_df.name_tag.fillna(_TAG_NONE)
     tasks_df = tasks_df.groupby("name_tag").count()
     tasks_df = tasks_df.reset_index().drop(columns=["_id"])
-    tasks_df["frac (%)"] = tasks_df.name/tasks_df.name.sum()*100
+    tasks_df["frac (%)"] = tasks_df.name / tasks_df.name.sum() * 100
     tasks_df = tasks_df.sort_values(by="name", ascending=False)
     print(tasks_df)
 
@@ -311,24 +336,37 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks()
     tasks_df = tasks_df.query("status!='DONE'")
-#    tasks_df = tasks_df.explode("tags")
+    #    tasks_df = tasks_df.explode("tags")
 
     _process_tag = TagProcessor(task_list.get_coll("tags"))
     tag_uuid_from, tag_uuid_to = [_process_tag(t) for t in [tag_from, tag_to]]
 
     print((tag_uuid_from, tag_uuid_to))
-    tasks_df = tasks_df[tasks_df.tags.apply(lambda s:tag_uuid_from in s)]
+    tasks_df = tasks_df[tasks_df.tags.apply(lambda s: tag_uuid_from in s)]
     for uuid_text in tqdm.tqdm(tasks_df.uuid):
         r, idx = task_list.get_task(uuid_text=uuid_text, index=None)
         r["tags"] = set(r["tags"])
-        r["tags"] = sorted(set(r["tags"])-{tag_uuid_from, } | {tag_uuid_to, })
+        r["tags"] = sorted(
+            set(r["tags"])
+            - {
+                tag_uuid_from,
+            }
+            | {
+                tag_uuid_to,
+            }
+        )
         task_list.insert_or_replace_record(r, index=idx)
     if remove_tag_from:
         print(_process_tag.remove_tag_by_uuid(tag_uuid_from))
 
 
 @gstasks.command()
-@click.option("-w", "--when", multiple=True, type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")))
+@click.option(
+    "-w",
+    "--when",
+    multiple=True,
+    type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")),
+)
 @click.option("-x", "--text")
 @click.option("-b", "--before-date")
 @click.option("-a", "--after-date")
@@ -339,11 +377,22 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @click.option("--name-lenght-limit", type=int, default=50)
 @click.option("-g", "--tag", "tags", multiple=True)
 @click.pass_context
-def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format, sample, name_lenght_limit, tags):
+def ls(
+    ctx,
+    when,
+    text,
+    before_date,
+    after_date,
+    un_scheduled,
+    head,
+    out_format,
+    sample,
+    name_lenght_limit,
+    tags,
+):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks()
-    before_date, after_date = map(
-        parse_cmdline_datetime, [before_date, after_date])
+    before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
     _when = set()
     for w in when:
         if w == "appropriate":
@@ -376,12 +425,16 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         df = df[[sd <= before_date for sd in df["scheduled_date"]]]
     if after_date is not None and len(df) > 0:
         df = df[[sd >= after_date for sd in df["scheduled_date"]]]
-    df.tags = df.tags.apply(lambda tags: ", ".join(
-        sorted(map(_process_tag.tag_uuid_to_tag_name, tags))))
-    df.tags = df.tags.apply(lambda s: f"\"{s}\"")
+    df.tags = df.tags.apply(
+        lambda tags: ", ".join(sorted(map(_process_tag.tag_uuid_to_tag_name, tags)))
+    )
+    df.tags = df.tags.apply(lambda s: f'"{s}"')
 
-    df = df.sort_values(by=["status", "due", "when", "uuid"], ascending=[
-        False, True, True, True], kind="stable")
+    df = df.sort_values(
+        by=["status", "due", "when", "uuid"],
+        ascending=[False, True, True, True],
+        kind="stable",
+    )
     if head is not None:
         df = df.head(head)
     if sample is not None:
@@ -389,8 +442,9 @@ def ls(ctx, when, text, before_date, after_date, un_scheduled, head, out_format,
         df = df.sample(n=sample)
 
     if name_lenght_limit > 0:
-        df.name = df.name.apply(lambda s: s if len(
-            s) < name_lenght_limit else f"{s[:name_lenght_limit]}...")
+        df.name = df.name.apply(
+            lambda s: s if len(s) < name_lenght_limit else f"{s[:name_lenght_limit]}..."
+        )
 
     if out_format is None:
         click.echo(df)
