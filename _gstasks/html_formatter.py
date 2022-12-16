@@ -18,12 +18,13 @@ ORGANIZATION:
 
 
 TODO:
-    1. states filter
-    2. (states) order
+    1. states filter (sql?)
+    2. (states) order (?sql)
     3. color based on state
     4. text formatting
+        a. contract links
     5. text styling
-    6. contract links
+        b. bold overdue tasks
 ==============================================================================="""
 import json
 import logging
@@ -45,11 +46,12 @@ def format_html(df, html_out_config, print_callback=print):
     # index set
     df = df.copy()
     df.set_index("uuid", inplace=True)
+    assert df.index.is_unique
 
     # filtering
     df.drop(columns=["_id"], inplace=True)
 
-    # sorting
+    # sorting/filtering
 
     # formatting
     _date_cols = ["_insertion_date", "_last_modification_date"]
