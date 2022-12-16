@@ -112,7 +112,7 @@ class TaskList:
             collection_name = self._collection_name
         return self._mongo_client[self._database_name][collection_name]
 
-    def insert_or_replace_record(self, r, index=None):
+    def insert_or_replace_record(self, r, index=None, action_comment=None):
         action = "inserting" if index is None else "replacing"
 
         print(f"{action} {r}", file=sys.stderr)
@@ -134,7 +134,7 @@ class TaskList:
         log_kwargs = {}
         if action == "replacing":
             log_kwargs["previous_r"] = self.get_coll().find_one({"uuid": r["uuid"]})
-        self._log(action=action, r=r, **log_kwargs)
+        self._log(action=action, r=r, action_comment=action_comment, **log_kwargs)
         self.get_coll().replace_one(
             filter={"uuid": r["uuid"]}, replacement=r, upsert=True
         )

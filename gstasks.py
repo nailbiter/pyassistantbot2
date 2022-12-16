@@ -220,8 +220,9 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
 @click.option("-d", "--due", type=click.DateTime())
+@click.option("-a", "--action-comment")
 @click.pass_context
-def edit(ctx, uuid_text, index, **kwargs):
+def edit(ctx, uuid_text, index, action_comment, **kwargs):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
@@ -254,7 +255,7 @@ def edit(ctx, uuid_text, index, **kwargs):
                     r["tags"] = sorted(set(r["tags"]) ^ kwargs["tags"])
                 else:
                     r[k] = None if v == _UNSET else v
-        task_list.insert_or_replace_record(r, index=idx)
+        task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)
 
 
 @gstasks.command()
