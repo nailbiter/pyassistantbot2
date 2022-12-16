@@ -16,9 +16,19 @@ ORGANIZATION:
      CREATED: 2022-12-16T20:37:31.068331
     REVISION: ---
 
+
+TODO:
+    1. states filter
+    2. (states) order
+    3. color based on state
+    4. text formatting
+    5. text styling
+    6. contract links
 ==============================================================================="""
 import json
 import logging
+
+import pandas as pd
 
 
 def format_html(df, html_out_config, print_callback=print):
@@ -32,11 +42,23 @@ def format_html(df, html_out_config, print_callback=print):
         config = json.load(f)
     logging.warning(f"config: {config}")
 
+    # index set
+    df = df.copy()
+    df.set_index("uuid", inplace=True)
+
+    # filtering
+    df.drop(columns=["_id"], inplace=True)
+
+    # sorting
+
+    # formatting
+    _date_cols = ["_insertion_date", "_last_modification_date"]
+    for cn in _date_cols:
+        df[cn] = df[cn].apply(
+            lambda dt: "" if pd.isna(dt) else dt.strftime("%Y-%m-%d %H:%M")
+        )
+
     out_file = config.get("out_file")
-
-    df_html = df.to_html()
-
-    if out_file is not None:
-        df.to_html(out_file)
-    else:
-        print_callback(df.to_html())
+    s = df.to_html(buf=out_file, render_links=True)
+    if s is not None:
+        print_callback(s)
