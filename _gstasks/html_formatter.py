@@ -20,7 +20,7 @@ ORGANIZATION:
 TODO:
     1. states filter (sql?)
     2. (states) order (?sql)
-    3. color based on state
+    3. color based on state (only stateonly state??)
     4. text formatting
         a. contract links
     5. text styling

@@ -215,6 +215,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @gstasks.command()
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
+@click.option("-f", "--uuid-list-file", type=click.Path())
 @click.option("-n", "--name")
 @click.option(
     "-t",
@@ -223,26 +224,31 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 )
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
-@click.option("-g", "--tag", multiple=True)
-@click.option("--url")
+@click.option("-g", "--tag", "tags", multiple=True)
+@click.option("--url", "URL")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
 @click.option("-d", "--due", type=click.DateTime())
 @click.option("-a", "--action-comment")
+@click.option("-c", "--comment")
 @click.pass_context
-def edit(ctx, uuid_text, index, action_comment, **kwargs):
+def edit(ctx, uuid_text, index, action_comment, uuid_list_file, **kwargs):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
     uuid_text = list(map(_fetch_uuid, uuid_text))
 
+    if uuid_list_file is not None:
+        with open(uuid_list_file) as f:
+            l = f.readlines()
+        uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
+
     task_list = ctx.obj["task_list"]
-    kwargs["URL"] = kwargs.pop("url")
     _process_tag = TagProcessor(task_list.get_coll("tags"))
-    kwargs["tags"] = {_process_tag(tag) for tag in kwargs.pop("tag")}
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
+        "tags": lambda tags: {_process_tag(tag) for tag in tags},
     }
     _UNSET = "***UNSET***"
     for k, v in _PROCESSORS.items():
