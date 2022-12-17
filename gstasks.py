@@ -41,8 +41,8 @@ from jinja2 import Template
 
 from _common import parse_cmdline_datetime, run_trello_cmd
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
-from _gstasks.html_formatter import format_html
 from _gstasks.additional_states import ADDITIONAL_STATES
+from _gstasks.html_formatter import format_html
 
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
@@ -69,7 +69,7 @@ def gstasks(ctx, debug, list_id, mongo_url):
 
 
 @gstasks.command()
-@click.option("-t", "--tags", envvar="GSTASKS_MV_TAGS")
+@click.option("-t", "--tag", "tags", envvar="GSTASKS_MV_TAGS")
 @click.option("--contains")
 @click.option("--not-contains")
 @click.pass_context
@@ -158,9 +158,10 @@ def open_url(ctx, index, uuid_text, web_browser, open_url):
 
 
 def _fetch_uuid(uuid):
-    if re.match(r"^-?\d+$", uuid) is not None:
+    m = re.match(r"^(-?\d+)$", uuid)
+    if m is not None:
         uuids_df = UuidCacher().get_all()
-        uuid = uuids_df.uuid.iloc[int(uuid)]
+        uuid = uuids_df.uuid.iloc[int(m.group(1))]
     return uuid
 
 
@@ -215,7 +216,11 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-n", "--name")
-@click.option("-t", "--status", type=click.Choice(["DONE", "FAILED", "REGULAR",*ADDITIONAL_STATES]))
+@click.option(
+    "-t",
+    "--status",
+    type=click.Choice(["DONE", "FAILED", "REGULAR", *ADDITIONAL_STATES]),
+)
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
 @click.option("-g", "--tag", multiple=True)
@@ -271,8 +276,10 @@ def edit(ctx, uuid_text, index, action_comment, **kwargs):
 )
 @click.option("-u", "--url", "URL")
 @click.option("-s", "--scheduled-date", type=CLI_DATETIME)
-@click.option("-t", "--status", type=click.Choice(["REGULAR", "DONE",*ADDITIONAL_STATES]))
-@click.option("-g", "--tags", multiple=True)
+@click.option(
+    "-t", "--status", type=click.Choice(["REGULAR", "DONE", *ADDITIONAL_STATES])
+)
+@click.option("-g", "--tag", "tags", multiple=True)
 @click.option("-d", "--due", type=CLI_DATETIME)
 @click.option("-c", "--comment")
 @click.option("--create-new-tag/--no-create-new-tag", default=False)
@@ -472,7 +479,7 @@ def ls(
     else:
         raise NotImplementedError((out_format,))
 
-    if out_format not in "json html".split():
+    if out_format not in "json html csv".split():
         click.echo(f"{len(pretty_df)} tasks matched")
 
 

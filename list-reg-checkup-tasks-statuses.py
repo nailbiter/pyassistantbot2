@@ -40,7 +40,8 @@ import _gstasks
 @click.option("-h", "--head", type=int)
 @click.option("--debug/--no-debug", default=False)
 @click.option("-n", "--name-max-length", type=int, default=20)
-def list_reg_checkup_tasks_statuses(mongo_url, head, debug, name_max_length):
+@click.option("-o","--out-format",type=click.Choice(["plain","tsv"]),default="plain")
+def list_reg_checkup_tasks_statuses(mongo_url, head, debug, name_max_length,out_format):
     if debug:
         logging.basicConfig(level=logging.INFO)
     client = pymongo.MongoClient(mongo_url)
@@ -90,8 +91,12 @@ def list_reg_checkup_tasks_statuses(mongo_url, head, debug, name_max_length):
     df.name = df.name.apply(_gstasks.StringContractor(name_max_length))
 
     df = df.set_index("uuid")
-    click.echo(df)
-    logging.info(df.columns)
+
+    if out_format=="plain":
+        click.echo(df)
+        logging.info(df.columns)
+    elif out_format=="tsv":
+        click.echo(df.to_csv(sep="\t"))
 
 
 if __name__ == "__main__":
