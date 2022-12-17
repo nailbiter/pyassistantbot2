@@ -30,6 +30,8 @@ import json
 import logging
 
 import pandas as pd
+# copycat to omit dependency on `alex_leontiev_toolbox_python`
+from _gstasks._pandas_sql import pandas_sql
 
 
 def format_html(df, html_out_config, print_callback=print):

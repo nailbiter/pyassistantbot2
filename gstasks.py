@@ -387,10 +387,10 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @click.option("--name-lenght-limit", type=int, default=50)
 @click.option("-g", "--tag", "tags", multiple=True)
 @click.option(
-    "--html-out-config",
+    "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
     show_envvar=True,
-    envvar="GSTASKS_LS_HTML_OUT_CONFIG",
+    envvar="GSTASKS_LS_OUT_FORMAT_CONFIG",
 )
 @click.pass_context
 def ls(
@@ -405,7 +405,7 @@ def ls(
     sample,
     name_lenght_limit,
     tags,
-    html_out_config,
+    out_format_config,
 ):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks(
@@ -480,7 +480,7 @@ def ls(
     elif out_format == "csv":
         click.echo(pretty_df.to_csv())
     elif out_format == "html":
-        format_html(df, html_out_config, print_callback=click.echo)
+        format_html(df, out_format_config, print_callback=click.echo)
         logging.warning(f"{len(pretty_df)} tasks matched")
     else:
         raise NotImplementedError((out_format,))
