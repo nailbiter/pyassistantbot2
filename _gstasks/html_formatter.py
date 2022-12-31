@@ -26,12 +26,37 @@ TODO:
     5. text styling
         b. bold overdue tasks
 ==============================================================================="""
+import itertools
 import json
 import logging
+from datetime import datetime, timedelta
 
 import pandas as pd
+from jinja2 import Template
+
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
+
+
+def _df_env(df):
+    df = df.copy()
+    df.reset_index(inplace=True)
+
+    tags = df.pop("tags")
+    tags = pd.DataFrame(
+        data=itertools.chain(
+            *[
+                [{"uuid": uuid, "tag": tag} for tag in tags_]
+                for uuid, tags_ in zip(df["uuid"], tags)
+            ]
+        ),
+        columns=["uuid", "tag"],
+    )
+
+    res = dict(tasks=df, tags=tags)
+    #    for k, df in res.items():
+    #        logging.warning(f"{k}:\n{df.head().to_string()}")
+    return res
 
 
 def format_html(df, html_out_config, print_callback=print):
@@ -54,8 +79,20 @@ def format_html(df, html_out_config, print_callback=print):
     df.drop(columns=["_id"], inplace=True)
 
     # sorting/filtering
-    click.echo(config)
-    exit(0)
+    if "sorting_sql" in config:
+        with open(config["sorting_sql"]) as f:
+            tpl = f.read()
+        logging.warning(tpl)
+        sql = Template(tpl).render(
+            {
+                "now": datetime.now(),
+                "util": {},
+            }
+        )
+        logging.warning(sql)
+        res = pandas_sql(sql, _df_env(df))
+
+        df = df.loc[res["uuid"].to_list()]
 
     # formatting
     _date_cols = ["_insertion_date", "_last_modification_date"]
@@ -66,5 +103,6 @@ def format_html(df, html_out_config, print_callback=print):
 
     out_file = config.get("out_file")
     s = df.to_html(buf=out_file, render_links=True)
+    logging.warning(f'html saved to "{out_file}"')
     if s is not None:
         print_callback(s)

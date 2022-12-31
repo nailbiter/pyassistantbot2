@@ -25,7 +25,7 @@ import string
 
 
 def pandas_sql(sql, df_mapping, engine_sqlalchemy_line="sqlite+pysqlite:///:memory:"):
-    engine = create_engine(engine_sqlalchemy_line, future=True)
+    engine = create_engine(engine_sqlalchemy_line)
 
     with engine.begin() as conn:
         for tn, df in df_mapping.items():
