@@ -22,6 +22,7 @@ ORGANIZATION:
 
 ==============================================================================="""
 
+import json
 import logging
 
 # from dotenv import load_dotenv
@@ -46,9 +47,15 @@ import _gstasks
 @click.option(
     "-o", "--out-format", type=click.Choice(["plain", "tsv", "json"]), default="plain"
 )
-@click.option("-d", "--scheduled-date", type=click.DateTime(["%Y-%m-%d"]))
+@click.option(
+    "-d",
+    "--scheduled-date",
+    "scheduled_dates",
+    type=click.DateTime(["%Y-%m-%d"]),
+    multiple=True,
+)
 def list_reg_checkup_tasks_statuses(
-    mongo_url, head, debug, name_max_length, out_format, scheduled_date
+    mongo_url, head, debug, name_max_length, out_format, scheduled_dates
 ):
     if debug:
         logging.basicConfig(level=logging.INFO)
@@ -93,8 +100,8 @@ def list_reg_checkup_tasks_statuses(
         logging.warning(f"pop status=\"{df.pop('status').unique()}\"")
     df = df[df.scheduled_date <= datetime.now()]
 
-    if scheduled_date is not None:
-        df = df[df.scheduled_date == scheduled_date]
+    if len(scheduled_dates) > 0:
+        df = df[df.scheduled_date.isin(scheduled_dates)]
     if head is not None:
         df = df.head(head)
 
@@ -111,7 +118,11 @@ def list_reg_checkup_tasks_statuses(
         click.echo(df)
         logging.info(df.columns)
     elif out_format == "json":
-        click.echo(df.to_json(orient="index"))
+        df[["scheduled_date", "due"]] = df[["scheduled_date", "due"]].applymap(
+            lambda ds: None if pd.isna(ds) else ds.strftime("%Y-%m-%d")
+        )
+        logging.info(df.dtypes)
+        click.echo(json.dumps(df.to_dict(orient="records")))
     elif out_format == "tsv":
         click.echo(df.to_csv(sep="\t"))
 
