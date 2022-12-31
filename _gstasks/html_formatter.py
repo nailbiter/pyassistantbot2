@@ -54,6 +54,8 @@ def format_html(df, html_out_config, print_callback=print):
     df.drop(columns=["_id"], inplace=True)
 
     # sorting/filtering
+    click.echo(config)
+    exit(0)
 
     # formatting
     _date_cols = ["_insertion_date", "_last_modification_date"]

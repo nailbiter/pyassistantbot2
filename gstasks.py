@@ -225,6 +225,11 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
 @click.option("-s", "--scheduled-date")
 @click.option("-g", "--tag", "tags", multiple=True)
+@click.option(
+    "--tag-operation",
+    type=click.Choice(["symmetric_difference", "union", "difference"]),
+    default="symmetric_difference",
+)
 @click.option("--url", "URL")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
@@ -232,7 +237,9 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-a", "--action-comment")
 @click.option("-c", "--comment")
 @click.pass_context
-def edit(ctx, uuid_text, index, action_comment, uuid_list_file, **kwargs):
+def edit(
+    ctx, uuid_text, index, action_comment, uuid_list_file, tag_operation, **kwargs
+):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
@@ -266,7 +273,9 @@ def edit(ctx, uuid_text, index, action_comment, uuid_list_file, **kwargs):
         for k, v in kwargs.items():
             if v is not None:
                 if k == "tags":
-                    r["tags"] = sorted(set(r["tags"]) ^ kwargs["tags"])
+                    r["tags"] = sorted(
+                        getattr(set, tag_operation)(set(r["tags"]), kwargs["tags"])
+                    )
                 else:
                     r[k] = None if v == _UNSET else v
         task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)
