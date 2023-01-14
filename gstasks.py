@@ -236,9 +236,17 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @click.option("-d", "--due", type=click.DateTime())
 @click.option("-a", "--action-comment")
 @click.option("-c", "--comment")
+@click.option("--create-new-tag/--no-create-new-tag", default=False)
 @click.pass_context
 def edit(
-    ctx, uuid_text, index, action_comment, uuid_list_file, tag_operation, **kwargs
+    ctx,
+    uuid_text,
+    index,
+    action_comment,
+    uuid_list_file,
+    tag_operation,
+    create_new_tag,
+    **kwargs,
 ):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
@@ -251,7 +259,9 @@ def edit(
         uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
     task_list = ctx.obj["task_list"]
-    _process_tag = TagProcessor(task_list.get_coll("tags"))
+    _process_tag = TagProcessor(
+        task_list.get_coll("tags"), create_new_tag=create_new_tag
+    )
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
