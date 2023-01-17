@@ -35,6 +35,8 @@ import functools
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
+    assert send_message_cb is not None
+    assert mongo_client is not None
     amount, *other = re.split(r" +", text)
     amount = _common.simple_math_eval.simple_math_eval(amount)
     assert amount != 0, "amount==0"

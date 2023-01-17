@@ -19,13 +19,37 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-import click
-import _common
 from datetime import datetime, timedelta
+
+import click
+import matplotlib.pyplot as plt
 import pandas as pd
 import pymongo
 import seaborn as sns
-import matplotlib.pyplot as plt
+
+import _common
+
+_AVAILABLE_TAGS = sorted(
+    {
+        "jerk",
+        "longwalk",
+        "red_light_bicycle",
+        "weight",
+        "bank",
+        "nailbite",
+        "mufg",
+        "calories_yesterday",
+        "weight",
+        "porn",
+        "talk",
+        "masha",
+        "salary",
+        "masturbation",
+        "self",
+        "hand",
+        "orgasm",
+    }
+)
 
 
 @click.group()
@@ -46,9 +70,10 @@ def show(ctx, regex, limit):
     if regex is not None:
         filter_["content"] = {"$regex": regex}
     df = pd.DataFrame(
-        coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=limit))
-#    df.date = df.date.apply(
-#        lambda dt: _common.to_utc_datetime(dt, inverse=True))
+        coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=limit)
+    )
+    #    df.date = df.date.apply(
+    #        lambda dt: _common.to_utc_datetime(dt, inverse=True))
     df = df.drop(columns=["_id"])
     click.echo(df)
 
@@ -60,7 +85,12 @@ def show(ctx, regex, limit):
 def show_weight(ctx, limit, show_graph):
     coll = ctx.obj["coll"]
     df = pd.DataFrame(
-        coll.find(filter={"content": {"$regex": "#weight"}}, sort=[("date", pymongo.DESCENDING)], limit=limit))
+        coll.find(
+            filter={"content": {"$regex": "#weight"}},
+            sort=[("date", pymongo.DESCENDING)],
+            limit=limit,
+        )
+    )
     rs = df.to_dict(orient="records")
     for r in rs:
         content = r["content"]
@@ -70,8 +100,11 @@ def show_weight(ctx, limit, show_graph):
         assert len(split) == 1
         r["weight"] = float(split[0])
     df = pd.DataFrame(rs).drop(columns=["content", "_id"])
-    click.echo(pd.DataFrame(
-        {**df, "date": df.date.apply(lambda d: d.strftime("%Y-%m-%d(%a) %H:%M"))}))
+    click.echo(
+        pd.DataFrame(
+            {**df, "date": df.date.apply(lambda d: d.strftime("%Y-%m-%d(%a) %H:%M"))}
+        )
+    )
     if show_graph:
         #        plt.subplots(figsize=(10,10))
         sns.lineplot(data=df, x="date", y="weight")
@@ -79,16 +112,17 @@ def show_weight(ctx, limit, show_graph):
 
 
 @note.command()
-@click.option("-x", "--text")
+@click.option("-x", "--text", default="")
 @click.option("-d", "--day", type=click.DateTime(["%Y-%m-%d %H:%M"]))
 @click.option("-s", "--days-shift", type=int, default=0)
 @click.option("--dry-run/--no-dry-run", default=False)
-@click.option("-t", "--tags", type=click.Choice("jerk,longwalk,red_light_bicycle,weight,bank,nailbite,mufg,calories_yesterday,weight,porn,talk,masha,salary".split(",")), multiple=True)
+@click.option("-t", "--tags", type=click.Choice(_AVAILABLE_TAGS), multiple=True)
 @click.pass_context
 def add(ctx, text, day, dry_run, days_shift, tags):
     coll = ctx.obj["coll"]
     for tag in tags:
         text = f"#{tag} {text}"
+    text = text.strip()
     if day is None:
         day = datetime.now()
     day -= timedelta(days=days_shift)
