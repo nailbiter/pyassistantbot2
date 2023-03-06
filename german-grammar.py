@@ -19,20 +19,24 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-import click
-from dotenv import load_dotenv
-import os
-from os import path
 import logging
-import pymongo
+import os
+import re
 from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-#import requests
-import _common.requests_cache
-#from lxml import html
+from os import path
+
+import click
+
+# from lxml import html
 import pandas as pd
+import pymongo
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from jinja2 import Template
-from lxml import html, etree
+from lxml import etree, html
+
+# import requests
+import _common.requests_cache
 
 _PROCESSORS = {
     "prateritum": {
@@ -42,24 +46,30 @@ _PROCESSORS = {
     },
     "konjunktiv2-vergangenheit": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": ["""section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)"""],
+        "sel": [
+            """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > table:nth-child(2)"""
+        ],
         "method": "css-select",
     },
     "konjunktiv2": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": ["""section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)"""],
+        "sel": [
+            """section.pons:nth-child(5) > div:nth-child(4) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > table:nth-child(2)"""
+        ],
         "method": "css-select",
     },
     "perfekt": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
-        "sel": ["""section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)"""],
+        "sel": [
+            """section.pons:nth-child(2) > div:nth-child(3) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > table:nth-child(2)"""
+        ],
         "method": "css-select",
     },
     "partizip2": {
         "tpl": "https://www.verbformen.de/konjugation/{{word}}.htm",
         "sel": [
             "/html/body/article/div[1]/div[2]/div/section[7]/div[2]/div[4]/table",
-            "/html/body/article/div[1]/div[4]/div/section[7]/div[2]/div[4]/table"
+            "/html/body/article/div[1]/div[4]/div/section[7]/div[2]/div[4]/table",
         ],
         "method": "xpath",
     },
@@ -73,7 +83,7 @@ class FetchElementException(Exception):
 def fetch_element(text, sel, method):
     assert method in "xpath css-select".split(), method
     if method == "css-select":
-        soup = BeautifulSoup(text, 'html.parser')
+        soup = BeautifulSoup(text, "html.parser")
         return str(soup.select(sel))
     elif method == "xpath":
         try:
@@ -89,12 +99,18 @@ def fetch_element(text, sel, method):
 
 @click.command()
 @click.option("--mongo-url", required=True, envvar="PYASSISTANTBOT_MONGO_URL")
-@click.option("-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum")
+@click.option(
+    "-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum"
+)
 @click.argument("word")
 @click.option("-c", "--cache-lifetime-min", type=int, default=-1)
 @click.option("--force-cache-miss/--no-force-cache-miss", "-f/ ", default=False)
-@click.option("-o", "--output-format", type=click.Choice("def json".split()), default="def")
-def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss, output_format):
+@click.option(
+    "-o", "--output-format", type=click.Choice("def json".split()), default="def"
+)
+def german_grammar(
+    mongo_url, type_, word, cache_lifetime_min, force_cache_miss, output_format
+):
     get = _common.requests_cache.RequestGet(
         cache_lifetime_min,
         ".german_grammar.db",
@@ -105,8 +121,8 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss,
         url,
         is_force_cache_miss=force_cache_miss,
     )
-#    logging.warning(res)
-    status_code, text = re,status_code,urls
+    #    logging.warning(res)
+    status_code, text = res
     assert status_code == 200, (text, status_code, url)
 
     with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
@@ -116,11 +132,11 @@ def german_grammar(mongo_url, type_, word, cache_lifetime_min, force_cache_miss,
             text = fetch_element(text, sel, p["method"])
             break
         except FetchElementException:
-            logging.warning(f"attempt with sel=\"{sel}\" failed")
+            logging.warning(f'attempt with sel="{sel}" failed')
             pass
     with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
         f.write(text)
-    df, = pd.read_html(text)
+    (df,) = pd.read_html(text)
 
     if output_format == "def":
         click.echo(df)
