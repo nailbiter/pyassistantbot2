@@ -54,8 +54,8 @@ _SCOPES = [
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
 @click.option("--debug/--no-debug", default=False)
-@click.option("--list-id", envvar="TODO_TRELLO_LIST_ID", required=True)
-@click.option("--mongo-url", envvar="PYASSISTANTBOT_MONGO_URL", required=True)
+@click.option("--list-id", required=True)
+@click.option("--mongo-url", required=True)
 @click.pass_context
 def gstasks(ctx, debug, list_id, mongo_url):
     if debug:
@@ -65,11 +65,11 @@ def gstasks(ctx, debug, list_id, mongo_url):
     ctx.obj["task_list"] = TaskList(
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
     )
-    ctx.obj["list_id"] = list_id
+    ctx.obj["1list_id"] = list_id
 
 
 @gstasks.command()
-@click.option("-t", "--tag", "tags", envvar="GSTASKS_MV_TAGS")
+@click.option("-t", "--tag", "tags")
 @click.option("--contains")
 @click.option("--not-contains")
 @click.pass_context
@@ -115,7 +115,7 @@ def mv(ctx, tags, contains, not_contains):
 
 @gstasks.command()
 @click.option("-h", "--task-hash")
-@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
+@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),show_envvar=True)
 @click.option("-s", "--scheduled-date")
 @click.option("--archive/--no-archive", default=True)
 @click.pass_context
@@ -141,7 +141,9 @@ def mv_task(ctx, task_hash, when, scheduled_date, archive):
 @gstasks.command()
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-u", "--uuid-text", multiple=True)
-@click.option("--web-browser", envvar="WEBBROWSER")
+@click.option(
+    "--web-browser",
+)
 @click.option("--open-url/--no-open-url", default=True)
 @click.pass_context
 def open_url(ctx, index, uuid_text, web_browser, open_url):
@@ -169,8 +171,14 @@ def _fetch_uuid(uuid):
 @click.option("-u", "--uuid-text", multiple=True)
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("--create-archived/--no-create-archived", default=True)
-@click.option("-l", "--label", multiple=True, envvar="GSTASKS__CREATE_CARD__LABEL")
-@click.option("--web-browser", envvar="WEBBROWSER")
+@click.option(
+    "-l",
+    "--label",
+    multiple=True,
+)
+@click.option(
+    "--web-browser",
+)
 @click.option("--open-url/--no-open-url", default=False)
 @click.pass_context
 def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_browser):
@@ -222,7 +230,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
     "--status",
     type=click.Choice(["DONE", "FAILED", "REGULAR", *ADDITIONAL_STATES]),
 )
-@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")))
+@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),show_envvar=True)
 @click.option("-s", "--scheduled-date")
 @click.option("-g", "--tag", "tags", multiple=True)
 @click.option(
@@ -298,6 +306,7 @@ def edit(
     "--when",
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
     required=True,
+    show_envvar=True,
 )
 @click.option("-u", "--url", "URL")
 @click.option("-s", "--scheduled-date", type=CLI_DATETIME)
@@ -395,6 +404,7 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     "--when",
     multiple=True,
     type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")),
+    show_envvar=True,
 )
 @click.option("-x", "--text")
 @click.option("-b", "--before-date")
@@ -408,8 +418,6 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @click.option(
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
-    show_envvar=True,
-    envvar="GSTASKS_LS_OUT_FORMAT_CONFIG",
 )
 @click.pass_context
 def ls(
@@ -509,4 +517,4 @@ def ls(
 
 
 if __name__ == "__main__":
-    gstasks()
+    gstasks(show_default=True, auto_envvar_prefix="GSTASKS")
