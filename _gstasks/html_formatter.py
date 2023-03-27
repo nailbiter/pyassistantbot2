@@ -95,14 +95,24 @@ def format_html(df, html_out_config, print_callback=print):
         df = df.loc[res["uuid"].to_list()]
 
     # formatting
+    # formatting via SQL? via CSS?
+    # TODO: next -- optional formatting via class assignment
+    # TODO: add optional css via `config`
     _date_cols = ["_insertion_date", "_last_modification_date"]
     for cn in _date_cols:
         df[cn] = df[cn].apply(
             lambda dt: "" if pd.isna(dt) else dt.strftime("%Y-%m-%d %H:%M")
         )
 
+    # TODO: col order via `config`
+        
     out_file = config.get("out_file")
-    s = df.to_html(buf=out_file, render_links=True)
+    is_use_style = config.get("is_use_style", False)
+    s = (
+        df.style.to_html(buf=out_file)
+        if is_use_style
+        else df.to_html(buf=out_file, render_links=True)
+    )
     logging.warning(f'html saved to "{out_file}"')
     if s is not None:
         print_callback(s)
