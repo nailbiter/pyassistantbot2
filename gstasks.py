@@ -33,6 +33,7 @@ import webbrowser
 from datetime import datetime
 from os import path
 from typing import cast
+import functools
 
 import click
 import pandas as pd
@@ -50,12 +51,14 @@ _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
 
+option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
+
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
-@click.option("--debug/--no-debug", default=False)
-@click.option("--list-id", required=True)
-@click.option("--mongo-url", required=True)
+@option_with_envvar_explicit("--debug/--no-debug", default=False)
+@option_with_envvar_explicit("--list-id", required=True)
+@option_with_envvar_explicit("--mongo-url", required=True)
 @click.pass_context
 def gstasks(ctx, debug, list_id, mongo_url):
     if debug:
@@ -69,9 +72,9 @@ def gstasks(ctx, debug, list_id, mongo_url):
 
 
 @gstasks.command()
-@click.option("-t", "--tag", "tags")
-@click.option("--contains")
-@click.option("--not-contains")
+@option_with_envvar_explicit("-t", "--tag", "tags")
+@option_with_envvar_explicit("--contains")
+@option_with_envvar_explicit("--not-contains")
 @click.pass_context
 def mv(ctx, tags, contains, not_contains):
     list_id = ctx.obj["list_id"]
@@ -114,10 +117,14 @@ def mv(ctx, tags, contains, not_contains):
 
 
 @gstasks.command()
-@click.option("-h", "--task-hash")
-@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),show_envvar=True)
-@click.option("-s", "--scheduled-date")
-@click.option("--archive/--no-archive", default=True)
+@option_with_envvar_explicit("-h", "--task-hash")
+@option_with_envvar_explicit(
+    "-w",
+    "--when",
+    type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
+)
+@option_with_envvar_explicit("-s", "--scheduled-date")
+@option_with_envvar_explicit("--archive/--no-archive", default=True)
 @click.pass_context
 def mv_task(ctx, task_hash, when, scheduled_date, archive):
     task_list = ctx.obj["task_list"]
@@ -139,12 +146,12 @@ def mv_task(ctx, task_hash, when, scheduled_date, archive):
 
 
 @gstasks.command()
-@click.option("-i", "--index", type=int, multiple=True)
-@click.option("-u", "--uuid-text", multiple=True)
-@click.option(
+@option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
+@option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
+@option_with_envvar_explicit(
     "--web-browser",
 )
-@click.option("--open-url/--no-open-url", default=True)
+@option_with_envvar_explicit("--open-url/--no-open-url", default=True)
 @click.pass_context
 def open_url(ctx, index, uuid_text, web_browser, open_url):
     task_list = ctx.obj["task_list"]
@@ -168,18 +175,18 @@ def _fetch_uuid(uuid):
 
 
 @gstasks.command()
-@click.option("-u", "--uuid-text", multiple=True)
-@click.option("-i", "--index", type=int, multiple=True)
-@click.option("--create-archived/--no-create-archived", default=True)
-@click.option(
+@option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
+@option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
+@option_with_envvar_explicit("--create-archived/--no-create-archived", default=True)
+@option_with_envvar_explicit(
     "-l",
     "--label",
     multiple=True,
 )
-@click.option(
+@option_with_envvar_explicit(
     "--web-browser",
 )
-@click.option("--open-url/--no-open-url", default=False)
+@option_with_envvar_explicit("--open-url/--no-open-url", default=False)
 @click.pass_context
 def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_browser):
     # taken from https://stackoverflow.com/a/13514318
@@ -221,30 +228,34 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 
 
 @gstasks.command()
-@click.option("-u", "--uuid-text", multiple=True)
-@click.option("-i", "--index", type=int, multiple=True)
-@click.option("-f", "--uuid-list-file", type=click.Path())
-@click.option("-n", "--name")
-@click.option(
+@option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
+@option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
+@option_with_envvar_explicit("-f", "--uuid-list-file", type=click.Path())
+@option_with_envvar_explicit("-n", "--name")
+@option_with_envvar_explicit(
     "-t",
     "--status",
     type=click.Choice(["DONE", "FAILED", "REGULAR", *ADDITIONAL_STATES]),
 )
-@click.option("-w", "--when", type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),show_envvar=True)
-@click.option("-s", "--scheduled-date")
-@click.option("-g", "--tag", "tags", multiple=True)
-@click.option(
+@option_with_envvar_explicit(
+    "-w",
+    "--when",
+    type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
+)
+@option_with_envvar_explicit("-s", "--scheduled-date")
+@option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
+@option_with_envvar_explicit(
     "--tag-operation",
     type=click.Choice(["symmetric_difference", "union", "difference"]),
     default="symmetric_difference",
 )
-@click.option("--url", "URL")
+@option_with_envvar_explicit("--url", "URL")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
-@click.option("-d", "--due", type=click.DateTime())
-@click.option("-a", "--action-comment")
-@click.option("-c", "--comment")
-@click.option("--create-new-tag/--no-create-new-tag", default=False)
+@option_with_envvar_explicit("-d", "--due", type=click.DateTime())
+@option_with_envvar_explicit("-a", "--action-comment")
+@option_with_envvar_explicit("-c", "--comment")
+@option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
 @click.pass_context
 def edit(
     ctx,
@@ -300,23 +311,22 @@ def edit(
 
 
 @gstasks.command()
-@click.option("-n", "--name", required=True)
-@click.option(
+@option_with_envvar_explicit("-n", "--name", required=True)
+@option_with_envvar_explicit(
     "-w",
     "--when",
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
     required=True,
-    show_envvar=True,
 )
-@click.option("-u", "--url", "URL")
-@click.option("-s", "--scheduled-date", type=CLI_DATETIME)
-@click.option(
+@option_with_envvar_explicit("-u", "--url", "URL")
+@option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
+@option_with_envvar_explicit(
     "-t", "--status", type=click.Choice(["REGULAR", "DONE", *ADDITIONAL_STATES])
 )
-@click.option("-g", "--tag", "tags", multiple=True)
-@click.option("-d", "--due", type=CLI_DATETIME)
-@click.option("-c", "--comment")
-@click.option("--create-new-tag/--no-create-new-tag", default=False)
+@option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
+@option_with_envvar_explicit("-d", "--due", type=CLI_DATETIME)
+@option_with_envvar_explicit("-c", "--comment")
+@option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
 @click.pass_context
 def add(ctx, create_new_tag, **kwargs):
     task_list = ctx.obj["task_list"]
@@ -368,7 +378,7 @@ def show_tags(ctx):
 @tags.command(name="mv")
 @click.argument("tag_from")
 @click.argument("tag_to")
-@click.option("--remove-tag-from/--no-remove-tag-from", default=False)
+@option_with_envvar_explicit("--remove-tag-from/--no-remove-tag-from", default=False)
 @click.pass_context
 def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     task_list = ctx.obj["task_list"]
@@ -399,23 +409,24 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 
 
 @gstasks.command()
-@click.option(
+@option_with_envvar_explicit(
     "-w",
     "--when",
     multiple=True,
     type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")),
-    show_envvar=True,
 )
-@click.option("-x", "--text")
-@click.option("-b", "--before-date")
-@click.option("-a", "--after-date")
-@click.option("-u", "--un-scheduled", is_flag=True, default=False)
-@click.option("-o", "--out-format", type=click.Choice(["str", "csv", "json", "html"]))
-@click.option("-h", "--head", type=int)
-@click.option("-s", "--sample", type=int)
-@click.option("--name-lenght-limit", type=int, default=50)
-@click.option("-g", "--tag", "tags", multiple=True)
-@click.option(
+@option_with_envvar_explicit("-x", "--text")
+@option_with_envvar_explicit("-b", "--before-date")
+@option_with_envvar_explicit("-a", "--after-date")
+@option_with_envvar_explicit("-u", "--un-scheduled", is_flag=True, default=False)
+@option_with_envvar_explicit(
+    "-o", "--out-format", type=click.Choice(["str", "csv", "json", "html"])
+)
+@option_with_envvar_explicit("-h", "--head", type=int)
+@option_with_envvar_explicit("-s", "--sample", type=int)
+@option_with_envvar_explicit("--name-lenght-limit", type=int, default=50)
+@option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
+@option_with_envvar_explicit(
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
 )
