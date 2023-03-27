@@ -43,7 +43,7 @@ def _df_env(df):
     df.reset_index(inplace=True)
 
     tags = df.pop("tags")
-    tags = pd.DataFrame(
+    tags_df = pd.DataFrame(
         data=itertools.chain(
             *[
                 [{"uuid": uuid, "tag": tag} for tag in tags_]
@@ -53,7 +53,7 @@ def _df_env(df):
         columns=["uuid", "tag"],
     )
 
-    res = dict(tasks=df, tags=tags)
+    res = dict(tasks=df, tags=tags_df)
     #    for k, df in res.items():
     #        logging.warning(f"{k}:\n{df.head().to_string()}")
     return res
