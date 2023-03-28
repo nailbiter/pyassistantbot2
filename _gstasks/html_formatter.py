@@ -30,6 +30,7 @@ import itertools
 import json
 import logging
 from datetime import datetime, timedelta
+import json5
 
 import pandas as pd
 from jinja2 import Template
@@ -67,7 +68,7 @@ def format_html(df, html_out_config, print_callback=print):
         return
 
     with open(html_out_config) as f:
-        config = json.load(f)
+        config = json5.load(f)
     logging.warning(f"config: {config}")
 
     # index set
@@ -105,11 +106,14 @@ def format_html(df, html_out_config, print_callback=print):
         )
 
     # TODO: col order via `config`
-        
+
     out_file = config.get("out_file")
     is_use_style = config.get("is_use_style", False)
     s = (
-        df.style.to_html(buf=out_file)
+        df.style.to_html(
+            buf=out_file,
+            #doctype_html=True,
+        )
         if is_use_style
         else df.to_html(buf=out_file, render_links=True)
     )
