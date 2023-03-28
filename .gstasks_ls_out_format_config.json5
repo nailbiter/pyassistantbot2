@@ -4,17 +4,31 @@
     "sorting_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
     "row_styling_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
     "template": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
-    //sample comment
     "output_columns": [
-        "name",
-        //"URL",
-        "scheduled_date",
-        "status",
-        "when",
-        "due",
-        "_insertion_date",
-	"tags",
-        "comment",
-        "_last_modification_date",
+        {"column_name": "name"},
+        {
+            "column_name": "URL",
+            "jinja_tpl": '{%if not utils.pd.isna(x)%}<a href="{{x}}">U</a>{%endif%}',
+        },
+        {
+            "column_name": "scheduled_date",
+            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
+        },
+        {"column_name": "status"},
+        {"column_name": "when"},
+        {
+            "column_name": "due",
+            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
+        },
+        {
+            "column_name": "_insertion_date",
+            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
+        },
+        {"column_name": "tags"},
+        {"column_name": "comment"},
+        {
+            "column_name": "_last_modification_date",
+            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
+        },
     ],
 }

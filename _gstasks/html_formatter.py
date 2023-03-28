@@ -80,41 +80,58 @@ def format_html(df, html_out_config, print_callback=print):
     # filtering
     df.drop(columns=["_id"], inplace=True)
 
+    env = {
+        "now": datetime.now(),
+        "utils": {
+            "pd":pd,
+        },
+    }
+
     # sorting/filtering
     if "sorting_sql" in config:
         with open(config["sorting_sql"]) as f:
             tpl = f.read()
         logging.warning(tpl)
-        sql = Template(tpl).render(
-            {
-                "now": datetime.now(),
-                "util": {},
-            }
-        )
+        sql = Template(tpl).render(env)
         logging.warning(sql)
         res = pandas_sql(sql, _df_env(df))
 
         df = df.loc[res["uuid"].to_list()]
 
-    # formatting
-    # formatting via SQL? via CSS?
-    # TODO: next -- optional formatting via class assignment
-    # TODO: add optional css via `config`
-    _date_cols = ["_insertion_date", "_last_modification_date"]
-    for cn in _date_cols:
-        df[cn] = df[cn].apply(
-            lambda dt: "" if pd.isna(dt) else dt.strftime("%Y-%m-%d %H:%M")
-        )
+    # row styling
+    if "row_styling_sql" in config:
+        with open(config["row_styling_sql"]) as f:
+            tpl = f.read()
+        logging.warning(tpl)
+        sql = Template(tpl).render(env)
+        logging.warning(sql)
+        res_df = pandas_sql(sql, _df_env(df))
+        res_df.set_index("uuid", inplace=True)
+        classes = res_df.loc[df.index, "class"].to_list()
+    else:
+        classes = None
+
+    # _date_cols = ["_insertion_date", "_last_modification_date"]
+    # for cn in _date_cols:
+    #     df[cn] = df[cn].apply(
+    #         lambda dt: "" if pd.isna(dt) else dt.strftime("%Y-%m-%d %H:%M")
+    #     )
+    logging.warning(df.dtypes)
 
     # TODO: col order via `config`
     if "output_columns" in config:
         logging.warning(f'output_columns: {config["output_columns"]}')
-        df = df[config["output_columns"]]
+        df = df[[r["column_name"] for r in config["output_columns"]]]
+        for r in config["output_columns"]:
+            if "jinja_tpl" in r:
+                df[r["column_name"]] = df[r["column_name"]].apply(
+                    lambda x: Template(r["jinja_tpl"]).render({**env, "x":x,}).strip()
+                )
 
     out_file = config.get("out_file")
     is_use_style = config.get("is_use_style", False)
     s = (
-        _style_to_buf(buf=out_file, config=config, df=df)
+        _style_to_buf(buf=out_file, config=config, df=df, classes=classes)
         if is_use_style
         else df.to_html(buf=out_file, render_links=True)
     )
@@ -123,27 +140,23 @@ def format_html(df, html_out_config, print_callback=print):
         print_callback(s)
 
 
-def _style_to_buf(buf: typing.Optional[str], config: dict, df: pd.DataFrame):
+def _style_to_buf(
+    buf: typing.Optional[str],
+    config: dict,
+    df: pd.DataFrame,
+    classes: typing.Optional[list[str]],
+):
+    # formatting
+    # formatting via SQL? via CSS?
+    # TODO(done): next -- optional formatting via class assignment
+    # TODO(done): add optional css via `config`
+
     html_template = config.get("template")
     logging.warning(f"html tpl: {html_template}")
 
     style = df.style
 
-    # row styling
-    if "row_styling_sql" in config:
-        with open(config["row_styling_sql"]) as f:
-            tpl = f.read()
-        logging.warning(tpl)
-        sql = Template(tpl).render(
-            {
-                "now": datetime.now(),
-                "util": {},
-            }
-        )
-        logging.warning(sql)
-        res_df = pandas_sql(sql, _df_env(df))
-        res_df.set_index("uuid", inplace=True)
-        classes = res_df.loc[df.index, "class"].to_list()
+    if classes is not None:
         assert len(classes) == len(df), (len(classes), len(df))
         style = style.set_td_classes(
             pd.DataFrame(
@@ -160,9 +173,11 @@ def _style_to_buf(buf: typing.Optional[str], config: dict, df: pd.DataFrame):
     html = style.to_html(**to_html_kwargs)
 
     if html_template is not None:
+        # FIXME: solve `pandas` html escape problem and switch to `jinja2`
         with open(html_template) as f:
             tpl = string_template(f.read())
-        html = tpl.substitute(table_html=html)
+        row_num, col_num = df.shape
+        html = tpl.substitute(table_html=html, row_num=row_num, col_num=col_num)
 
     if buf is not None:
         with open(buf, "w") as f:
