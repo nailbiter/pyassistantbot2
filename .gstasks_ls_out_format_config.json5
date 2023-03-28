@@ -7,7 +7,7 @@
     //sample comment
     "output_columns": [
         "name",
-        "URL",
+        //"URL",
         "scheduled_date",
         "status",
         "when",
