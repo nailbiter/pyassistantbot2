@@ -1,7 +1,8 @@
 {
-    "is_use_style": false,
+    "is_use_style": true,
     "out_file": "tasks.html",
-    "sorting_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ls_html_sort_sel.jinja.sql",
+    "sorting_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
+    "row_styling_sql":"/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
     // sample comment
-    "template":"/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.jinja2.sql",
+    "template":"/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
 }

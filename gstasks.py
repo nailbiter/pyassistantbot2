@@ -39,7 +39,6 @@ import click
 import pandas as pd
 import tqdm
 from jinja2 import Template
-from string import Template as string_template
 
 from _common import parse_cmdline_datetime, run_trello_cmd
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher

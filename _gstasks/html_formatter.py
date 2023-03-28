@@ -31,9 +31,10 @@ import json
 import logging
 from datetime import datetime, timedelta
 import json5
-
+import typing
 import pandas as pd
 from jinja2 import Template
+from string import Template as string_template
 
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
@@ -110,13 +111,56 @@ def format_html(df, html_out_config, print_callback=print):
     out_file = config.get("out_file")
     is_use_style = config.get("is_use_style", False)
     s = (
-        df.style.to_html(
-            buf=out_file,
-            #doctype_html=True,
-        )
+        _style_to_buf(buf=out_file, config=config, df=df)
         if is_use_style
         else df.to_html(buf=out_file, render_links=True)
     )
     logging.warning(f'html saved to "{out_file}"')
     if s is not None:
         print_callback(s)
+
+
+def _style_to_buf(buf: typing.Optional[str], config: dict, df: pd.DataFrame):
+    html_template = config.get("template")
+    logging.warning(f"html tpl: {html_template}")
+
+    style = df.style
+
+    # row styling
+    if "row_styling_sql" in config:
+        with open(config["row_styling_sql"]) as f:
+            tpl = f.read()
+        logging.warning(tpl)
+        sql = Template(tpl).render(
+            {
+                "now": datetime.now(),
+                "util": {},
+            }
+        )
+        logging.warning(sql)
+        res_df = pandas_sql(sql, _df_env(df))
+        res_df.set_index("uuid", inplace=True)
+        classes = res_df.loc[df.index, "class"].to_list()
+        assert len(classes) == len(df), (len(classes), len(df))
+        style = style.set_td_classes(
+            pd.DataFrame(
+                data=[[cls] * len(df.columns) for cls in classes],
+                columns=df.columns,
+                index=df.index,
+            )
+        )
+
+    to_html_kwargs = {}
+    if html_template is not None:
+        to_html_kwargs["doctype_html"] = True
+
+    html = style.to_html(**to_html_kwargs)
+
+    if html_template is not None:
+        with open(html_template) as f:
+            tpl = string_template(f.read())
+        html = tpl.substitute(table_html=html)
+
+    if buf is not None:
+        with open(buf, "w") as f:
+            f.write(html)
