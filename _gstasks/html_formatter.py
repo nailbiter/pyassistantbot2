@@ -107,6 +107,9 @@ def format_html(df, html_out_config, print_callback=print):
         )
 
     # TODO: col order via `config`
+    if "output_columns" in config:
+        logging.warning(f'output_columns: {config["output_columns"]}')
+        df = df[config["output_columns"]]
 
     out_file = config.get("out_file")
     is_use_style = config.get("is_use_style", False)

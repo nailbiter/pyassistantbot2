@@ -2,7 +2,19 @@
     "is_use_style": true,
     "out_file": "tasks.html",
     "sorting_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
-    "row_styling_sql":"/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
-    // sample comment
-    "template":"/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
+    "row_styling_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
+    "template": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
+    //sample comment
+    "output_columns": [
+        "name",
+        "URL",
+        "scheduled_date",
+        "status",
+        "when",
+        "due",
+        "_insertion_date",
+	"tags",
+        "comment",
+        "_last_modification_date",
+    ],
 }
