@@ -256,6 +256,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @option_with_envvar_explicit("-a", "--action-comment")
 @option_with_envvar_explicit("-c", "--comment")
 @option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
+@option_with_envvar_explicit("-l", "--label", type=(str, str))
 @click.pass_context
 def edit(
     ctx,
@@ -305,6 +306,11 @@ def edit(
                     r["tags"] = sorted(
                         getattr(set, tag_operation)(set(r["tags"]), kwargs["tags"])
                     )
+                elif k == "label":
+                    r["label"] = {
+                        **r.get("label", {}),
+                        v[0]: v[1],
+                    }
                 else:
                     r[k] = None if v == _UNSET else v
         task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)

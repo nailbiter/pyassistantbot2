@@ -55,7 +55,16 @@ def _df_env(df):
         columns=["uuid", "tag"],
     )
 
-    res = dict(tasks=df, tags=tags_df)
+    if "label" in df.columns:
+        labels_df = pd.DataFrame(
+            data=[({} if pd.isna(label) else label) for label in df.pop("label")]
+        )
+    else:
+        labels_df = pd.DataFrame()
+
+    labels_df["uuid"] = df["uuid"]
+
+    res = dict(tasks=df, tags=tags_df, labels=labels_df)
     #    for k, df in res.items():
     #        logging.warning(f"{k}:\n{df.head().to_string()}")
     return res
@@ -83,7 +92,10 @@ def format_html(df, html_out_config, print_callback=print):
     env = {
         "now": datetime.now(),
         "utils": {
-            "pd":pd,
+            "pd": pd,
+            "custom":{
+                "ifnull":(lambda x,y:y if pd.isna(x) else x),
+            },
         },
     }
 
@@ -121,12 +133,29 @@ def format_html(df, html_out_config, print_callback=print):
     # TODO: col order via `config`
     if "output_columns" in config:
         logging.warning(f'output_columns: {config["output_columns"]}')
-        df = df[[r["column_name"] for r in config["output_columns"]]]
-        for r in config["output_columns"]:
-            if "jinja_tpl" in r:
-                df[r["column_name"]] = df[r["column_name"]].apply(
-                    lambda x: Template(r["jinja_tpl"]).render({**env, "x":x,}).strip()
-                )
+        rs = list(df.reset_index().to_dict(orient="records"))
+        # logging.warning(f"rs: {rs[:5]}")
+        df = pd.DataFrame(
+            {
+                output_column["column_name"]: _render_column(output_column, rs, env)
+                for output_column in config["output_columns"]
+            },
+            index=df.index,
+        )
+        # df = df[[r["column_name"] for r in config["output_columns"]]]
+        # for r in config["output_columns"]:
+        #     jinja_tpl = r.get("jinja_tpl")
+        #     if "jinja_tpl" in r:
+        #         df[r["column_name"]] = df[r["column_name"]].apply(
+        #             lambda x: Template(r["jinja_tpl"])
+        #             .render(
+        #                 {
+        #                     **env,
+        #                     "x": x,
+        #                 }
+        #             )
+        #             .strip()
+        #         )
 
     out_file = config.get("out_file")
     is_use_style = config.get("is_use_style", False)
@@ -138,6 +167,26 @@ def format_html(df, html_out_config, print_callback=print):
     logging.warning(f'html saved to "{out_file}"')
     if s is not None:
         print_callback(s)
+
+
+def _render_column(output_column, rs, env):
+    # logging.warning(f"_render_column in: {output_column, rs[:5]}")
+    res = map(
+        lambda r: Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
+        .render(
+            {
+                **env,
+                "r": r,
+                "column_name": output_column["column_name"],
+                "x": r.get(output_column["column_name"]),
+            }
+        )
+        .strip(),
+        rs,
+    )
+    res = list(res)
+    # logging.warning(res)
+    return res
 
 
 def _style_to_buf(
