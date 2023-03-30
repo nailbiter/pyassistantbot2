@@ -43,7 +43,7 @@ from jinja2 import Template
 from _common import parse_cmdline_datetime, run_trello_cmd
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
-from _gstasks.html_formatter import format_html
+from _gstasks.html_formatter import format_html, ifnull
 
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
@@ -68,7 +68,7 @@ def gstasks(ctx, debug, list_id, mongo_url):
     ctx.obj["task_list"] = TaskList(
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
     )
-    ctx.obj["1list_id"] = list_id
+    ctx.obj["list_id"] = list_id
 
 
 @gstasks.command()
@@ -257,6 +257,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @option_with_envvar_explicit("-c", "--comment")
 @option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
 @option_with_envvar_explicit("-l", "--label", type=(str, str))
+@option_with_envvar_explicit("--post-hook")
 @click.pass_context
 def edit(
     ctx,
@@ -266,6 +267,7 @@ def edit(
     uuid_list_file,
     tag_operation,
     create_new_tag,
+    post_hook,
     **kwargs,
 ):
     # taken from https://stackoverflow.com/a/13514318
@@ -308,12 +310,16 @@ def edit(
                     )
                 elif k == "label":
                     r["label"] = {
-                        **r.get("label", {}),
+                        **ifnull(r.get("label", {}), {}),
                         v[0]: v[1],
                     }
                 else:
                     r[k] = None if v == _UNSET else v
         task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)
+
+    if post_hook is not None:
+        logging.warning(f'executing post_hook "{post_hook}"')
+        os.system(post_hook)
 
 
 @gstasks.command()
@@ -524,7 +530,7 @@ def ls(
     elif out_format == "csv":
         click.echo(pretty_df.to_csv())
     elif out_format == "html":
-        format_html(df, out_format_config, print_callback=click.echo)
+        format_html(df, out_format_config, task_list, print_callback=click.echo)
         logging.warning(f"{len(pretty_df)} tasks matched")
     else:
         raise NotImplementedError((out_format,))

@@ -1,38 +1,39 @@
 {
-    "is_use_style": true,
-    "out_file": "tasks.html",
-    "sorting_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
-    "row_styling_sql": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
-    "template": "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
-    "output_columns": [
-        {"column_name": "name"},
-        {
-            "column_name": "URL",
-            "jinja_tpl": '{%if not utils.pd.isna(x)%}<a href="{{x}}">U</a>{%endif%}',
-        },
-        {
-            "column_name": "scheduled_date",
-            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
-        },
-        {"column_name": "status"},
-        {"column_name": "when"},
-        {
-            "column_name": "due",
-            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
-        },
-        {
-            "column_name": "_insertion_date",
-            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
-        },
-        {"column_name": "tags"},
-        {"column_name": "comment"},
-        {
-            "column_name": "_last_modification_date",
-            "jinja_tpl": "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
-        },
-	{
-	    "column_name": "test",
-	    "jinja_tpl": "{{utils.custom.ifnull(r.get('label',{}),{}).get('test')}}",
-	}
-    ],
+  is_use_style: true,
+  out_file: "tasks.html",
+  sorting_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
+  row_styling_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
+  template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
+  output_columns: [
+    { column_name: "name" },
+    {
+      column_name: "URL",
+      jinja_tpl: '{%if not utils.pd.isna(x)%}<a href="{{x}}">U</a>{%endif%}',
+    },
+    {
+      column_name: "scheduled_date",
+      jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
+    },
+    { column_name: "status" },
+    { column_name: "when" },
+    {
+      column_name: "due",
+      jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
+    },
+    {
+      column_name: "_insertion_date",
+      jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
+    },
+    { column_name: "tags" },
+    { column_name: "comment" },
+    {
+      column_name: "_last_modification_date",
+      jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
+    },
+    {
+      column_name: "test",
+      jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{}).get('test')),{}).get('name')}}",
+      //jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{},is_loud=True).get('test')),{}).get('name')}}",
+    },
+  ],
 }

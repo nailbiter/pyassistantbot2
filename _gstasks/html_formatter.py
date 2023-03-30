@@ -35,9 +35,44 @@ import typing
 import pandas as pd
 from jinja2 import Template
 from string import Template as string_template
+import typing
+import functools
 
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
+
+
+def ifnull(x, y, method: typing.Literal["isna"] = "isna", is_loud: bool = False):
+    res = y if pd.isna(x) else x
+    if is_loud:
+        logging.warning(("ifnull", (x, y), res))
+    return res
+
+
+class _get_task_by_uuid:
+    def __init__(self, task_list):
+        self._coll = task_list.get_coll()
+        self._cache = {}
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def __call__(self, uuid_: str, is_report_cache_hitmisses: bool = False):
+        if uuid_ not in self._cache:
+            if is_report_cache_hitmisses:
+                self._logger.warning(f'cache miss with "{uuid_}"')
+            self._cache[uuid_] = self._coll.find_one({"uuid": uuid_})
+        elif is_report_cache_hitmisses:
+            self._logger.warning(f'cache hit with "{uuid_}"')
+        res = self._cache[uuid_]
+
+        # self._logger.warning(
+        #     (
+        #         "_get_task_by_uuid",
+        #         uuid_,
+        #         res,
+        #     )
+        # )
+
+        return res
 
 
 def _df_env(df):
@@ -70,7 +105,7 @@ def _df_env(df):
     return res
 
 
-def format_html(df, html_out_config, print_callback=print):
+def format_html(df, html_out_config, task_list, print_callback=print):
     #    logging.warning(html_out_config)
 
     if html_out_config is None:
@@ -88,13 +123,13 @@ def format_html(df, html_out_config, print_callback=print):
 
     # filtering
     df.drop(columns=["_id"], inplace=True)
-
     env = {
         "now": datetime.now(),
         "utils": {
             "pd": pd,
-            "custom":{
-                "ifnull":(lambda x,y:y if pd.isna(x) else x),
+            "custom": {
+                "ifnull": ifnull,
+                "get_task_by_uuid": _get_task_by_uuid(task_list),
             },
         },
     }
