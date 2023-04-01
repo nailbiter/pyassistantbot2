@@ -30,10 +30,10 @@
       column_name: "_last_modification_date",
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
     },
-    {
+    /*{
       column_name: "test",
       jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{}).get('test')),{}).get('name')}}",
       //jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{},is_loud=True).get('test')),{}).get('name')}}",
-    },
+    },*/
   ],
 }
