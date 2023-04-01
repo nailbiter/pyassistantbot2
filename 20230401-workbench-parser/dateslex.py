@@ -22,58 +22,92 @@ import ply.lex as lex
 from datetime import datetime, timedelta
 import logging
 
-# List of token names.   This is always required
-tokens = (
-    "PLUS",
-    "MINUS",
-    "LPAREN",
-    "RPAREN",
-    "DATETIME",
-    "TIMEDELTA",
-)
 
-# Regular expression rules for simple tokens
-t_PLUS = r"\+"
-t_MINUS = r"-"
-t_LPAREN = r"\("
-t_RPAREN = r"\)"
+class DatesLexer(object):
 
-# A regular expression rule with some action code
-def t_DATETIME(t):
-    r'''(["']\d{4}-\d{2}-\d{2}["']|today|yesterday|tomorrow|now)'''
-    # t.value = int(t.value)
-    if t.value not in ["today", "yesterday", "tomorrow", "now"]:
-        t.value = datetime.strptime(t.value[1:-1], "%Y-%m-%d")
-    return t
+    # List of token names.   This is always required
+    tokens = (
+        "PLUS",
+        "MINUS",
+        "LPAREN",
+        "RPAREN",
+        "DATETIME",
+        "TIMEDELTA",
+        "L",
+        "G",
+        "LE",
+        "GE",
+        "E",
+        "VAR",
+        "AND",
+        "OR",
+    )
 
+    # Regular expression rules for simple tokens
+    t_PLUS = r"\+"
+    t_MINUS = r"-"
+    t_LPAREN = r"\("
+    t_RPAREN = r"\)"
+    t_L = r"<"
+    t_G = r">"
+    t_LE = "<="
+    t_GE = ">="
+    t_E = "=="
+    t_VAR = "x"
+    t_AND = r"(&&|and)"
+    t_OR = r"(\|\||or)"
 
-def t_TIMEDELTA(t):
-    r"(?P<dur>\d+)(?P<unit>[dhm])?"
+    # A regular expression rule with some action code
+    def t_DATETIME(self, t):
+        r"""(["']\d{4}-\d{2}-\d{2}["']|today|yesterday|tomorrow|now)"""
+        # FIXME: add "next (mon|tue|wed|thu|sat|sun)..."
+        # t.value = int(t.value)
+        if t.value == "now":
+            t.value = self._now
+        elif t.value == "today":
+            t.value = datetime.strptime(self._now.strftime("%Y-%m-%d"), "%Y-%m-%d")
+        elif t.value == "yesterday":
+            t.value = datetime.strptime(self._now.strftime("%Y-%m-%d"), "%Y-%m-%d")
+            t.value -= timedelta(days=1)
+        elif t.value == "tomorrow":
+            t.value = datetime.strptime(self._now.strftime("%Y-%m-%d"), "%Y-%m-%d")
+            t.value += timedelta(days=1)
+        else:
+            t.value = datetime.strptime(t.value[1:-1], "%Y-%m-%d")
+        return t
 
-    # logging.warning((t.value, t.lexer.lexmatch))
+    def t_TIMEDELTA(self, t):
+        r"(?P<dur>\d+)(?P<unit>[dhm])?"
 
-    units = {k[0]: f"{k}s" for k in "day hour month".split()}
-    units[None] = units["d"]
+        # logging.warning((t.value, t.lexer.lexmatch))
 
-    unit = units[t.lexer.lexmatch.group("unit")]
-    t.value = timedelta(**{unit: int(t.lexer.lexmatch.group("dur"))})
-    return t
+        units = {k[0]: f"{k}s" for k in "day hour month".split()}
+        units[None] = units["d"]
 
+        unit = units[t.lexer.lexmatch.group("unit")]
+        t.value = timedelta(**{unit: int(t.lexer.lexmatch.group("dur"))})
+        return t
 
-# # Define a rule so we can track line numbers
-# def t_newline(t):
-#     r"\n+"
-#     t.lexer.lineno += len(t.value)
+    # # Define a rule so we can track line numbers
+    # def t_newline(t):
+    #     r"\n+"
+    #     t.lexer.lineno += len(t.value)
 
+    # A string containing ignored characters (spaces and tabs)
+    t_ignore = " \t"
 
-# A string containing ignored characters (spaces and tabs)
-t_ignore = " \t"
+    # Error handling rule
+    def t_error(self, t):
+        print("Illegal character '%s'" % t.value[0])
+        t.lexer.skip(1)
 
-# Error handling rule
-def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
-    t.lexer.skip(1)
+    # Build the lexer
+    def build(self, **kwargs):
+        self.lexer = lex.lex(object=self, **kwargs)
 
+    def __init__(self, now=None):
+        if now is None:
+            now = datetime.now()
+        self._now = now
 
-# Build the lexer
-lexer = lex.lex()
+    # lexer = lex.lex()
