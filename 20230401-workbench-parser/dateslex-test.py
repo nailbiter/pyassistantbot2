@@ -21,17 +21,20 @@ ORGANIZATION:
 from dateslex import lexer
 
 # Test it out
-data = """
-3 + 4 * 10
-  + -20 *2
-"""
+datas = [
+    '"2023-04-01"+1d',
+    "today+1h"
+]
 
 # Give the lexer some input
-lexer.input(data)
+for data in datas:
+    print(data)
 
-# Tokenize
-while True:
-    tok = lexer.token()
-    if not tok:
-        break  # No more input
-    print(tok)
+    lexer.input(data.strip())
+
+    # Tokenize
+    while True:
+        tok = lexer.token()
+        if not tok:
+            break  # No more input
+        print(tok)

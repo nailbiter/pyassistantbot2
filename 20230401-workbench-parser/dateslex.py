@@ -19,37 +19,51 @@ ORGANIZATION:
 ==============================================================================="""
 
 import ply.lex as lex
+from datetime import datetime, timedelta
+import logging
 
 # List of token names.   This is always required
 tokens = (
-    "NUMBER",
     "PLUS",
     "MINUS",
-    "TIMES",
-    "DIVIDE",
     "LPAREN",
     "RPAREN",
+    "DATETIME",
+    "TIMEDELTA",
 )
 
 # Regular expression rules for simple tokens
 t_PLUS = r"\+"
 t_MINUS = r"-"
-t_TIMES = r"\*"
-t_DIVIDE = r"/"
 t_LPAREN = r"\("
 t_RPAREN = r"\)"
 
 # A regular expression rule with some action code
-def t_NUMBER(t):
-    r"\d+"
-    t.value = int(t.value)
+def t_DATETIME(t):
+    r'''(["']\d{4}-\d{2}-\d{2}["']|today|yesterday|tomorrow|now)'''
+    # t.value = int(t.value)
+    if t.value not in ["today", "yesterday", "tomorrow", "now"]:
+        t.value = datetime.strptime(t.value[1:-1], "%Y-%m-%d")
     return t
 
 
-# Define a rule so we can track line numbers
-def t_newline(t):
-    r"\n+"
-    t.lexer.lineno += len(t.value)
+def t_TIMEDELTA(t):
+    r"(?P<dur>\d+)(?P<unit>[dhm])?"
+
+    # logging.warning((t.value, t.lexer.lexmatch))
+
+    units = {k[0]: f"{k}s" for k in "day hour month".split()}
+    units[None] = units["d"]
+
+    unit = units[t.lexer.lexmatch.group("unit")]
+    t.value = timedelta(**{unit: int(t.lexer.lexmatch.group("dur"))})
+    return t
+
+
+# # Define a rule so we can track line numbers
+# def t_newline(t):
+#     r"\n+"
+#     t.lexer.lineno += len(t.value)
 
 
 # A string containing ignored characters (spaces and tabs)
