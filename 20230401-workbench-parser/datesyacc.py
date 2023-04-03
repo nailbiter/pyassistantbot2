@@ -24,6 +24,9 @@ timedelta
 expression
 """
 
+from dateslex import DatesLexer
+tokens = DatesLexer.tokens
+
 
 def p_expression_plus(p):
     'expression : expression PLUS term'

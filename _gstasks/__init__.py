@@ -161,11 +161,12 @@ CLI_DATETIME = ConvenientCliDatetimeParamType()
 
 
 class TagProcessor:
-    def __init__(self, coll, create_new_tag=True):
+    def __init__(self, coll, create_new_tag=True,flag_name=None):
         self._coll = coll
         self._cache = {}
         self._logger = logging.getLogger(self.__class__.__name__)
         self._create_new_tag = create_new_tag
+        self._flag_name = flag_name
 
     def get_all_tags(self):
         return pd.DataFrame(self._coll.find())
@@ -183,7 +184,10 @@ class TagProcessor:
         df = pd.DataFrame(self._coll.find(kwargs))
         assert len(df) <= 1, (tag, df)
         if len(df) == 0:
-            assert self._create_new_tag, f'cannot create new tag "{kwargs}"'
+            msg = f'cannot create new tag "{kwargs}"'
+            if self._flag_name is not None:
+                msg = f"{msg} (use flag `{self._flag_name}`)"
+            assert self._create_new_tag, msg
             assert kwargs["name"] is not None, kwargs
             tag_r = self._get_tag_imputation_record(kwargs["name"])
             logger.warning(f"insert {tag_r}")

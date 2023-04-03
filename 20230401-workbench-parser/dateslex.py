@@ -24,8 +24,6 @@ import logging
 
 
 class DatesLexer(object):
-
-    # List of token names.   This is always required
     tokens = (
         "PLUS",
         "MINUS",
@@ -38,11 +36,12 @@ class DatesLexer(object):
         "LE",
         "GE",
         "E",
-        "VAR",
+        # "VAR",
         "AND",
         "OR",
     )
 
+    # List of token names.   This is always required
     # Regular expression rules for simple tokens
     t_PLUS = r"\+"
     t_MINUS = r"-"
@@ -53,17 +52,19 @@ class DatesLexer(object):
     t_LE = "<="
     t_GE = ">="
     t_E = "=="
-    t_VAR = "x"
+    # t_VAR = "x"
     t_AND = r"(&&|and)"
     t_OR = r"(\|\||or)"
 
     # A regular expression rule with some action code
     def t_DATETIME(self, t):
-        r"""(["']\d{4}-\d{2}-\d{2}["']|today|yesterday|tomorrow|now)"""
+        r"""(["']\d{4}-\d{2}-\d{2}["']|today|yesterday|tomorrow|now|none|x)"""
         # FIXME: add "next (mon|tue|wed|thu|sat|sun)..."
         # t.value = int(t.value)
         if t.value == "now":
             t.value = self._now
+        elif t.value == "none":
+            t.value = None
         elif t.value == "today":
             t.value = datetime.strptime(self._now.strftime("%Y-%m-%d"), "%Y-%m-%d")
         elif t.value == "yesterday":
@@ -72,6 +73,8 @@ class DatesLexer(object):
         elif t.value == "tomorrow":
             t.value = datetime.strptime(self._now.strftime("%Y-%m-%d"), "%Y-%m-%d")
             t.value += timedelta(days=1)
+        elif t.value == "x":
+            t.value = self._x
         else:
             t.value = datetime.strptime(t.value[1:-1], "%Y-%m-%d")
         return t
@@ -105,9 +108,10 @@ class DatesLexer(object):
     def build(self, **kwargs):
         self.lexer = lex.lex(object=self, **kwargs)
 
-    def __init__(self, now=None):
+    def __init__(self, x: datetime, now: datetime = None):
         if now is None:
             now = datetime.now()
+        self._x = x
         self._now = now
 
     # lexer = lex.lex()
