@@ -18,28 +18,29 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-from dateslex import DatesLexer
+if __name__ == "__main__":
+    from dateslex import DatesLexer
 
-# Test it out
-datas = [
-    '"2023-04-01"+1d',
-    "now+1h",
-    "today+1d",
-    "||",
-]
+    # Test it out
+    datas = [
+        '"2023-04-01"+1d',
+        "now+1h",
+        "today+1d",
+        "||",
+    ]
 
-# Give the lexer some input
-for data in datas:
-    print(data)
+    # Give the lexer some input
+    for data in datas:
+        print(data)
 
-    m = DatesLexer()
-    m.build()
-    m.lexer.input(data.strip())
+        m = DatesLexer()
+        m.build()
+        m.lexer.input(data.strip())
 
-    # Tokenize
-    while True:
-        tok = m.lexer.token()
-        if not tok:
-            break  # No more input
-        print(tok)
-    print("\n")
+        # Tokenize
+        while True:
+            tok = m.lexer.token()
+            if not tok:
+                break  # No more input
+            print(tok)
+        print("\n")

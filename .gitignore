@@ -144,3 +144,6 @@ tasks.html
 \#*\#
 .\#*
 *~
+
+# envrc
+.gstasks.env

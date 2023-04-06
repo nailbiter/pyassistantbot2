@@ -34,6 +34,8 @@ from datetime import datetime
 from os import path
 from typing import cast
 import functools
+from dotenv import load_dotenv
+
 
 import click
 import pandas as pd
@@ -544,4 +546,15 @@ def ls(
 
 
 if __name__ == "__main__":
+
+    env_fns = [
+        path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
+        ".env",
+    ]
+    for env_fn in env_fns:
+        if path.isfile(env_fn):
+            logging.warning(f'loading "{env_fn}"')
+            load_dotenv(dotenv_path=env_fn)
+            break
+
     gstasks(show_default=True, auto_envvar_prefix="GSTASKS")
