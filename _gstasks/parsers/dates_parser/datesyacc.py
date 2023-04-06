@@ -24,21 +24,23 @@ timedelta
 expression
 """
 
-from dateslex import DatesLexer
+from _gstasks.parsers.dates_parser.dateslex import DatesLexer
 import ply.yacc as yacc
 from datetime import datetime, timedelta
 import logging
+import pandas as pd
 
 
 class DatesParser(object):
     tokens = DatesLexer.tokens
 
-    def __init__(self, x: datetime, now: datetime = None):
+    def __init__(self, x: datetime, now: datetime = None,is_loud:bool=False):
         if now is None:
             now = datetime.now()
         self._x = x
         self._now = now
         self.parser = yacc.yacc(module=self)
+        self._is_loud = is_loud
 
     def p_expression_op(self, p):
         """expression : datetime E datetime
@@ -48,12 +50,12 @@ class DatesParser(object):
         | datetime LE datetime
         | datetime GE datetime
         """
-
-        logging.warning(("p_expression_op", list(p)))
+        if self._is_loud:
+            logging.warning(("p_expression_op", list(p)))
         if p[2] == "==":
-            p[0] = (p[1] == p[3]) if p[3] is not None else (p[1] is None)
+            p[0] = (p[1] == p[3]) if p[3] is not None else pd.isna(p[1])
         elif p[2] == "!=":
-            p[0] = (p[1] != p[3]) if p[3] is not None else (p[1] is not None)
+            p[0] = (p[1] != p[3]) if p[3] is not None else (not pd.isna(p[1]))
         elif p[2] == "<":
             p[0] = p[1] < p[3]
         elif p[2] == ">":
@@ -66,7 +68,9 @@ class DatesParser(object):
     def p_expression_ex(self, p):
         """expression : expression OR expression
         | expression AND expression"""
-        logging.warning(("p_expression_ex", list(p)))
+        
+        if self._is_loud:
+            logging.warning(("p_expression_ex", list(p)))
         if p[2] in ["&&", "and"]:
             p[0] = p[1] and p[3]
         elif p[2] in ["||", "or"]:
@@ -74,12 +78,16 @@ class DatesParser(object):
 
     def p_expression_bra(self, p):
         "expression : LPAREN expression RPAREN"
-        logging.warning(("p_expression_bra", list(p)))
+
+        if self._is_loud:
+            logging.warning(("p_expression_bra", list(p)))
         p[0] = p[2]
 
     def p_datetime(self, p):
         "datetime : DATETIME"
-        logging.warning(("p_datetime", list(p)))
+
+        if self._is_loud:
+            logging.warning(("p_datetime", list(p)))
         p[0] = p[1]
 
     def p_datetime_op(self, p):
@@ -87,14 +95,17 @@ class DatesParser(object):
         datetime : datetime PLUS timedelta
                  | datetime MINUS timedelta
         """
-        logging.warning(("p_datetime_op", list(p)))
+        if self._is_loud:
+            logging.warning(("p_datetime_op", list(p)))
         if p[2] == "+":
             p[0] = p[1] + p[3]
         elif p[3] == "-":
             p[0] = p[1] - p[3]
-    def p_timedelta(self,p):
+
+    def p_timedelta(self, p):
         "timedelta : TIMEDELTA"
-        logging.warning(("p_timedelta", list(p)))
+        if self._is_loud:
+            logging.warning(("p_timedelta", list(p)))
         p[0] = p[1]
 
     # def p_expression_plus(p):

@@ -35,6 +35,7 @@ from os import path
 from typing import cast
 import functools
 from dotenv import load_dotenv
+from _gstasks.parsers.dates_parser import DatesQueryEvaluator
 
 
 import click
@@ -448,6 +449,7 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
 )
+@option_with_envvar_explicit("-q","--scheduled-date-query")
 @click.pass_context
 def ls(
     ctx,
@@ -462,6 +464,7 @@ def ls(
     name_lenght_limit,
     tags,
     out_format_config,
+    scheduled_date_query,
 ):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks(
@@ -491,6 +494,9 @@ def ls(
     df = df.query("status!='DONE' and status!='FAILED'")
     if len(tags) > 0:
         df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
+
+    if scheduled_date_query is not None:
+        df = df[df["scheduled_date"].apply(DatesQueryEvaluator(scheduled_date_query))]
     if un_scheduled and len(df) > 0:
         df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
     if len(when) > 0 and len(df) > 0:
