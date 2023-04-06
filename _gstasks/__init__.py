@@ -161,7 +161,7 @@ CLI_DATETIME = ConvenientCliDatetimeParamType()
 
 
 class TagProcessor:
-    def __init__(self, coll, create_new_tag=True,flag_name=None):
+    def __init__(self, coll, create_new_tag=True, flag_name=None):
         self._coll = coll
         self._cache = {}
         self._logger = logging.getLogger(self.__class__.__name__)

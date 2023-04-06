@@ -345,7 +345,9 @@ def edit(
 def add(ctx, create_new_tag, **kwargs):
     task_list = ctx.obj["task_list"]
     _process_tag = TagProcessor(
-        task_list.get_coll("tags"), create_new_tag=create_new_tag,flag_name="--create-new-tag"
+        task_list.get_coll("tags"),
+        create_new_tag=create_new_tag,
+        flag_name="--create-new-tag",
     )
 
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]

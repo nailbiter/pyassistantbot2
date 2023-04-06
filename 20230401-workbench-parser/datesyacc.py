@@ -25,53 +25,114 @@ expression
 """
 
 from dateslex import DatesLexer
-tokens = DatesLexer.tokens
+import ply.yacc as yacc
+from datetime import datetime, timedelta
+import logging
 
 
-def p_expression_plus(p):
-    'expression : expression PLUS term'
-    p[0] = p[1] + p[3]
+class DatesParser(object):
+    tokens = DatesLexer.tokens
 
-def p_expression_minus(p):
-    'expression : expression MINUS term'
-    p[0] = p[1] - p[3]
+    def __init__(self, x: datetime, now: datetime = None):
+        if now is None:
+            now = datetime.now()
+        self._x = x
+        self._now = now
+        self.parser = yacc.yacc(module=self)
 
-def p_expression_term(p):
-    'expression : term'
-    p[0] = p[1]
+    def p_expression_op(self, p):
+        """expression : datetime E datetime
+        | datetime NE datetime
+        | datetime L datetime
+        | datetime G datetime
+        | datetime LE datetime
+        | datetime GE datetime
+        """
 
-def p_term_times(p):
-    'term : term TIMES factor'
-    p[0] = p[1] * p[3]
+        logging.warning(("p_expression_op", list(p)))
+        if p[2] == "==":
+            p[0] = (p[1] == p[3]) if p[3] is not None else (p[1] is None)
+        elif p[2] == "!=":
+            p[0] = (p[1] != p[3]) if p[3] is not None else (p[1] is not None)
+        elif p[2] == "<":
+            p[0] = p[1] < p[3]
+        elif p[2] == ">":
+            p[0] = p[1] > p[3]
+        elif p[2] == "<=":
+            p[0] = p[1] <= p[3]
+        elif p[2] == ">=":
+            p[0] = p[1] >= p[3]
 
-def p_term_div(p):
-    'term : term DIVIDE factor'
-    p[0] = p[1] / p[3]
+    def p_expression_ex(self, p):
+        """expression : expression OR expression
+        | expression AND expression"""
+        logging.warning(("p_expression_ex", list(p)))
+        if p[2] in ["&&", "and"]:
+            p[0] = p[1] and p[3]
+        elif p[2] in ["||", "or"]:
+            p[0] = p[1] or p[3]
 
-def p_term_factor(p):
-    'term : factor'
-    p[0] = p[1]
+    def p_expression_bra(self, p):
+        "expression : LPAREN expression RPAREN"
+        logging.warning(("p_expression_bra", list(p)))
+        p[0] = p[2]
 
-def p_factor_num(p):
-    'factor : NUMBER'
-    p[0] = p[1]
+    def p_datetime(self, p):
+        "datetime : DATETIME"
+        logging.warning(("p_datetime", list(p)))
+        p[0] = p[1]
 
-def p_factor_expr(p):
-    'factor : LPAREN expression RPAREN'
-    p[0] = p[2]
+    def p_datetime_op(self, p):
+        """
+        datetime : datetime PLUS timedelta
+                 | datetime MINUS timedelta
+        """
+        logging.warning(("p_datetime_op", list(p)))
+        if p[2] == "+":
+            p[0] = p[1] + p[3]
+        elif p[3] == "-":
+            p[0] = p[1] - p[3]
+    def p_timedelta(self,p):
+        "timedelta : TIMEDELTA"
+        logging.warning(("p_timedelta", list(p)))
+        p[0] = p[1]
 
-# Error rule for syntax errors
-def p_error(p):
-    print("Syntax error in input!")
+    # def p_expression_plus(p):
+    #     "expression : expression PLUS term"
+    #     p[0] = p[1] + p[3]
+
+    # def p_expression_minus(p):
+    #     "expression : expression MINUS term"
+    #     p[0] = p[1] - p[3]
+
+    # def p_expression_term(p):
+    #     "expression : term"
+    #     p[0] = p[1]
+
+    # def p_term_times(p):
+    #     "term : term TIMES factor"
+    #     p[0] = p[1] * p[3]
+
+    # def p_term_div(p):
+    #     "term : term DIVIDE factor"
+    #     p[0] = p[1] / p[3]
+
+    # def p_term_factor(p):
+    #     "term : factor"
+    #     p[0] = p[1]
+
+    # def p_factor_num(p):
+    #     "factor : NUMBER"
+    #     p[0] = p[1]
+
+    # def p_factor_expr(p):
+    #     "factor : LPAREN expression RPAREN"
+    #     p[0] = p[2]
+
+    # Error rule for syntax errors
+    def p_error(self, p):
+        print("Syntax error in input!")
+
 
 # Build the parser
-parser = yacc.yacc()
-
-# while True:
-#    try:
-#        s = raw_input('calc > ')
-#    except EOFError:
-#        break
-#    if not s: continue
-#    result = parser.parse(s)
-#    print(result)
+# parser = yacc.yacc()

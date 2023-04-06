@@ -36,6 +36,7 @@ class DatesLexer(object):
         "LE",
         "GE",
         "E",
+        "NE",
         # "VAR",
         "AND",
         "OR",
@@ -52,6 +53,7 @@ class DatesLexer(object):
     t_LE = "<="
     t_GE = ">="
     t_E = "=="
+    t_NE = "!="
     # t_VAR = "x"
     t_AND = r"(&&|and)"
     t_OR = r"(\|\||or)"
