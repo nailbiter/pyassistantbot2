@@ -62,8 +62,9 @@ option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
 @option_with_envvar_explicit("--debug/--no-debug", default=False)
 @option_with_envvar_explicit("--list-id", required=True)
 @option_with_envvar_explicit("--mongo-url", required=True)
+@option_with_envvar_explicit("--uuid-cache-db", default=path.abspath(path.join(path.dirname(__file__),".uuid_cache.db")))
 @click.pass_context
-def gstasks(ctx, debug, list_id, mongo_url):
+def gstasks(ctx, debug, list_id, mongo_url,uuid_cache_db):
     if debug:
         logging.basicConfig(level=logging.DEBUG)
 
@@ -72,6 +73,7 @@ def gstasks(ctx, debug, list_id, mongo_url):
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
     )
     ctx.obj["list_id"] = list_id
+    ctx.obj["uuid_cache_db"] = uuid_cache_db
 
 
 @gstasks.command()
@@ -169,10 +171,10 @@ def open_url(ctx, index, uuid_text, web_browser, open_url):
             click.echo(r["URL"])
 
 
-def _fetch_uuid(uuid):
+def _fetch_uuid(uuid,uuid_cache_db=None):
     m = re.match(r"^(-?\d+)$", uuid)
     if m is not None:
-        uuids_df = UuidCacher().get_all()
+        uuids_df = UuidCacher(uuid_cache_db).get_all()
         uuid = uuids_df.uuid.iloc[int(m.group(1))]
     return uuid
 
@@ -199,7 +201,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
     task_list, list_id = [ctx.obj[k] for k in "task_list,list_id".split(",")]
 
     for _uuid_text, _index in tqdm.tqdm(
-        [(_fetch_uuid(x), None) for x in uuid_text] + [(None, x) for x in index]
+        [(_fetch_uuid(x,ctx.obj["uuid_cache_db"]), None) for x in uuid_text] + [(None, x) for x in index]
     ):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         # FIXME: later
@@ -255,7 +257,7 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @option_with_envvar_explicit("--url", "URL")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
-@option_with_envvar_explicit("-d", "--due", type=click.DateTime())
+@option_with_envvar_explicit("-d", "--due")
 @option_with_envvar_explicit("-a", "--action-comment")
 @option_with_envvar_explicit("-c", "--comment")
 @option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
@@ -276,7 +278,7 @@ def edit(
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
-    uuid_text = list(map(_fetch_uuid, uuid_text))
+    uuid_text = list(map(functools.partial(_fetch_uuid,uuid_cache_db=ctx.obj["uuid_cache_db"]), uuid_text))
 
     if uuid_list_file is not None:
         with open(uuid_list_file) as f:
@@ -292,6 +294,7 @@ def edit(
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
+        "due": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
         "tags": lambda tags: {_process_tag(tag) for tag in tags},
     }
     _UNSET = "***UNSET***"
@@ -355,12 +358,13 @@ def add(ctx, create_new_tag, **kwargs):
 
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
     uuid = task_list.insert_or_replace_record({**kwargs})
-    UuidCacher().add(uuid, kwargs["name"])
+    UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, kwargs["name"])
 
 
 @gstasks.command()
-def show_uuid_cache():
-    print(UuidCacher().get_all())
+@click.pass_context
+def show_uuid_cache(ctx):
+    print(UuidCacher(ctx.obj["uuid_cache_db"]).get_all())
 
 
 @gstasks.group()
@@ -449,7 +453,7 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
 )
-@option_with_envvar_explicit("-q","--scheduled-date-query")
+@option_with_envvar_explicit("-q", "--scheduled-date-query")
 @click.pass_context
 def ls(
     ctx,
