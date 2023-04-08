@@ -234,7 +234,7 @@ class TagProcessor:
 
 
 class UuidCacher:
-    def __init__(self, cache_database_filename=".uuid_cache.db"):
+    def __init__(self, cache_database_filename):
         self._cache_database_filename = cache_database_filename
         self._db_name = "uuid_cache"
         self._logger = logging.getLogger(self.__class__.__name__)
