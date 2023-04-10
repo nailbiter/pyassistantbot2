@@ -28,4 +28,3 @@ ADDITIONAL_STATES = []
 if path.isfile(_ADDITIONAL_STATES_FILE):
     with open(_ADDITIONAL_STATES_FILE) as f:
         ADDITIONAL_STATES = json.load(f)
-logging.warning(f"ADDITIONAL_STATES: {ADDITIONAL_STATES}")

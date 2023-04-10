@@ -140,9 +140,9 @@ def format_html(df, html_out_config, task_list, print_callback=print):
             tpl = f.read()
         logging.warning(tpl)
         sql = Template(tpl).render(env)
-        logging.warning(sql)
+        logging.info(sql)
         res = pandas_sql(sql, _df_env(df))
-
+        logging.info(res)
         df = df.loc[res["uuid"].to_list()]
 
     # row styling
@@ -266,3 +266,4 @@ def _style_to_buf(
     if buf is not None:
         with open(buf, "w") as f:
             f.write(html)
+        logging.warning(f'save to "{buf}"')

@@ -147,3 +147,5 @@ tasks.html
 
 # envrc
 .gstasks.env
+
+test.log.txt

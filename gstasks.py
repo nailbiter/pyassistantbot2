@@ -43,10 +43,13 @@ import pandas as pd
 import tqdm
 from jinja2 import Template
 
-from _common import parse_cmdline_datetime, run_trello_cmd
+from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull
+
+# FIXME: do without global env
+LOADED_DOTENV = None
 
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
@@ -59,14 +62,38 @@ option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
-@option_with_envvar_explicit("--debug/--no-debug", default=False)
 @option_with_envvar_explicit("--list-id", required=True)
 @option_with_envvar_explicit("--mongo-url", required=True)
-@option_with_envvar_explicit("--uuid-cache-db", default=path.abspath(path.join(path.dirname(__file__),".uuid_cache.db")))
+@option_with_envvar_explicit(
+    "--uuid-cache-db",
+    default=path.abspath(path.join(path.dirname(__file__), ".uuid_cache.db")),
+)
+@option_with_envvar_explicit("-d", "--debug")
 @click.pass_context
-def gstasks(ctx, debug, list_id, mongo_url,uuid_cache_db):
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
+def gstasks(ctx, list_id, mongo_url, uuid_cache_db, debug):
+    total_level = logging.DEBUG
+    basic_config_kwargs = {"handlers": [], "level": total_level}
+    if debug is not None:
+        debug_fn = get_random_fn(".log.txt") if (debug == "@random") else debug
+        _handler = logging.FileHandler(filename=debug_fn)
+        _handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s,%(msecs)d %(levelname)-8s %(name)s [%(filename)s:%(lineno)d] %(message)s",
+                datefmt="%Y-%m-%d:%H:%M:%S",
+            )
+        )
+        _handler.setLevel(total_level)
+        basic_config_kwargs["handlers"].append(_handler)
+    _handler = logging.StreamHandler()
+    _handler.setLevel(logging.WARNING)
+    basic_config_kwargs["handlers"].append(_handler)
+    logging.basicConfig(**basic_config_kwargs)
+    if debug is not None:
+        logging.warning(f'log saved to "{debug_fn}"')
+
+    logging.warning(f"ADDITIONAL_STATES: {ADDITIONAL_STATES}")
+    if LOADED_DOTENV is not None:
+        logging.warning(f'loading "{LOADED_DOTENV}"')
 
     ctx.ensure_object(dict)
     ctx.obj["task_list"] = TaskList(
@@ -171,7 +198,7 @@ def open_url(ctx, index, uuid_text, web_browser, open_url):
             click.echo(r["URL"])
 
 
-def _fetch_uuid(uuid,uuid_cache_db=None):
+def _fetch_uuid(uuid, uuid_cache_db=None):
     m = re.match(r"^(-?\d+)$", uuid)
     if m is not None:
         uuids_df = UuidCacher(uuid_cache_db).get_all()
@@ -201,7 +228,8 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
     task_list, list_id = [ctx.obj[k] for k in "task_list,list_id".split(",")]
 
     for _uuid_text, _index in tqdm.tqdm(
-        [(_fetch_uuid(x,ctx.obj["uuid_cache_db"]), None) for x in uuid_text] + [(None, x) for x in index]
+        [(_fetch_uuid(x, ctx.obj["uuid_cache_db"]), None) for x in uuid_text]
+        + [(None, x) for x in index]
     ):
         r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         # FIXME: later
@@ -278,7 +306,12 @@ def edit(
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
-    uuid_text = list(map(functools.partial(_fetch_uuid,uuid_cache_db=ctx.obj["uuid_cache_db"]), uuid_text))
+    uuid_text = list(
+        map(
+            functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj["uuid_cache_db"]),
+            uuid_text,
+        )
+    )
 
     if uuid_list_file is not None:
         with open(uuid_list_file) as f:
@@ -347,8 +380,9 @@ def edit(
 @option_with_envvar_explicit("-d", "--due", type=CLI_DATETIME)
 @option_with_envvar_explicit("-c", "--comment")
 @option_with_envvar_explicit("--create-new-tag/--no-create-new-tag", default=False)
+@option_with_envvar_explicit("--post-hook")
 @click.pass_context
-def add(ctx, create_new_tag, **kwargs):
+def add(ctx, create_new_tag, post_hook, **kwargs):
     task_list = ctx.obj["task_list"]
     _process_tag = TagProcessor(
         task_list.get_coll("tags"),
@@ -359,6 +393,10 @@ def add(ctx, create_new_tag, **kwargs):
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
     uuid = task_list.insert_or_replace_record({**kwargs})
     UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, kwargs["name"])
+
+    if post_hook is not None:
+        logging.warning(f'executing post_hook "{post_hook}"')
+        os.system(post_hook)
 
 
 @gstasks.command()
@@ -563,7 +601,7 @@ if __name__ == "__main__":
     ]
     for env_fn in env_fns:
         if path.isfile(env_fn):
-            logging.warning(f'loading "{env_fn}"')
+            LOADED_DOTENV = env_fn
             load_dotenv(dotenv_path=env_fn)
             break
 
