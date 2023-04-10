@@ -71,7 +71,7 @@ option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
 @option_with_envvar_explicit("-d", "--debug")
 @click.pass_context
 def gstasks(ctx, list_id, mongo_url, uuid_cache_db, debug):
-    total_level = logging.DEBUG
+    total_level = logging.INFO
     basic_config_kwargs = {"handlers": [], "level": total_level}
     if debug is not None:
         debug_fn = get_random_fn(".log.txt") if (debug == "@random") else debug
