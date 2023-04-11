@@ -138,20 +138,20 @@ def format_html(df, html_out_config, task_list, print_callback=print):
     if "sorting_sql" in config:
         with open(config["sorting_sql"]) as f:
             tpl = f.read()
-        logging.warning(tpl)
+        logging.info(tpl)
         sql = Template(tpl).render(env)
         logging.info(sql)
         res = pandas_sql(sql, _df_env(df))
-        logging.info(res)
+        logging.info("\n" + res.to_csv(index=None))
         df = df.loc[res["uuid"].to_list()]
 
     # row styling
     if "row_styling_sql" in config:
         with open(config["row_styling_sql"]) as f:
             tpl = f.read()
-        logging.warning(tpl)
+        logging.info(tpl)
         sql = Template(tpl).render(env)
-        logging.warning(sql)
+        logging.info(sql)
         res_df = pandas_sql(sql, _df_env(df))
         res_df.set_index("uuid", inplace=True)
         classes = res_df.loc[df.index, "class"].to_list()
