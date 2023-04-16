@@ -36,39 +36,49 @@ import functools
 from _ttask_common import ttask as _ttask
 
 
-
-
 @click.command()
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-f", "--from-to", type=(int, int), multiple=True)
+@click.option("-l", "--index-file", type=click.Path())
 @click.option("--mongo-url", envvar="MONGO_URL", required=True)
 @click.option("-g", "--gstasks-line")
 @click.option("-h", "--head", type=int)
 @click.option("--repeat/--no-repeat", default=False)
 @click.option("-r", "--grep")
-def ttask(index, mongo_url, gstasks_line, repeat, from_to, head, grep):
+def ttask(index, mongo_url, gstasks_line, repeat, from_to, head, grep, index_file):
     # taken from https://stackoverflow.com/a/13514318
-    this_function_name = cast(
-        types.FrameType, inspect.currentframe()).f_code.co_name
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     df, coll = _ttask(mongo_url, head=head, grep=grep, is_print=not repeat)
 
     index = set(index)
+    if index_file is not None:
+        index |= set(pd.read_csv(index_file)["index"].apply(int))
     for a, b in from_to:
-        index |= set(range(a, b+1))
+        index |= set(range(a, b + 1))
     index = sorted(index)
+
+    # logging.warning(index)
+    # exit(0)
 
     for i in index:
         r = df.loc[i]
         if gstasks_line is not None:
-            cmd = f"./gstasks.py add -n \"{r.content}\" {gstasks_line}"
+            cmd = f'./gstasks.py add -n "{r.content}" {gstasks_line}'
             logger.warning(f"> {cmd}")
             ec, out = subprocess.getstatusoutput(cmd)
             assert ec == 0, (ec, out)
             click.echo(out)
-        coll.update_one({"_id": r._id}, {
-                        "$set": {"status": "DONE", "_last_modification": _common.to_utc_datetime()}})
+        coll.update_one(
+            {"_id": r._id},
+            {
+                "$set": {
+                    "status": "DONE",
+                    "_last_modification": _common.to_utc_datetime(),
+                }
+            },
+        )
         click.echo(f"done {r._id} ({r.content})")
     if repeat:
         _ttask(mongo_url, head=head, grep=grep)
