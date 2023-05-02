@@ -41,8 +41,13 @@ import _common.requests_cache
 _PROCESSORS = {
     "prateritum": {
         "tpl": "https://www.verbformen.de/konjugation/indikativ/praeteritum/?w={{word}}",
-        "sel": """#vVdBx > div.vTbl > table""",
+        "sel": ["""#vVdBx > div.vTbl > table"""],
         "method": "css-select",
+    },
+    "konjunktiv1": {
+        "tpl": "https://www.verbformen.de/konjugation/{{word}}.htm",
+        "sel": ["/html/body/article/div[1]/div[2]/div/section[2]/div[2]/div[4]"],
+        "method": "xpath",
     },
     "konjunktiv2-vergangenheit": {
         "tpl": "https://de.pons.com/verbtabellen/deutsch/{{word}}",
@@ -117,6 +122,7 @@ def german_grammar(
     )
     p = _PROCESSORS[type_]
     url = Template(p["tpl"]).render({"word": word})
+    logging.warning(f'url: "{url}"')
     res = get(
         url,
         is_force_cache_miss=force_cache_miss,
@@ -136,7 +142,9 @@ def german_grammar(
             pass
     with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
         f.write(text)
-    (df,) = pd.read_html(text)
+    (df, *tail) = pd.read_html(text)
+    if len(tail) > 0:
+        logging.warning((tail, len(tail)))
 
     if output_format == "def":
         click.echo(df)
