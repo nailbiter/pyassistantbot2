@@ -30,6 +30,10 @@
       column_name: "_last_modification_date",
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
     },
+    {
+      column_name: "is_engage",
+      jinja_tpl: "{{r.uuid==last_engaged_task_uuid}}",
+    },
     /*{
       column_name: "test",
       jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{}).get('test')),{}).get('name')}}",

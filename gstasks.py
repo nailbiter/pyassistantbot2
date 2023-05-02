@@ -470,6 +470,38 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 
 
 @gstasks.command()
+@option_with_envvar_explicit("-u", "--uuid-text", required=True)
+@option_with_envvar_explicit("--post-hook")
+@click.pass_context
+def engage(ctx, uuid_text, post_hook):
+    """
+    FIXME: re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
+    """
+    # taken from https://stackoverflow.com/a/13514318
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
+    logger = logging.getLogger(__name__).getChild(this_function_name)
+
+    uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
+
+    task_list = ctx.obj["task_list"]
+
+    r, _ = task_list.get_task(uuid_text=uuid_text)
+    logger.warning(f"engaging {r}")
+
+    # if uuid_list_file is not None:
+    #     with open(uuid_list_file) as f:
+    #         l = f.readlines()
+    #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
+
+    coll = task_list.get_coll("engage")
+    coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"]})
+
+    if post_hook is not None:
+        logging.warning(f'executing post_hook "{post_hook}"')
+        os.system(post_hook)
+
+
+@gstasks.command()
 @option_with_envvar_explicit(
     "-w",
     "--when",
