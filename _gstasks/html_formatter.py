@@ -105,7 +105,7 @@ def _df_env(df):
     return res
 
 
-def format_html(df, html_out_config, task_list, print_callback=print):
+def format_html(df, html_out_config, task_list, print_callback=print,out_file=None):
     #    logging.warning(html_out_config)
 
     if html_out_config is None:
@@ -195,7 +195,7 @@ def format_html(df, html_out_config, task_list, print_callback=print):
         #             .strip()
         #         )
 
-    out_file = config.get("out_file")
+    out_file = config.get("out_file") if out_file is None else out_file
     is_use_style = config.get("is_use_style", False)
     s = (
         _style_to_buf(buf=out_file, config=config, df=df, classes=classes)

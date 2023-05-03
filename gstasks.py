@@ -36,13 +36,10 @@ from typing import cast
 import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
-
-
 import click
 import pandas as pd
 import tqdm
 from jinja2 import Template
-
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
@@ -484,12 +481,11 @@ def engage(ctx, uuid_text, post_hook):
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     task_list = ctx.obj["task_list"]
-    
+
     if uuid_text == "D":
         r = {"uuid": None}
     else:
         uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
-
 
         r, _ = task_list.get_task(uuid_text=uuid_text)
 
@@ -531,6 +527,7 @@ def engage(ctx, uuid_text, post_hook):
     type=click.Path(dir_okay=False, exists=True),
 )
 @option_with_envvar_explicit("-q", "--scheduled-date-query")
+@option_with_envvar_explicit("--out-file", type=click.Path())
 @click.pass_context
 def ls(
     ctx,
@@ -546,6 +543,7 @@ def ls(
     tags,
     out_format_config,
     scheduled_date_query,
+    out_file,
 ):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks(
@@ -623,7 +621,13 @@ def ls(
     elif out_format == "csv":
         click.echo(pretty_df.to_csv())
     elif out_format == "html":
-        format_html(df, out_format_config, task_list, print_callback=click.echo)
+        format_html(
+            df,
+            out_format_config,
+            task_list,
+            print_callback=click.echo,
+            out_file=out_file,
+        )
         logging.warning(f"{len(pretty_df)} tasks matched")
     else:
         raise NotImplementedError((out_format,))
