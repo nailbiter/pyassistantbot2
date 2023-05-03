@@ -470,7 +470,9 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 
 
 @gstasks.command()
-@option_with_envvar_explicit("-u", "--uuid-text", required=True)
+@option_with_envvar_explicit(
+    "-u", "--uuid-text", required=True, help='`D` means "disengage"'
+)
 @option_with_envvar_explicit("--post-hook")
 @click.pass_context
 def engage(ctx, uuid_text, post_hook):
@@ -481,11 +483,16 @@ def engage(ctx, uuid_text, post_hook):
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
-    uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
-
     task_list = ctx.obj["task_list"]
+    
+    if uuid_text == "D":
+        r = {"uuid": None}
+    else:
+        uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
 
-    r, _ = task_list.get_task(uuid_text=uuid_text)
+
+        r, _ = task_list.get_task(uuid_text=uuid_text)
+
     logger.warning(f"engaging {r}")
 
     # if uuid_list_file is not None:
