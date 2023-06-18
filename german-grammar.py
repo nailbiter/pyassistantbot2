@@ -105,7 +105,12 @@ def fetch_element(text, sel, method):
 @click.command()
 @click.option("--mongo-url", required=True, envvar="PYASSISTANTBOT_MONGO_URL")
 @click.option(
-    "-t", "--type", "type_", type=click.Choice(_PROCESSORS), default="prateritum"
+    "-t",
+    "--type",
+    "types",
+    type=click.Choice(_PROCESSORS),
+    default=["prateritum"],
+    multiple=True,
 )
 @click.argument("word")
 @click.option("-c", "--cache-lifetime-min", type=int, default=-1)
@@ -113,43 +118,53 @@ def fetch_element(text, sel, method):
 @click.option(
     "-o", "--output-format", type=click.Choice("def json".split()), default="def"
 )
+@click.option("-i", "--df-index", type=int, default=0)
 def german_grammar(
-    mongo_url, type_, word, cache_lifetime_min, force_cache_miss, output_format
+    mongo_url,
+    types,
+    word,
+    cache_lifetime_min,
+    force_cache_miss,
+    output_format,
+    df_index,
 ):
     get = _common.requests_cache.RequestGet(
         cache_lifetime_min,
         ".german_grammar.db",
     )
-    p = _PROCESSORS[type_]
-    url = Template(p["tpl"]).render({"word": word})
-    logging.warning(f'url: "{url}"')
-    res = get(
-        url,
-        is_force_cache_miss=force_cache_miss,
-    )
-    #    logging.warning(res)
-    status_code, text = res
-    assert status_code == 200, (text, status_code, url)
+    for type_ in types:
+        p = _PROCESSORS[type_]
+        url = Template(p["tpl"]).render({"word": word})
+        logging.warning(f'url: "{url}"')
+        res = get(
+            url,
+            is_force_cache_miss=force_cache_miss,
+        )
+        #    logging.warning(res)
+        status_code, text = res
+        assert status_code == 200, (text, status_code, url)
 
-    with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
-        f.write(text)
-    for sel in p["sel"]:
-        try:
-            text = fetch_element(text, sel, p["method"])
-            break
-        except FetchElementException:
-            logging.warning(f'attempt with sel="{sel}" failed')
-            pass
-    with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
-        f.write(text)
-    (df, *tail) = pd.read_html(text)
-    if len(tail) > 0:
-        logging.warning((tail, len(tail)))
+        with open("/tmp/d2b89983_24ae_4839_acc5_c5a05076028b.html", "w") as f:
+            f.write(text)
+        for sel in p["sel"]:
+            try:
+                text = fetch_element(text, sel, p["method"])
+                break
+            except FetchElementException:
+                logging.warning(f'attempt with sel="{sel}" failed')
+                pass
+        with open("/tmp/BD5C777D-FDBB-45BF-AF39-37266D20E1BE.html", "w") as f:
+            f.write(text)
+        dfs = pd.read_html(text)
 
-    if output_format == "def":
-        click.echo(df)
-    elif output_format == "json":
-        click.echo(df.to_json(force_ascii=False))
+        if len(dfs) > 1:
+            logging.warning((dfs, len(dfs)))
+        df = dfs[df_index]
+
+        if output_format == "def":
+            click.echo(df)
+        elif output_format == "json":
+            click.echo(df.to_json(force_ascii=False))
 
 
 if __name__ == "__main__":
