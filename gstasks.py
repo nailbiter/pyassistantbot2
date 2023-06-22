@@ -44,6 +44,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull
+import requests
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -503,6 +504,68 @@ def engage(ctx, uuid_text, post_hook):
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
 
+
+@gstasks.group()
+@click.pass_context
+def remind(ctx):
+    pass
+
+
+@remind.command(name="add")
+@option_with_envvar_explicit("-u", "--uuid-text", required=True)
+@option_with_envvar_explicit("-d", "--remind-datetime", type=click.DateTime())
+@click.pass_context
+def add_remind(ctx, uuid_text, remind_datetime):
+    if remind_datetime is None:
+        remind_datetime = datetime.now()
+    task_list = ctx.obj["task_list"]
+    r, _ = task_list.get_task(uuid_text=uuid_text)
+    coll = task_list.get_coll("remind")
+    rem = dict(task_uuid=r["uuid"], remind_datetime=remind_datetime, sweeped_on=None)
+    logging.warning(f"inserting rem: {rem}")
+    coll.insert_one(rem)
+
+
+@remind.command(name="ls")
+@click.pass_context
+def ls_remind(ctx):
+    task_list = ctx.obj["task_list"]
+    coll = task_list.get_coll("remind")
+    df = pd.DataFrame(coll.find())
+    click.echo(df.to_csv(sep="\t", index=None))
+
+
+@remind.command(name="sweep")
+@option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
+@option_with_envvar_explicit("-s", "--slack-url")
+@click.pass_context
+def sweep_remind(ctx, dry_run, slack_url):
+    task_list = ctx.obj["task_list"]
+    coll = task_list.get_coll("remind")
+    df = pd.DataFrame(coll.find({"sweeped_on": None}))
+    now = datetime.now()
+    if len(df)>0:
+        df = df[df["remind_datetime"] <= now]
+        logging.warning(df)
+        if not dry_run:
+            for _id in df["_id"]:
+                # FIXME: use `update_many`
+                coll.update_one({"_id": _id}, {"$set": {"sweeped_on": now}})
+        if slack_url is not None and len(df) > 0:
+            logging.warning(slack_url)
+            requests.post(
+                slack_url,
+                json.dumps(
+                    {
+                        "text": Template(
+                            "reminder on `{{now.isoformat()}}`\n```{{df.to_string()}}```"
+                        ).render(dict(now=now, df=df.drop(columns=["_id", "sweeped_on"])))
+                    }
+                ),
+                headers={"Content-type": "application/json"},
+            )
+
+            
 
 @gstasks.command()
 @option_with_envvar_explicit(
