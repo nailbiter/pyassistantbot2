@@ -544,7 +544,7 @@ def sweep_remind(ctx, dry_run, slack_url):
     coll = task_list.get_coll("remind")
     df = pd.DataFrame(coll.find({"sweeped_on": None}))
     now = datetime.now()
-    if len(df)>0:
+    if len(df) > 0:
         df = df[df["remind_datetime"] <= now]
         logging.warning(df)
         if not dry_run:
@@ -559,13 +559,14 @@ def sweep_remind(ctx, dry_run, slack_url):
                     {
                         "text": Template(
                             "reminder on `{{now.isoformat()}}`\n```{{df.to_string()}}```"
-                        ).render(dict(now=now, df=df.drop(columns=["_id", "sweeped_on"])))
+                        ).render(
+                            dict(now=now, df=df.drop(columns=["_id", "sweeped_on"]))
+                        )
                     }
                 ),
                 headers={"Content-type": "application/json"},
             )
 
-            
 
 @gstasks.command()
 @option_with_envvar_explicit(

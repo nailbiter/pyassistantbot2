@@ -78,6 +78,11 @@ _PROCESSORS = {
         ],
         "method": "xpath",
     },
+    "plusquamperfect": {
+        "tpl": "https://www.verbformen.de/konjugation/{{word}}.htm",
+        "sel": ["/html/body/article/div[1]/div[2]/div/section[3]/div[2]/div[4]/table"],
+        "method": "xpath",
+    },
 }
 
 
