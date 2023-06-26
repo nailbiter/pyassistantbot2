@@ -542,6 +542,8 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
 @remind.command(name="ls")
 @click.pass_context
 def ls_remind(ctx):
+    # remind_datetime: before, after or none
+    # sweeped_on: before, after or none
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
     df = pd.DataFrame(coll.find())
