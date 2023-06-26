@@ -160,6 +160,34 @@ class ConvenientCliDatetimeParamType(click.ParamType):
 CLI_DATETIME = ConvenientCliDatetimeParamType()
 
 
+class ConvenientCliTimeParamType(click.ParamType):
+    name = "convenient_cli_time"
+
+    def __init__(self, now=datetime.now()):
+        self._now = now
+
+    def convert(self, value, param, ctx):
+
+        # return _common.parse_cmdline_datetime(
+        #     value, fail_callback=lambda msg: self.fail(msg, param, ctx)
+        # )
+        if (m := re.match(r"\+([\d+])([m])$", value)) is not None:
+            k = {s[0]: s for s in ["minutes"]}[m.group(2)]
+            return self._now + timedelta(**{k: int(m.group(1))})
+        elif (m := re.match(r"(\d{2}):(\d{2})$", value)) is not None:
+            return self._now.replace(
+                **{k: int(m.group(i + 1)) for i, k in enumerate(["hour", "minute"])}
+            )
+        else:
+            res = pd.to_datetime(value, errors="coerse")
+            if pd.isna(res):
+                self.fail(msg, param, ctx)
+            return res
+
+
+CLI_TIME = ConvenientCliTimeParamType
+
+
 class TagProcessor:
     def __init__(self, coll, create_new_tag=True, flag_name=None):
         self._coll = coll

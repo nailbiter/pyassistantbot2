@@ -42,10 +42,11 @@ import tqdm
 from jinja2 import Template
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
-from _gstasks import CLI_DATETIME, TagProcessor, TaskList, UuidCacher
+from _gstasks import CLI_DATETIME, CLI_TIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull
 import requests
+import uuid
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -515,7 +516,7 @@ def remind(ctx):
 @remind.command(name="add")
 @option_with_envvar_explicit("-u", "--uuid-text")
 @option_with_envvar_explicit("-m", "--message")
-@option_with_envvar_explicit("-d", "--remind-datetime", type=click.DateTime())
+@option_with_envvar_explicit("-d", "--remind-datetime", type=CLI_TIME())
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if remind_datetime is None:
@@ -532,6 +533,7 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
         remind_datetime=remind_datetime,
         sweeped_on=None,
         message=message,
+        uuid=str(uuid.uuid4()),
     )
     logging.warning(f"inserting rem: {rem}")
     coll.insert_one(rem)
