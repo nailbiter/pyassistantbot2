@@ -39,7 +39,7 @@ from _gstasks.parsers.dates_parser import DatesQueryEvaluator
 import click
 import pandas as pd
 import tqdm
-from jinja2 import Template
+from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import CLI_DATETIME, CLI_TIME, TagProcessor, TaskList, UuidCacher
@@ -510,7 +510,11 @@ def engage(ctx, uuid_text, post_hook):
 @gstasks.group()
 @click.pass_context
 def remind(ctx):
-    pass
+    ctx.obj["jinja_env"] = Environment(
+        loader=FileSystemLoader(
+            path.join(path.dirname(__file__), "_gstasks/templates/remind")
+        )
+    )
 
 
 @remind.command(name="add")
@@ -587,8 +591,11 @@ def mark_remind(ctx, uuid_, comment):
 @option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
 @option_with_envvar_explicit("-s", "--slack-url")
 @option_with_envvar_explicit("-i", "--check-interval-minutes", type=int)
+@option_with_envvar_explicit(
+    "-t", "--template-filename", default="sweep_message.jinja.txt"
+)
 @click.pass_context
-def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes):
+def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filename):
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
 
@@ -608,9 +615,9 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes):
                     slack_url,
                     json.dumps(
                         {
-                            "text": Template(
-                                "reminder on `{{now.isoformat()}}`\n```{{df.to_string()}}```"
-                            ).render(
+                            "text": ctx.obj["jinja_env"]
+                            .get_template(template_filename)
+                            .render(
                                 dict(now=now, df=df.drop(columns=["_id", "sweeped_on"]))
                             )
                         }
@@ -620,7 +627,7 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes):
         if check_interval_minutes is None:
             break
         else:
-            logging.warning(f"sleep {check_interval_minutes} minute(s)...")
+            logging.warning(f"sleep {check_interval_minutes} minute(s)... ({datetime.now().isoformat()} now)")
             time.sleep(check_interval_minutes * 60)
 
 

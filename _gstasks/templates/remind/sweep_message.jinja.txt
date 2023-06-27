@@ -1,0 +1,1 @@
+reminder on `{{now.isoformat()}}`:\n```{{df.to_string()}}```
