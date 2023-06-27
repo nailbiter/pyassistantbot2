@@ -541,13 +541,43 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
 
 @remind.command(name="ls")
 @click.pass_context
-def ls_remind(ctx):
+@option_with_envvar_explicit(
+    "-d", "--remind-datetime", type=click.Choice(["before_now", "after_now", "none"])
+)
+@option_with_envvar_explicit(
+    "-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"])
+)
+def ls_remind(ctx, **kwargs):
     # remind_datetime: before, after or none
     # sweeped_on: before, after or none
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
-    df = pd.DataFrame(coll.find())
+    filter_ = {}
+    now = datetime.now()
+    for k in ["sweeped_on", "remind_datetime"]:
+        if kwargs[k] is not None:
+            if kwargs[k] == "none":
+                v = None
+            elif kwargs[k] == "before_now":
+                v = {"$lte": now}
+            elif kwargs[k] == "after_now":
+                v = {"$gte": now}
+            filter_[k] = v
+    df = pd.DataFrame(coll.find(filter_))
     click.echo(df.to_csv(sep="\t", index=None))
+
+
+@remind.command(name="mark")
+@click.pass_context
+@click.option("-u", "--uuid", "uuid_", required=True)
+@click.option("-c", "--comment", default="manually marked")
+def mark_remind(ctx, uuid_, comment):
+    task_list = ctx.obj["task_list"]
+    coll = task_list.get_coll("remind")
+    res = coll.update_one(
+        {"uuid": uuid_}, {"$set": {"sweeped_on": datetime.now(), "comment": comment}}
+    )
+    logging.warning(res)
 
 
 @remind.command(name="sweep")
