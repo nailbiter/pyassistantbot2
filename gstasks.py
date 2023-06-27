@@ -627,7 +627,9 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filen
         if check_interval_minutes is None:
             break
         else:
-            logging.warning(f"sleep {check_interval_minutes} minute(s)... ({datetime.now().isoformat()} now)")
+            logging.warning(
+                f"sleep {check_interval_minutes} minute(s)... ({now.isoformat()} now)"
+            )
             time.sleep(check_interval_minutes * 60)
 
 
