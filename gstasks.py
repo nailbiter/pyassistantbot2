@@ -574,8 +574,10 @@ def ls_remind(ctx, **kwargs):
 def mark_remind(ctx, uuid_, comment):
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
+    r, = list(coll.find({"uuid":re.compile("^"+uuid_)}))
+    logging.warning(r)
     res = coll.update_one(
-        {"uuid": uuid_}, {"$set": {"sweeped_on": datetime.now(), "comment": comment}}
+        {"uuid": r['uuid']}, {"$set": {"sweeped_on": datetime.now(), "comment": comment}}
     )
     logging.warning(res)
 

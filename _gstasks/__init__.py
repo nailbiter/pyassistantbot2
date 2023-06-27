@@ -171,8 +171,8 @@ class ConvenientCliTimeParamType(click.ParamType):
         # return _common.parse_cmdline_datetime(
         #     value, fail_callback=lambda msg: self.fail(msg, param, ctx)
         # )
-        if (m := re.match(r"\+([\d]+)([m])$", value)) is not None:
-            k = {s[0]: s for s in ["minutes"]}[m.group(2)]
+        if (m := re.match(r"\+([\d]+)([mh])$", value)) is not None:
+            k = {s[0]: s for s in ["minutes", "hours"]}[m.group(2)]
             return self._now + timedelta(**{k: int(m.group(1))})
         elif (m := re.match(r"(\d{2}):(\d{2})$", value)) is not None:
             return self._now.replace(
