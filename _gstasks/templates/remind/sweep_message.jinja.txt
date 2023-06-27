@@ -1,1 +1,4 @@
-reminder on `{{now.isoformat()}}`:\n```{{df.to_string()}}```
+reminder on `{{now.isoformat()}}`:
+```
+{{df.to_string()}}
+```
