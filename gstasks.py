@@ -608,10 +608,6 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filen
         if len(df) > 0:
             df = df[df["remind_datetime"] <= now]
             logging.warning(df)
-            if not dry_run:
-                for _id in df["_id"]:
-                    # FIXME: use `update_many`
-                    coll.update_one({"_id": _id}, {"$set": {"sweeped_on": now}})
             if slack_url is not None and len(df) > 0:
                 logging.warning(slack_url)
                 requests.post(
@@ -627,6 +623,13 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filen
                     ),
                     headers={"Content-type": "application/json"},
                 )
+                
+            if not dry_run:
+                logging.warning(f"sweep {len(_df)} reminds")
+                for _id in df["_id"]:
+                    # FIXME: use `update_many`
+                    coll.update_one({"_id": _id}, {"$set": {"sweeped_on": now}})
+                    
         if check_interval_minutes is None:
             break
         else:
