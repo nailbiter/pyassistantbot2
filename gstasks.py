@@ -69,8 +69,13 @@ option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
     default=path.abspath(path.join(path.dirname(__file__), ".uuid_cache.db")),
 )
 @option_with_envvar_explicit("-d", "--debug")
+@option_with_envvar_explicit(
+    "--template-dir",
+    default=path.join(path.dirname(__file__), "_gstasks/templates"),
+    type=click.Path(is_file=False, is_dir=True, exists=True, readable=True),
+)
 @click.pass_context
-def gstasks(ctx, list_id, mongo_url, uuid_cache_db, debug):
+def gstasks(ctx, mongo_url, debug, **kwargs):
     total_level = logging.INFO
     basic_config_kwargs = {"handlers": [], "level": total_level}
     if debug is not None:
@@ -99,8 +104,8 @@ def gstasks(ctx, list_id, mongo_url, uuid_cache_db, debug):
     ctx.obj["task_list"] = TaskList(
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
     )
-    ctx.obj["list_id"] = list_id
-    ctx.obj["uuid_cache_db"] = uuid_cache_db
+    for k, v in kwargs.items():
+        ctx.obj[k] = v
 
 
 @gstasks.command()
@@ -511,9 +516,7 @@ def engage(ctx, uuid_text, post_hook):
 @click.pass_context
 def remind(ctx):
     ctx.obj["jinja_env"] = Environment(
-        loader=FileSystemLoader(
-            path.join(path.dirname(__file__), "_gstasks/templates/remind")
-        )
+        loader=FileSystemLoader(path.join(ctx.obj["template_dir"], "remind"))
     )
 
 
