@@ -47,6 +47,7 @@ from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull
 import requests
 import uuid
+import pymongo
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -785,18 +786,23 @@ def ls(
 @click_option_with_envvar_explicit(
     "--dump-dir",
     type=click.Path(file_okay=False, dir_okay=True),
-    required=True,
+    default=path.join(path.dirname(__file__), ".gstasks_dump"),
 )
 @click.pass_context
 def dump_restore(ctx, **kwargs):
     os.makedirs(kwargs["dump_dir"], exist_ok=True)
+    logging.warning(kwargs["dump_dir"])
     for k, v in kwargs.items():
         ctx.obj[k] = v
 
 
 @dump_restore.command()
 @click.pass_context
-def dump(ctx):
+@click_option_with_envvar_explicit(
+    "-r", "--retention", type=(click.Choice(["num", "dur_days"]), int)
+)
+@click_option_with_envvar_explicit("--mongodump-cmd", default="mongodump")
+def dump(ctx, retention, mongodump_cmd):
     """
     adapted from https://gist.github.com/Lh4cKg/939ce683e2876b314a205b3f8c6e8e9d
     """
@@ -804,6 +810,41 @@ def dump(ctx):
         k: k
         for k in ["actions", "engage", "remind", "tags", "tasks", "regular_checkup"]
     }
+    _DUMP_TS_FORMAT = "%Y%m%dT%H%M%S%f"
+
+    mongo_url = ctx.obj["task_list"].mongo_url
+    logging.warning(mongo_url)
+    parsed_mongo_url = pymongo.uri_parser.parse_uri(mongo_url)
+    logging.warning(parsed_mongo_url)
+
+    now = datetime.now()
+    dump_dir = path.join(ctx.obj["dump_dir"], f"dump_{now.strftime(_DUMP_TS_FORMAT)}")
+    os.makedirs(dump_dir)
+    logging.warning(dump_dir)
+
+    cmd = Template(
+        """{{mongodump_cmd}} --username='{{username}}' --password='{{password}}' --uri='{{mongo_url}}'  --gzip --out='{{dump_dir}}'"""
+    ).render(
+        {
+            **parsed_mongo_url,
+            "mongodump_cmd": mongodump_cmd,
+            "mongo_url": mongo_url,
+            "dump_dir": dump_dir,
+        }
+    )
+    logging.warning(f"> {cmd}")
+    ec, out = subprocess.getstatusoutput(cmd)
+    assert ec == 0, (ec, cmd, out)
+
+    if retention is not None:
+        # TODO: apply retention policy
+        dirs = os.listdir(os.ctx["dump_dir"])
+        logging.warning(dirs)
+
+
+@dump_restore.command()
+def restore(ctx):
+    pass
 
 
 if __name__ == "__main__":

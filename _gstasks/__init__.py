@@ -76,6 +76,11 @@ class TaskList:
         self._database_name = database_name
         self._collection_name = collection_name
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._mongo_url = mongo_url
+
+    @property
+    def mongo_url(self):
+        return self._mongo_url
 
     def get_all_tasks(self, is_post_processing=True, is_drop_hidden_fields=True):
         df = pd.DataFrame(self.get_coll().find())

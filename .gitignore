@@ -149,3 +149,6 @@ tasks.html
 .gstasks.env
 
 test.log.txt
+
+#dump
+.gstasks_dump
