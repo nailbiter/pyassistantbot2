@@ -72,7 +72,7 @@ click_option_with_envvar_explicit = functools.partial(click.option, show_envvar=
 @click_option_with_envvar_explicit(
     "--template-dir",
     default=path.join(path.dirname(__file__), "_gstasks/templates"),
-    type=click.Path(is_file=False, is_dir=True, exists=True, readable=True),
+    type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
 )
 @click.pass_context
 def gstasks(ctx, mongo_url, debug, **kwargs):
@@ -778,12 +778,14 @@ def ls(
     if out_format not in "json html csv".split():
         click.echo(f"{len(pretty_df)} tasks matched")
 
+
 # FIXME: short group names, long final command names
 # or other way round??
 @gstasks.group(name="dr")
 @click_option_with_envvar_explicit(
     "--dump-dir",
-    type=click.Path(is_file=False, is_dir=True),
+    type=click.Path(file_okay=False, dir_okay=True),
+    required=True,
 )
 @click.pass_context
 def dump_restore(ctx, **kwargs):
