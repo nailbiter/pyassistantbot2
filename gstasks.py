@@ -46,6 +46,7 @@ from _gstasks import CLI_DATETIME, CLI_TIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull
 import requests
+import numpy as np
 import uuid
 import pymongo
 
@@ -606,10 +607,24 @@ def mark_remind(ctx, uuid_, comment):
 @click_option_with_envvar_explicit(
     "-t", "--template-filename", default="sweep_message.jinja.txt"
 )
+@click_option_with_envvar_explicit("--snap-to-grid/--no-snap-to-grid", default=False)
 @click.pass_context
-def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filename):
+def sweep_remind(
+    ctx, dry_run, slack_url, check_interval_minutes, template_filename, snap_to_grid
+):
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
+
+    if snap_to_grid and (check_interval_minutes is not None):
+        now = datetime.now()
+        now_min = datetime.timestamp(now) / 60
+        wait_min = check_interval_minutes * np.ceil(now_min / check_interval_minutes)
+        wait_dt = datetime.fromtimestamp(60 * wait_min)
+        td = wait_dt - now
+        logging.warning(
+            f"waiting till {wait_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {td})"
+        )
+        time.sleep(td.total_seconds())
 
     while True:
         df = pd.DataFrame(coll.find({"sweeped_on": None}))
