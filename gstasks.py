@@ -272,7 +272,9 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
 @gstasks.command()
 @click_option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
 @click_option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
-@click_option_with_envvar_explicit("-f", "--uuid-list-file", type=click.Path())
+@click_option_with_envvar_explicit(
+    "-f", "--uuid-list-file", type=click.Path(allow_dash=True)
+)
 @click_option_with_envvar_explicit("-n", "--name")
 @click_option_with_envvar_explicit(
     "-t",
@@ -325,7 +327,7 @@ def edit(
     )
 
     if uuid_list_file is not None:
-        with open(uuid_list_file) as f:
+        with click.open_file(uuid_list_file) as f:
             l = f.readlines()
         uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
