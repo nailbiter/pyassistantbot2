@@ -566,7 +566,10 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
 @click_option_with_envvar_explicit(
     "-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"])
 )
-def ls_remind(ctx, **kwargs):
+@click_option_with_envvar_explicit(
+    "-o", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+)
+def ls_remind(ctx, sort_order, **kwargs):
     # remind_datetime: before, after or none
     # sweeped_on: before, after or none
     task_list = ctx.obj["task_list"]
@@ -583,6 +586,18 @@ def ls_remind(ctx, **kwargs):
                 v = {"$gte": now}
             filter_[k] = v
     df = pd.DataFrame(coll.find(filter_))
+
+    if len(sort_order) > 0:
+        kwargs = dict(
+            by=[k for k, _ in sort_order],
+            ascending=[(a == "asc") for _, a in sort_order],
+            )
+        logging.warning(f"sort {kwargs}")
+        df.sort_values(
+            **kwargs,
+            inplace=True,
+        )
+
     click.echo(df.to_csv(sep="\t", index=None))
 
 
