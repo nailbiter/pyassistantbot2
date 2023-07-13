@@ -634,7 +634,7 @@ def sweep_remind(ctx, dry_run, slack_url, check_interval_minutes, template_filen
                 )
 
             if not dry_run:
-                logging.warning(f"sweep {len(_df)} reminds")
+                logging.warning(f"sweep {len(df)} reminds")
                 for _id in df["_id"]:
                     # FIXME: use `update_many`
                     coll.update_one({"_id": _id}, {"$set": {"sweeped_on": now}})
