@@ -591,7 +591,7 @@ def ls_remind(ctx, sort_order, **kwargs):
         kwargs = dict(
             by=[k for k, _ in sort_order],
             ascending=[(a == "asc") for _, a in sort_order],
-            )
+        )
         logging.warning(f"sort {kwargs}")
         df.sort_values(
             **kwargs,
@@ -833,11 +833,21 @@ def dump_restore(ctx, **kwargs):
 @click_option_with_envvar_explicit(
     "-r", "--retention", type=(click.Choice(["num", "dur_days"]), int)
 )
+@click_option_with_envvar_explicit("-u", "--username")
+@click_option_with_envvar_explicit("-p", "--password")
+@click_option_with_envvar_explicit("--user-password-none-value", default="NONE")
 @click_option_with_envvar_explicit("--mongodump-cmd", default="mongodump")
-def dump(ctx, retention, mongodump_cmd):
+def dump(ctx, retention, mongodump_cmd, user_password_none_value, **user_password):
     """
     adapted from https://gist.github.com/Lh4cKg/939ce683e2876b314a205b3f8c6e8e9d
     """
+    for k, v in list(user_password.items()):
+        if v == None:
+            del user_password[k]
+        elif v == user_password_none_value:
+            user_password[k] = None
+    logging.warning(f"user_password: {user_password}")
+
     _COLLECTION_NAMES = {
         k: k
         for k in ["actions", "engage", "remind", "tags", "tasks", "regular_checkup"]
@@ -855,15 +865,23 @@ def dump(ctx, retention, mongodump_cmd):
     logging.warning(dump_dir)
 
     cmd = Template(
-        """{{mongodump_cmd}} --username='{{username}}' --password='{{password}}' --uri='{{mongo_url}}'  --gzip --out='{{dump_dir}}'"""
+        """{{mongodump_cmd}}
+        {%for k,v in dict(username=username,password=password)|dictsort%}
+        {%if v is not none%}--{{k}}='{{v}}'{%endif%}
+        {%endfor%}
+        --uri='{{mongo_url}}'  --gzip --out='{{dump_dir}}'
+        """
     ).render(
         {
             **parsed_mongo_url,
+            **user_password,
             "mongodump_cmd": mongodump_cmd,
             "mongo_url": mongo_url,
             "dump_dir": dump_dir,
         }
     )
+    cmd = cmd.strip().replace("\n", " ")
+    cmd = re.sub(r"\s+"," ",cmd)
     logging.warning(f"> {cmd}")
     ec, out = subprocess.getstatusoutput(cmd)
     assert ec == 0, (ec, cmd, out)
