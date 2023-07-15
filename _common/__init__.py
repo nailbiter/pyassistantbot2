@@ -81,6 +81,12 @@ def get_remote_mongo_client(mongo_pass):
     )
 
 
+TIMEDELTA_ABBREVIATIONS = {
+    **{s[0].upper(): f"{s}s" for s in ["minute", "hour", "years"]},
+    **{s[0].lower(): f"{s}s" for s in ["day", "month"]},
+}
+
+
 def parse_cmdline_datetime(s, fail_callback=None):
     try:
         if s is None:

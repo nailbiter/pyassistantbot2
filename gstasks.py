@@ -534,8 +534,9 @@ def remind(ctx):
 
 @remind.command(name="add")
 @click_option_with_envvar_explicit("-u", "--uuid-text")
-@click_option_with_envvar_explicit("-m", "--message")
-@click_option_with_envvar_explicit("-d", "--remind-datetime", type=CLI_TIME())
+# align cmdline's keys with `gstask add`
+@click_option_with_envvar_explicit("-n", "--message")
+@click_option_with_envvar_explicit("-s", "--remind-datetime", type=CLI_TIME())
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if remind_datetime is None:
@@ -586,8 +587,9 @@ def ls_remind(ctx, sort_order, **kwargs):
                 v = {"$gte": now}
             filter_[k] = v
     df = pd.DataFrame(coll.find(filter_))
+    logging.warning(f"{len(df)} reminds")
 
-    if len(sort_order) > 0:
+    if len(df) > 0 and len(sort_order) > 0:
         kwargs = dict(
             by=[k for k, _ in sort_order],
             ascending=[(a == "asc") for _, a in sort_order],
@@ -602,19 +604,20 @@ def ls_remind(ctx, sort_order, **kwargs):
 
 
 @remind.command(name="mark")
+@click.option("-u", "--uuid", "uuids", required=True, multiple=True)
+@click.option("-a", "--action-comment", default="manually marked")
 @click.pass_context
-@click.option("-u", "--uuid", "uuid_", required=True)
-@click.option("-c", "--comment", default="manually marked")
-def mark_remind(ctx, uuid_, comment):
+def mark_remind(ctx, uuids, **kwargs):
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
-    (r,) = list(coll.find({"uuid": re.compile("^" + uuid_)}))
-    logging.warning(r)
-    res = coll.update_one(
-        {"uuid": r["uuid"]},
-        {"$set": {"sweeped_on": datetime.now(), "comment": comment}},
-    )
-    logging.warning(res)
+    for uuid_ in tqdm.tqdm(uuids):
+        (r,) = list(coll.find({"uuid": re.compile("^" + uuid_)}))
+        logging.warning(r)
+        res = coll.update_one(
+            {"uuid": r["uuid"]},
+            {"$set": {"sweeped_on": datetime.now(), **kwargs}},
+        )
+        logging.warning(res)
 
 
 @remind.command(name="sweep")
@@ -881,7 +884,7 @@ def dump(ctx, retention, mongodump_cmd, user_password_none_value, **user_passwor
         }
     )
     cmd = cmd.strip().replace("\n", " ")
-    cmd = re.sub(r"\s+"," ",cmd)
+    cmd = re.sub(r"\s+", " ", cmd)
     logging.warning(f"> {cmd}")
     ec, out = subprocess.getstatusoutput(cmd)
     assert ec == 0, (ec, cmd, out)

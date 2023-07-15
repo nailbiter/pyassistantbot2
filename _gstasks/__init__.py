@@ -31,11 +31,13 @@ import types
 import uuid
 from datetime import datetime, timedelta
 from typing import cast
-
 import click
 import pandas as pd
 from jinja2 import Template
 from pymongo import MongoClient
+
+# pip3 install python-dateutil
+from dateutil.relativedelta import relativedelta
 
 import _common
 
@@ -176,17 +178,24 @@ class ConvenientCliTimeParamType(click.ParamType):
         # return _common.parse_cmdline_datetime(
         #     value, fail_callback=lambda msg: self.fail(msg, param, ctx)
         # )
-        if (m := re.match(r"\+([\d]+)([mh])$", value)) is not None:
-            k = {s[0]: s for s in ["minutes", "hours"]}[m.group(2)]
-            return self._now + timedelta(**{k: int(m.group(1))})
+        if (
+            m := re.match(
+                r"\+([\d]+)([" + "".join(_common.TIMEDELTA_ABBREVIATIONS) + "])$", value
+            )
+        ) is not None:
+            return self._now + relativedelta(
+                **{_common.TIMEDELTA_ABBREVIATIONS[m.group(2)]: int(m.group(1))}
+            )
         elif (m := re.match(r"(\d{2}):(\d{2})$", value)) is not None:
             return self._now.replace(
-                **{k: int(m.group(i + 1)) for i, k in enumerate(["hour", "minute"])}
+                **{k: int(m.group(i + 1)) for i, k in enumerate(["hour", "minute"])},
+                second=0,
+                microsecond=0,
             )
         else:
             res = pd.to_datetime(value, errors="coerce")
             if pd.isna(res):
-                self.fail(msg, param, ctx)
+                self.fail(f'cannot parse "{value}"', param, ctx)
             return res
 
 
