@@ -9,7 +9,8 @@
 
 #### marks, tags, labels, flabels
 
-* **mark** -- 
-* **tag** --
-* **label** -- 
+* **mark** -- can only be at one (or zero) tasks at any given time
+* **tag** -- for every task, tag can be either "on" or "off"
+* **label** -- for every task, label can be set to arbitrary string (may change in future) value; think of a Python dictionary associated
+with every task
 * **flabel** -- (=fuzzy labels)

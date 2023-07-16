@@ -501,7 +501,9 @@ _MARK_UNSET_SYMBOL = "D"
 @click.pass_context
 def mark(ctx, uuid_text, post_hook, mark):
     """
-    FIXME: re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
+    FIXME:
+      1. re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
+      2. set up fixed set of marks with fixed arity (=1 by default)
     """
 
     # taken from https://stackoverflow.com/a/13514318
