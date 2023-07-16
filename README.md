@@ -13,4 +13,4 @@
 * **tag** -- for every task, tag can be either "on" or "off"
 * **label** -- for every task, label can be set to arbitrary string (may change in future) value; think of a Python dictionary associated
 with every task
-* **flabel** -- (=fuzzy labels)
+* **flabel** -- (=fuzzy labels) same as label but instead of *dict* we have key-value pairs (meaning that the keys may duplicate)
