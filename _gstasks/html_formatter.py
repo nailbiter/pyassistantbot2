@@ -29,6 +29,7 @@ TODO:
 import itertools
 import json
 import logging
+from os import path
 from datetime import datetime, timedelta
 import json5
 import typing
@@ -38,6 +39,7 @@ from string import Template as string_template
 import typing
 import functools
 import hashlib
+import importlib.util
 
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
@@ -146,6 +148,20 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
         },
     }
 
+    ## load UDFs
+    udfs = []
+    if "sql_udfs_file" in config:
+        udfs_fn = path.abspath(config["sql_udfs_file"])
+        logging.warning(f"udfs_fn: `{udfs_fn}`")
+        ## adapted from https://stackoverflow.com/a/67692
+        spec = importlib.util.spec_from_file_location("gstasks_sql_udfs", udfs_fn)
+        foo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foo)
+        #logging.info(dir(foo))
+        #logging.warning(foo.export_udfs)
+        udfs.extend(foo.export_udfs)
+    logging.warning(f"udfs: {udfs}")
+
     # sorting/filtering
     if "sorting_sql" in config:
         with open(config["sorting_sql"]) as f:
@@ -153,17 +169,7 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
         logging.info(tpl)
         sql = Template(tpl).render(env)
         logging.info(sql)
-        res = pandas_sql(
-            sql,
-            _df_env(df),
-            utils=[
-                dict(
-                    name="md5",
-                    nargs=1,
-                    callback=lambda t: hashlib.md5(t.encode()).hexdigest(),
-                )
-            ],
-        )
+        res = pandas_sql(sql, _df_env(df), utils=udfs)
         logging.info("\n" + res.to_csv(index=None))
         df = df.loc[res["uuid"].to_list()]
 

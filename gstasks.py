@@ -569,7 +569,6 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
 
 
 @remind.command(name="ls")
-@click.pass_context
 @click_option_with_envvar_explicit(
     "-d", "--remind-datetime", type=click.Choice(["before_now", "after_now", "none"])
 )
@@ -583,6 +582,7 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
     "-o",
     "--out-format",
 )
+@click.pass_context
 def ls_remind(ctx, sort_order, out_format, **kwargs):
     # remind_datetime: before, after or none
     # sweeped_on: before, after or none

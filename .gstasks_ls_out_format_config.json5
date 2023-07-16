@@ -4,6 +4,7 @@
   sorting_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
   row_styling_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
   template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
+  sql_udfs_file: "gstasks_sql_uds.py",
   output_columns: [
     { column_name: "name" },
     {
