@@ -914,7 +914,6 @@ def restore(ctx):
 
 
 if __name__ == "__main__":
-
     env_fns = [
         path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
         ".env",
