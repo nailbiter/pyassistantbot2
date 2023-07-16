@@ -82,6 +82,7 @@ def get_remote_mongo_client(mongo_pass):
 
 
 TIMEDELTA_ABBREVIATIONS = {
+    ## idea: match with codes in https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
     **{s[0].upper(): f"{s}s" for s in ["minute", "hour", "years"]},
     **{s[0].lower(): f"{s}s" for s in ["day", "month"]},
 }

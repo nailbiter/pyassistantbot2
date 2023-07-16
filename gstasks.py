@@ -577,9 +577,13 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
     "-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"])
 )
 @click_option_with_envvar_explicit(
-    "-o", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+    "-r", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
 )
-def ls_remind(ctx, sort_order, **kwargs):
+@click_option_with_envvar_explicit(
+    "-o",
+    "--out-format",
+)
+def ls_remind(ctx, sort_order, out_format, **kwargs):
     # remind_datetime: before, after or none
     # sweeped_on: before, after or none
     task_list = ctx.obj["task_list"]
