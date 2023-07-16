@@ -486,27 +486,34 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
         print(_process_tag.remove_tag_by_uuid(tag_uuid_from))
 
 
+_MARK_UNSET_SYMBOL = "D"
+
+
 @gstasks.command()
 @click_option_with_envvar_explicit(
-    "-u", "--uuid-text", required=True, help='`D` means "disengage"'
+    "-u",
+    "--uuid-text",
+    required=True,
+    help=f'`{_MARK_UNSET_SYMBOL}` means "unset"',
 )
 @click_option_with_envvar_explicit("--post-hook")
+@click_option_with_envvar_explicit("-m", "--mark", default="engage")
 @click.pass_context
-def engage(ctx, uuid_text, post_hook):
+def mark(ctx, uuid_text, post_hook, mark):
     """
     FIXME: re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
     """
+
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     task_list = ctx.obj["task_list"]
 
-    if uuid_text == "D":
+    if uuid_text == _MARK_UNSET_SYMBOL:
         r = {"uuid": None}
     else:
         uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
-
         r, _ = task_list.get_task(uuid_text=uuid_text)
 
     logger.warning(f"engaging {r}")
@@ -517,7 +524,7 @@ def engage(ctx, uuid_text, post_hook):
     #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
     coll = task_list.get_coll("engage")
-    coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"]})
+    coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"], "mark": mark})
 
     if post_hook is not None:
         logging.warning(f'executing post_hook "{post_hook}"')

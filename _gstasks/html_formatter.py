@@ -105,7 +105,7 @@ def _df_env(df):
     return res
 
 
-def format_html(df, html_out_config, task_list, print_callback=print,out_file=None):
+def format_html(df, html_out_config, task_list, print_callback=print, out_file=None):
     #    logging.warning(html_out_config)
 
     if html_out_config is None:
@@ -126,7 +126,10 @@ def format_html(df, html_out_config, task_list, print_callback=print,out_file=No
     env = {
         "now": datetime.now(),
         "last_engaged_task_uuid": list(
-            task_list.get_coll("engage").find().sort("dt", -1).limit(1)
+            task_list.get_coll("engage")
+            .find({"mark": "engage"})
+            .sort("dt", -1)
+            .limit(1)
         )[0]["task_uuid"],
         "utils": {
             "pd": pd,
