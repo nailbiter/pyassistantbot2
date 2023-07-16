@@ -37,6 +37,7 @@ from jinja2 import Template
 from string import Template as string_template
 import typing
 import functools
+import hashlib
 
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
@@ -105,6 +106,16 @@ def _df_env(df):
     return res
 
 
+def _get_last_engaged_task_uuid(task_list):
+    l = list(
+        task_list.get_coll("engage").find({"mark": "engage"}).sort("dt", -1).limit(1)
+    )
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]["task_uuid"]
+
+
 def format_html(df, html_out_config, task_list, print_callback=print, out_file=None):
     #    logging.warning(html_out_config)
 
@@ -125,12 +136,7 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
     df.drop(columns=["_id"], inplace=True)
     env = {
         "now": datetime.now(),
-        "last_engaged_task_uuid": list(
-            task_list.get_coll("engage")
-            .find({"mark": "engage"})
-            .sort("dt", -1)
-            .limit(1)
-        )[0]["task_uuid"],
+        "last_engaged_task_uuid": _get_last_engaged_task_uuid(task_list),
         "utils": {
             "pd": pd,
             "custom": {
@@ -147,7 +153,17 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
         logging.info(tpl)
         sql = Template(tpl).render(env)
         logging.info(sql)
-        res = pandas_sql(sql, _df_env(df))
+        res = pandas_sql(
+            sql,
+            _df_env(df),
+            utils=[
+                dict(
+                    name="md5",
+                    nargs=1,
+                    callback=lambda t: hashlib.md5(t.encode()).hexdigest(),
+                )
+            ],
+        )
         logging.info("\n" + res.to_csv(index=None))
         df = df.loc[res["uuid"].to_list()]
 
