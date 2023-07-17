@@ -564,6 +564,16 @@ def _check_pid(pid):
         return True
 
 
+def _is_sweep_demon_running(obj):
+    fn = obj["sweep_demon_pid_file"]
+    is_demon_running = False
+    if path.isfile(fn):
+        with open(fn) as f:
+            pid = json.load(f)["pid"]
+        is_demon_running = _check_pid(pid)
+    return is_demon_running
+
+
 @remind.command(name="add")
 @click_option_with_envvar_explicit("-u", "--uuid-text")
 # align cmdline's keys with `gstask add`
@@ -572,13 +582,7 @@ def _check_pid(pid):
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if ctx.obj["is_sweep_demon_pid"]:
-        fn = ctx.obj["sweep_demon_pid_file"]
-        is_demon_running = False
-        if path.isfile(fn):
-            with open(fn) as f:
-                pid = json.load(f)["pid"]
-            is_demon_running = _check_pid(pid)
-
+        is_demon_running = _is_sweep_demon_running(ctx.obj)
         logging.warning(f'sweep demon {"" if is_demon_running else "is not "}running')
 
     if remind_datetime is None:
