@@ -534,11 +534,34 @@ def mark(ctx, uuid_text, post_hook, mark):
 
 
 @gstasks.group()
+@click_option_with_envvar_explicit(
+    "--is-sweep-demon-pid/--no-is-sweep-demon-pid", default=False
+)
+@click_option_with_envvar_explicit(
+    "--sweep-demon-pid-file",
+    type=click.Path(),
+    default=path.join(path.dirname(__file__), ".gstasks_sweep_demon.pid.json"),
+)
 @click.pass_context
-def remind(ctx):
+def remind(ctx, **kwargs):
     ctx.obj["jinja_env"] = Environment(
         loader=FileSystemLoader(path.join(ctx.obj["template_dir"], "remind"))
     )
+    for k, v in kwargs.items():
+        ctx.obj[k] = v
+
+
+def _check_pid(pid):
+    """
+    Check For the existence of a unix pid.
+    taken from https://stackoverflow.com/a/568285
+    """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
 
 
 @remind.command(name="add")
@@ -548,6 +571,16 @@ def remind(ctx):
 @click_option_with_envvar_explicit("-s", "--remind-datetime", type=CLI_TIME())
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
+    if ctx.obj["is_sweep_demon_pid"]:
+        fn = ctx.obj["sweep_demon_pid_file"]
+        is_demon_running = False
+        if path.isfile(fn):
+            with open(fn) as f:
+                pid = json.load(f)["pid"]
+            is_demon_running = _check_pid(pid)
+
+        logging.warning(f'sweep demon {"" if is_demon_running else "is not "}running')
+
     if remind_datetime is None:
         remind_datetime = datetime.now()
     assert message is not None or uuid_text is not None
@@ -645,6 +678,12 @@ def mark_remind(ctx, uuids, **kwargs):
 def sweep_remind(
     ctx, dry_run, slack_url, check_interval_minutes, template_filename, snap_to_grid
 ):
+    if ctx.obj["is_sweep_demon_pid"]:
+        fn = ctx.obj["sweep_demon_pid_file"]
+        logging.warning(f"saving pid to `{fn}`")
+        with open(fn, "w") as f:
+            json.dump({"pid": os.getpid()}, f)
+
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
 

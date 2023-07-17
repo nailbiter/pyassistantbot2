@@ -152,3 +152,4 @@ test.log.txt
 
 #dump
 .gstasks_dump
+.gstasks_sweep_demon.pid.json
