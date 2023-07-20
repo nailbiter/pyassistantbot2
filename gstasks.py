@@ -427,8 +427,11 @@ def tags(ctx):
 
 
 @tags.command(name="show")
+@click_option_with_envvar_explicit(
+    "-r", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+)
 @click.pass_context
-def show_tags(ctx):
+def show_tags(ctx, sort_order):
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks()
     tasks_df = tasks_df.query("status!='DONE'")
@@ -447,7 +450,17 @@ def show_tags(ctx):
     tasks_df = tasks_df.groupby("name_tag").count()
     tasks_df = tasks_df.reset_index().drop(columns=["_id"])
     tasks_df["frac (%)"] = tasks_df.name / tasks_df.name.sum() * 100
-    tasks_df = tasks_df.sort_values(by="name", ascending=False)
+
+    if len(tasks_df) > 0:
+        if len(sort_order) > 0:
+            kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
+        else:
+            kwargs = dict(by=["name"], ascending=[False])
+        logging.warning(f"sort {kwargs}")
+        tasks_df.sort_values(
+            **kwargs,
+            inplace=True,
+        )
     print(tasks_df)
 
 
@@ -640,10 +653,7 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
     logging.warning(f"{len(df)} reminds")
 
     if len(df) > 0 and len(sort_order) > 0:
-        kwargs = dict(
-            by=[k for k, _ in sort_order],
-            ascending=[(a == "asc") for _, a in sort_order],
-        )
+        kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
         logging.warning(f"sort {kwargs}")
         df.sort_values(
             **kwargs,
@@ -651,6 +661,14 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
         )
 
     click.echo(df.to_csv(sep="\t", index=None))
+
+
+def _cmdline_keys_to_sort_kwargs(sort_order):
+    kwargs = dict(
+        by=[k for k, _ in sort_order],
+        ascending=[(a == "asc") for _, a in sort_order],
+    )
+    return kwargs
 
 
 @remind.command(name="mark")
