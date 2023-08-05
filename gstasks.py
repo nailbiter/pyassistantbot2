@@ -44,7 +44,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import CLI_DATETIME, CLI_TIME, TagProcessor, TaskList, UuidCacher
 from _gstasks.additional_states import ADDITIONAL_STATES
-from _gstasks.html_formatter import format_html, ifnull
+from _gstasks.html_formatter import format_html, ifnull, get_last_engaged_task_uuid
 import requests
 import numpy as np
 import uuid
@@ -506,7 +506,6 @@ _MARK_UNSET_SYMBOL = "D"
 @click_option_with_envvar_explicit(
     "-u",
     "--uuid-text",
-    required=True,
     help=f'`{_MARK_UNSET_SYMBOL}` means "unset"',
 )
 @click_option_with_envvar_explicit("--post-hook")
@@ -525,25 +524,40 @@ def mark(ctx, uuid_text, post_hook, mark):
 
     task_list = ctx.obj["task_list"]
 
-    if uuid_text == _MARK_UNSET_SYMBOL:
-        r = {"uuid": None}
+    logger.warning(f'mark: "{mark}"')
+
+    if uuid_text is None:
+        task_uuid = get_last_engaged_task_uuid(task_list, mark=mark)
+        if task_uuid is None:
+            task = task_uuid
+        else:
+            task, _ = task_list.get_task(uuid_text=task_uuid)
+        logger.warning(task)
+        click.echo(
+            Template(
+                """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
+            ).render(dict(task=task))
+        )
     else:
-        uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
-        r, _ = task_list.get_task(uuid_text=uuid_text)
+        if uuid_text == _MARK_UNSET_SYMBOL:
+            r = {"uuid": None}
+        else:
+            uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
+            r, _ = task_list.get_task(uuid_text=uuid_text)
 
-    logger.warning(f"engaging {r}")
+        logger.warning(f"engaging {r}")
 
-    # if uuid_list_file is not None:
-    #     with open(uuid_list_file) as f:
-    #         l = f.readlines()
-    #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
+        # if uuid_list_file is not None:
+        #     with open(uuid_list_file) as f:
+        #         l = f.readlines()
+        #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
-    coll = task_list.get_coll("engage")
-    coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"], "mark": mark})
+        coll = task_list.get_coll("engage")
+        coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"], "mark": mark})
 
-    if post_hook is not None:
-        logging.warning(f'executing post_hook "{post_hook}"')
-        os.system(post_hook)
+        if post_hook is not None:
+            logging.warning(f'executing post_hook "{post_hook}"')
+            os.system(post_hook)
 
 
 @gstasks.group()
@@ -614,7 +628,7 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
         message=message,
         uuid=str(uuid.uuid4()),
     )
-    logging.warning(f"inserting rem: {rem}")
+    logging.warning(f"inserting rem: {rem} (in {str(remind_datetime-datetime.now())})")
     coll.insert_one(rem)
 
 

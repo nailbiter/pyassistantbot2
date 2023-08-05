@@ -108,9 +108,9 @@ def _df_env(df):
     return res
 
 
-def _get_last_engaged_task_uuid(task_list):
+def get_last_engaged_task_uuid(task_list,mark='engage'):
     l = list(
-        task_list.get_coll("engage").find({"mark": "engage"}).sort("dt", -1).limit(1)
+        task_list.get_coll("engage").find({"mark": mark}).sort("dt", -1).limit(1)
     )
     if len(l) == 0:
         return None
@@ -138,7 +138,7 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
     df.drop(columns=["_id"], inplace=True)
     env = {
         "now": datetime.now(),
-        "last_engaged_task_uuid": _get_last_engaged_task_uuid(task_list),
+        "last_engaged_task_uuid": get_last_engaged_task_uuid(task_list),
         "utils": {
             "pd": pd,
             "custom": {
