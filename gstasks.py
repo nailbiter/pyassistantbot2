@@ -49,6 +49,7 @@ import requests
 import numpy as np
 import uuid
 import pymongo
+from _common.click_format_dataframe import AVAILABLE_OUT_FORMATS, format_df
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -377,7 +378,10 @@ def edit(
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-n", "--name", required=True)
+@click_option_with_envvar_explicit("-n", "--name", "names", multiple=True)
+@click_option_with_envvar_explicit(
+    "--names-batch-file", "-f", type=click.Path(allow_dash=True)
+)
 @click_option_with_envvar_explicit(
     "-w",
     "--when",
@@ -397,7 +401,16 @@ def edit(
 )
 @click_option_with_envvar_explicit("--post-hook")
 @click.pass_context
-def add(ctx, create_new_tag, post_hook, **kwargs):
+def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
+    names = list(names)
+    if names_batch_file is not None:
+        with click.open_file(names_batch_file) as f:
+            lines = f.readlines()
+        lines = [line.strip() for line in lines if len(line.strip()) > 0]
+        names.extend(lines)
+    logging.warning(names)
+    assert len(names) > 0
+
     task_list = ctx.obj["task_list"]
     _process_tag = TagProcessor(
         task_list.get_coll("tags"),
@@ -406,8 +419,11 @@ def add(ctx, create_new_tag, post_hook, **kwargs):
     )
 
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
-    uuid = task_list.insert_or_replace_record({**kwargs})
-    UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, kwargs["name"])
+    for name in tqdm.tqdm(names):
+        assert name is not None
+        kwargs["name"] = name
+        uuid = task_list.insert_or_replace_record({**kwargs})
+        UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
     if post_hook is not None:
         logging.warning(f'executing post_hook "{post_hook}"')
@@ -783,7 +799,7 @@ def sweep_remind(
 @click_option_with_envvar_explicit("-a", "--after-date")
 @click_option_with_envvar_explicit("-u", "--un-scheduled", is_flag=True, default=False)
 @click_option_with_envvar_explicit(
-    "-o", "--out-format", type=click.Choice(["str", "csv", "json", "html"])
+    "-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS)
 )
 @click_option_with_envvar_explicit("-h", "--head", type=int)
 @click_option_with_envvar_explicit("-s", "--sample", type=int)
@@ -795,6 +811,7 @@ def sweep_remind(
 )
 @click_option_with_envvar_explicit("-q", "--scheduled-date-query")
 @click_option_with_envvar_explicit("--out-file", type=click.Path())
+@click_option_with_envvar_explicit("-c", "--column", "columns", type=str, multiple=True)
 @click.pass_context
 def ls(
     ctx,
@@ -811,6 +828,7 @@ def ls(
     out_format_config,
     scheduled_date_query,
     out_file,
+    columns,
 ):
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks(
@@ -879,28 +897,50 @@ def ls(
             lambda s: s if len(s) < name_lenght_limit else f"{s[:name_lenght_limit]}..."
         )
 
-    if out_format is None:
-        click.echo(pretty_df)
-    elif out_format == "str":
-        click.echo(pretty_df.to_string())
-    elif out_format == "json":
-        click.echo(pretty_df.to_json(orient="records"))
-    elif out_format == "csv":
-        click.echo(pretty_df.to_csv())
-    elif out_format == "html":
-        format_html(
-            df,
-            out_format_config,
-            task_list,
-            print_callback=click.echo,
-            out_file=out_file,
-        )
-        logging.warning(f"{len(pretty_df)} tasks matched")
-    else:
-        raise NotImplementedError((out_format,))
+    if columns:
+        pretty_df = pretty_df[list(columns)]
 
-    if out_format not in "json html csv".split():
-        click.echo(f"{len(pretty_df)} tasks matched")
+    # if out_format is None:
+    #     click.echo(pretty_df)
+    # elif out_format == "str":
+    #     click.echo(pretty_df.to_string())
+    # elif out_format == "json":
+    #     click.echo(pretty_df.to_json(orient="records"))
+    # elif out_format == "csv":
+    #     click.echo(pretty_df.to_csv())
+    # elif out_format == "html":
+    #     format_html(
+    #         df,
+    #         out_format_config,
+    #         task_list,
+    #         print_callback=click.echo,
+    #         out_file=out_file,
+    #     )
+    #     logging.warning(f"{len(pretty_df)} tasks matched")
+    # else:
+    #     raise NotImplementedError((out_format,))
+
+    click.echo(
+        format_df(
+            pretty_df,
+            "plain" if not out_format else out_format,
+            formatters=dict(
+                html=lambda _: format_html(
+                    df,
+                    out_format_config,
+                    task_list,
+                    print_callback=click.echo,
+                    out_file=out_file,
+                )
+            ),
+        )
+    )
+
+    s = f"{len(pretty_df)} tasks matched"
+    if out_format in ["html"]:
+        logging.warning(s)
+    if out_format not in ["json", "html", "csv"]:
+        click.echo(s)
 
 
 # FIXME: short group names, long final command names

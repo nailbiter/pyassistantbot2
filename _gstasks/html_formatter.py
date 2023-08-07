@@ -108,18 +108,20 @@ def _df_env(df):
     return res
 
 
-def get_last_engaged_task_uuid(task_list,mark='engage'):
-    l = list(
-        task_list.get_coll("engage").find({"mark": mark}).sort("dt", -1).limit(1)
-    )
+def get_last_engaged_task_uuid(task_list, mark="engage"):
+    l = list(task_list.get_coll("engage").find({"mark": mark}).sort("dt", -1).limit(1))
     if len(l) == 0:
         return None
     else:
         return l[0]["task_uuid"]
 
 
-def format_html(df, html_out_config, task_list, print_callback=print, out_file=None):
+def format_html(
+    df, html_out_config=None, task_list=None, print_callback=print, out_file=None
+):
     #    logging.warning(html_out_config)
+    assert task_list is not None
+    assert html_out_config is not None
 
     if html_out_config is None:
         print_callback(df.to_html())
@@ -157,8 +159,8 @@ def format_html(df, html_out_config, task_list, print_callback=print, out_file=N
         spec = importlib.util.spec_from_file_location("gstasks_sql_udfs", udfs_fn)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        #logging.info(dir(foo))
-        #logging.warning(foo.export_udfs)
+        # logging.info(dir(foo))
+        # logging.warning(foo.export_udfs)
         udfs.extend(foo.export_udfs)
     logging.warning(f"udfs: {udfs}")
 
