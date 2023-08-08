@@ -50,6 +50,7 @@ import numpy as np
 import uuid
 import pymongo
 from _common.click_format_dataframe import AVAILABLE_OUT_FORMATS, format_df
+import operator
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -1026,6 +1027,51 @@ def dump(ctx, retention, mongodump_cmd, user_password_none_value, **user_passwor
 @dump_restore.command()
 def restore(ctx):
     pass
+
+
+@gstasks.group()
+@click.pass_context
+def analysis(ctx):
+    pass
+
+
+@analysis.command()
+@click_option_with_envvar_explicit("-t", "--target-status", default="DONE")
+@click_option_with_envvar_explicit("--resample/--no-resample", "-r/ ", default=False)
+@click.pass_context
+def daily_progress(ctx, target_status, resample):
+    task_list = ctx.obj["task_list"]
+    tasks_df = task_list.get_all_tasks(is_drop_hidden_fields=False)
+
+    actions_df = pd.DataFrame(
+        task_list.get_coll("actions").find(
+            {"action": "replacing", "r.status": target_status}
+        )
+    )
+    actions_df["uuid"] = actions_df["r"].apply(operator.itemgetter("uuid"))
+    # logging.warning(actions_df[["timestamp"]])
+    # logging.warning(actions_df)
+    done_s = actions_df.groupby(
+        actions_df["timestamp"].apply(operator.methodcaller("date"))
+    )["uuid"].nunique()
+
+    created_s = (
+        tasks_df["_insertion_date"].apply(operator.methodcaller("date")).value_counts()
+    )
+
+    df = pd.DataFrame(
+        dict(
+            created=created_s,
+            done=done_s,
+        )
+    )
+    if resample:
+        df = pd.DataFrame({k: s.asfreq(freq="D", fill_value=0) for k, s in df.items()})
+    df.fillna(0, inplace=True)
+    df = df.applymap(int)
+    df.sort_index(inplace=True)
+
+    click.echo(df.tail())
 
 
 if __name__ == "__main__":

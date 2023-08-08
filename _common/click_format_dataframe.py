@@ -18,11 +18,17 @@ ORGANIZATION:
 
 ==============================================================================="""
 import pandas as pd
+import operator
 
 AVAILABLE_OUT_FORMATS = ["str", "csv", "json", "html", "plain", "csvfn"]
 
+_DEFAULT_FORMATTERS = {
+    "html": operator.methodcaller("to_html"),
+}
+
 
 def format_df(df: pd.DataFrame, out_format: str, formatters: dict = {}) -> str:
+    formatters = {**_DEFAULT_FORMATTERS,**formatters}
     if out_format == "plain":
         s = str(df)
     elif out_format == "str":
@@ -32,7 +38,7 @@ def format_df(df: pd.DataFrame, out_format: str, formatters: dict = {}) -> str:
     elif out_format == "csv":
         s = df.to_csv()
     elif out_format == "html":
-        s = formatters.get("html", lambda df: df.to_html())(df)
+        s = formatters[out_format](df)
         # logging.warning(f"{len(df)} tasks matched")
     elif out_format == "csvfn":
         raise NotImplementedError(dict(out_format=out_format))

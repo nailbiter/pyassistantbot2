@@ -18,6 +18,7 @@ ORGANIZATION:
 
 ==============================================================================="""
 
+# pip3 install python-dateutil
 import hashlib
 import inspect
 import json
@@ -35,11 +36,13 @@ import click
 import pandas as pd
 from jinja2 import Template
 from pymongo import MongoClient
-
-# pip3 install python-dateutil
+from bson.codec_options import CodecOptions
 from dateutil.relativedelta import relativedelta
-
+import pytz
 import _common
+
+
+_LOCAL_TZ_NAME = "Asia/Tokyo"
 
 
 def _parse_date(s):
@@ -84,7 +87,9 @@ class TaskList:
     def mongo_url(self):
         return self._mongo_url
 
-    def get_all_tasks(self, is_post_processing=True, is_drop_hidden_fields=True):
+    def get_all_tasks(
+        self, is_post_processing=True, is_drop_hidden_fields=True
+    ) -> pd.DataFrame:
         df = pd.DataFrame(self.get_coll().find())
         #        df = df.sort_values(by=["_insertion_date", "_id"])
         if is_drop_hidden_fields:
@@ -118,7 +123,15 @@ class TaskList:
     def get_coll(self, collection_name=None):
         if collection_name is None:
             collection_name = self._collection_name
-        return self._mongo_client[self._database_name][collection_name]
+        res = self._mongo_client[self._database_name][collection_name]
+
+        # res = res.with_options(
+        #     codec_options=tz(
+        #         CodecOptions_aware=True, tzinfo=pytz.timezone(_LOCAL_TZ_NAME)
+        #     )
+        # )
+
+        return res
 
     def insert_or_replace_record(self, r, index=None, action_comment=None):
         action = "inserting" if index is None else "replacing"
@@ -174,7 +187,6 @@ class ConvenientCliTimeParamType(click.ParamType):
         self._now = now
 
     def convert(self, value, param, ctx):
-
         # return _common.parse_cmdline_datetime(
         #     value, fail_callback=lambda msg: self.fail(msg, param, ctx)
         # )
