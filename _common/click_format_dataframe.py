@@ -28,7 +28,7 @@ _DEFAULT_FORMATTERS = {
 
 
 def format_df(df: pd.DataFrame, out_format: str, formatters: dict = {}) -> str:
-    formatters = {**_DEFAULT_FORMATTERS,**formatters}
+    formatters = {**_DEFAULT_FORMATTERS, **formatters}
     if out_format == "plain":
         s = str(df)
     elif out_format == "str":

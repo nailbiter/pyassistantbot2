@@ -39,28 +39,47 @@ from _ttask_common import ttask as _ttask
 @click.command()
 @click.option("-i", "--index", type=int, multiple=True)
 @click.option("-f", "--from-to", type=(int, int), multiple=True)
-@click.option("-l", "--index-file", type=click.Path())
+@click.option("-l", "--index-file", type=click.Path(allow_dash=True))
 @click.option("--mongo-url", envvar="MONGO_URL", required=True)
 @click.option("-g", "--gstasks-line")
 @click.option("-h", "--head", type=int)
 @click.option("--repeat/--no-repeat", default=False)
 @click.option("-r", "--grep")
-def ttask(index, mongo_url, gstasks_line, repeat, from_to, head, grep, index_file):
+@click.option(
+    "-o", "--out-format", type=click.Choice(["json", "plain"]), default="plain"
+)
+@click.option("--dry-run/--no-dry-run", default=False)
+def ttask(
+    index,
+    mongo_url,
+    gstasks_line,
+    repeat,
+    from_to,
+    head,
+    grep,
+    index_file,
+    out_format,
+    dry_run,
+):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
-    df, coll = _ttask(mongo_url, head=head, grep=grep, is_print=not repeat)
+    df, coll = _ttask(
+        mongo_url, head=head, grep=grep, is_print=not repeat, out_format=out_format
+    )
 
     index = set(index)
     if index_file is not None:
-        index |= set(pd.read_csv(index_file)["index"].apply(int))
+        with click.open_file(index_file) as f:
+            index |= set(pd.read_csv(f, names=["index"])["index"].apply(int))
     for a, b in from_to:
         index |= set(range(a, b + 1))
     index = sorted(index)
 
-    # logging.warning(index)
-    # exit(0)
+    if dry_run:
+        logging.warning(index)
+        exit(0)
 
     for i in index:
         r = df.loc[i]
