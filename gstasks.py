@@ -627,7 +627,7 @@ def _is_sweep_demon_running(obj):
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if ctx.obj["is_sweep_demon_pid"]:
         is_demon_running = _is_sweep_demon_running(ctx.obj)
-        logging.warning(f'sweep demon {"" if is_demon_running else "is not "}running')
+        logging.warning(f'sweep demon {"" if is_demon_running else "IS NOT "}running')
 
     if remind_datetime is None:
         remind_datetime = datetime.now()
