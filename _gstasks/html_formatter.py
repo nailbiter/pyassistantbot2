@@ -196,6 +196,7 @@ def format_html(
         res_df = pandas_sql(sql, _df_env(df))
         res_df.set_index("uuid", inplace=True)
         classes = res_df.loc[df.index, "class"].to_list()
+        logging.warning(res_df)
     else:
         classes = None
 

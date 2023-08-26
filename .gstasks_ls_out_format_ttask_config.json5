@@ -6,7 +6,13 @@ select uuid, 1 as x, udf__md5(uuid) as hash \
 from (select *, scheduled_date is null as sdin from tasks) \
 order by sdin,scheduled_date asc, _last_modification_date desc \
 ",
-  row_styling_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
+  row_styling_sql: "\
+    select uuid,\
+iif(date(scheduled_date)=date('{{now}}'),'is_today','') as class,\
+ scheduled_date, datetime('{{now}}') as now\
+--status as class \n\
+from tasks\
+",
   template: "\
 <html>\
   <style>\
@@ -35,6 +41,9 @@ td {\
     border: 1px solid;\
 }\
 \
+.is_today {\
+    background-color: lightgray;\
+}\
 .REGULAR {\
     background-color: brown;\
 }\
