@@ -307,7 +307,7 @@ _NONE_CLICK_VALUE = "NONE"
 @click_option_with_envvar_explicit(
     "--create-new-tag/--no-create-new-tag", default=False
 )
-@click_option_with_envvar_explicit("-l", "--label", type=(str, str))
+@click_option_with_envvar_explicit("-l", "--label", type=(str, str), multiple=True)
 @click_option_with_envvar_explicit(
     "--string-set-mode", type=click.Choice(["set", "rappend"]), default="set"
 )
@@ -386,7 +386,7 @@ def edit(
                 elif k == "label":
                     r["label"] = {
                         **ifnull(r.get("label", {}), {}),
-                        v[0]: v[1],
+                        **{kk:vv for kk,vv in v}
                     }
                 else:
                     r[k] = None if v == _UNSET else v

@@ -10,7 +10,7 @@ order by sdin,scheduled_date asc, _last_modification_date desc \
   template: "\
 <html>\
   <style>\
-  </styletable {\
+  table {\
     border: 1px solid;\
     /* outline: 0.5rem solid khaki; */\
     /* box-shadow: 0 0 0 2rem skyblue; */\
@@ -39,6 +39,7 @@ td {\
     background-color: brown;\
 }\
 >\
+</style>\
   <p>$row_num tasks</p>\
   ${table_html}\
 </html>",
@@ -77,6 +78,7 @@ td {\
       column_name: "is_engage",
       jinja_tpl: "{{r.uuid==last_engaged_task_uuid}}",
     },
+    { column_name: "labels", jinja_tpl: "{{r.label}}" },
     /*{
       column_name: "test",
       jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{}).get('test')),{}).get('name')}}",
