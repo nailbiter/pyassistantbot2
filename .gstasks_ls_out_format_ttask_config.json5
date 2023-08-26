@@ -3,8 +3,8 @@
   out_file: "ttask_tasks.html",
   sorting_sql: "\
 select uuid, 1 as x, udf__md5(uuid) as hash \
-from tasks \
-order by scheduled_date desc, _last_modification_date desc \
+from (select *, scheduled_date is null as sdin from tasks) \
+order by sdin,scheduled_date asc, _last_modification_date desc \
 ",
   row_styling_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
   template: "\
