@@ -235,6 +235,11 @@ def format_html(
 
     out_file = config.get("out_file") if out_file is None else out_file
     is_use_style = config.get("is_use_style", False)
+    df.index = (
+        df.index.to_series()
+        .apply(lambda x: Template(config.get("index_style", "{{x}}")).render(dict(x=x)))
+        .to_list()
+    )
     s = (
         _style_to_buf(buf=out_file, config=config, df=df, classes=classes)
         if is_use_style
@@ -299,7 +304,7 @@ def _style_to_buf(
 
     if html_template is not None:
         # FIXME: solve `pandas` html escape problem and switch to `jinja2`
-        #with open(html_template) as f:
+        # with open(html_template) as f:
         #    tpl = string_template(f.read())
         tpl = string_template(_load_code_from_config_value(html_template))
         row_num, col_num = df.shape

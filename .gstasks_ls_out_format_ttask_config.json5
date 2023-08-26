@@ -44,6 +44,7 @@ td {\
   ${table_html}\
 </html>",
   sql_udfs_file: "gstasks_sql_uds.py",
+  index_style: "{{x.split('-')[0]}}",
   output_columns: [
     { column_name: "name" },
     {
