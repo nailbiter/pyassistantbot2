@@ -1,9 +1,47 @@
 {
   is_use_style: true,
-  out_file: "tasks.html",
-  sorting_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/sort_sel.jinja.sql",
-  row_styling_sql: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
-  template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/tasks.string.html",
+  out_file: "ttask_tasks.html",
+  sorting_sql: "\
+select uuid, 1 as x, udf__md5(uuid) as hash \
+from tasks \
+order by scheduled_date desc, _last_modification_date desc \
+",
+  row_styling_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_samples/row_styling.jinja.sql",
+  template: '\
+<html>\
+  <style>\
+  </styletable {\
+    border: 1px solid;\
+    /* outline: 0.5rem solid khaki; */\
+    /* box-shadow: 0 0 0 2rem skyblue; */\
+    /* border-radius: 12px; */ \
+    /* font: bold 1rem sans-serif; */\
+    /* margin: 2rem; */\
+    /* padding: 1rem; */\
+    /* outline-offset: 0.5rem; */\
+\
+    table-layout: fixed; width: 100%\
+}\
+\
+\
+th {\
+    border: 1px solid;\
+}\
+\
+.col0 {\
+}\
+\
+td {\
+    border: 1px solid;\
+}\
+\
+.REGULAR {\
+    background-color: brown;\
+}\
+>\
+  <p>$row_num tasks</p>\
+  ${table_html}\
+</html>',
   sql_udfs_file: "gstasks_sql_uds.py",
   output_columns: [
     { column_name: "name" },
@@ -25,7 +63,7 @@
       column_name: "_insertion_date",
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
     },
-    { column_name: "tags" },
+    { column_name: "tags", jinja_tpl: "{{utils.json5.loads(x)}}" },
     { column_name: "comment" },
     {
       column_name: "_last_modification_date",

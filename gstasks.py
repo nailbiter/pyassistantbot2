@@ -271,6 +271,9 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
             webbrowser.get(web_browser).open(url)
 
 
+_NONE_CLICK_VALUE = "NONE"
+
+
 @gstasks.command()
 @click_option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
 @click_option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
@@ -305,6 +308,9 @@ def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_bro
     "--create-new-tag/--no-create-new-tag", default=False
 )
 @click_option_with_envvar_explicit("-l", "--label", type=(str, str))
+@click_option_with_envvar_explicit(
+    "--string-set-mode", type=click.Choice(["set", "rappend"]), default="set"
+)
 @click_option_with_envvar_explicit("--post-hook")
 @click.pass_context
 def edit(
@@ -315,6 +321,7 @@ def edit(
     uuid_list_file,
     tag_operation,
     create_new_tag,
+    string_set_mode,
     post_hook,
     **kwargs,
 ):
@@ -341,14 +348,16 @@ def edit(
     )
 
     _PROCESSORS = {
-        "scheduled_date": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
-        "due": lambda s: None if s == "NONE" else parse_cmdline_datetime(s),
+        "scheduled_date": lambda s: None
+        if s == _NONE_CLICK_VALUE
+        else parse_cmdline_datetime(s),
+        "due": lambda s: None if s == _NONE_CLICK_VALUE else parse_cmdline_datetime(s),
         "tags": lambda tags: {_process_tag(tag) for tag in tags},
     }
     _UNSET = "***UNSET***"
     for k, v in _PROCESSORS.items():
         if kwargs[k] is not None:
-            if kwargs[k] == "NONE":
+            if kwargs[k] == _NONE_CLICK_VALUE:
                 kwargs[k] = _UNSET
             else:
                 kwargs[k] = v(kwargs[k])
@@ -364,6 +373,16 @@ def edit(
                     r["tags"] = sorted(
                         getattr(set, tag_operation)(set(r["tags"]), kwargs["tags"])
                     )
+                elif k in ["name", "comment"]:
+                    if v == _UNSET:
+                        r[k] = None
+                    elif string_set_mode == "set":
+                        r[k] = v
+                    elif string_set_mode == "rappend":
+                        r[k] += v
+                    else:
+                        raise NotImplementedError(dict(string_set_mode=string_set_mode))
+                    # r[k] = None if v == _UNSET else v
                 elif k == "label":
                     r["label"] = {
                         **ifnull(r.get("label", {}), {}),
@@ -443,6 +462,9 @@ def tags(ctx):
     pass
 
 
+_TAG_NONE = "NONE"
+
+
 @tags.command(name="show")
 @click_option_with_envvar_explicit(
     "-r", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
@@ -461,7 +483,6 @@ def show_tags(ctx, sort_order):
     tasks_df = tags_df.set_index("uuid").join(
         tasks_df.set_index("uuid"), lsuffix="_tag", how="outer"
     )
-    _TAG_NONE = "NONE"
     assert _TAG_NONE not in list(tags_df.name)
     tasks_df.name_tag = tasks_df.name_tag.fillna(_TAG_NONE)
     tasks_df = tasks_df.groupby("name_tag").count()

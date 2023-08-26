@@ -117,6 +117,17 @@ def get_last_engaged_task_uuid(task_list, mark="engage"):
         return l[0]["task_uuid"]
 
 
+def _load_code_from_config_value(config_value):
+    _FILE_NAME_PREFIX = "@"
+    if config_value.startswith(_FILE_NAME_PREFIX):
+        fn = config_value[len(_FILE_NAME_PREFIX) :]
+        with open(fn) as f:
+            tpl = f.read()
+    else:
+        tpl = config_value
+    return tpl
+
+
 def format_html(
     df, html_out_config=None, task_list=None, print_callback=print, out_file=None
 ):
@@ -144,6 +155,7 @@ def format_html(
         "last_engaged_task_uuid": get_last_engaged_task_uuid(task_list),
         "utils": {
             "pd": pd,
+            "json5": {"loads": json5.loads},
             "custom": {
                 "ifnull": ifnull,
                 "get_task_by_uuid": _get_task_by_uuid(task_list),
@@ -167,8 +179,7 @@ def format_html(
 
     # sorting/filtering
     if "sorting_sql" in config:
-        with open(config["sorting_sql"]) as f:
-            tpl = f.read()
+        tpl = _load_code_from_config_value(config["sorting_sql"])
         logging.info(tpl)
         sql = Template(tpl).render(env)
         logging.info(sql)
@@ -178,8 +189,7 @@ def format_html(
 
     # row styling
     if "row_styling_sql" in config:
-        with open(config["row_styling_sql"]) as f:
-            tpl = f.read()
+        tpl = _load_code_from_config_value(config["row_styling_sql"])
         logging.info(tpl)
         sql = Template(tpl).render(env)
         logging.info(sql)
@@ -289,8 +299,9 @@ def _style_to_buf(
 
     if html_template is not None:
         # FIXME: solve `pandas` html escape problem and switch to `jinja2`
-        with open(html_template) as f:
-            tpl = string_template(f.read())
+        #with open(html_template) as f:
+        #    tpl = string_template(f.read())
+        tpl = string_template(_load_code_from_config_value(html_template))
         row_num, col_num = df.shape
         html = tpl.substitute(table_html=html, row_num=row_num, col_num=col_num)
 

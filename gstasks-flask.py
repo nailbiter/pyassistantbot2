@@ -25,6 +25,8 @@ from os import path
 import subprocess
 import uuid
 import logging
+import json
+from jinja2 import Template
 
 app = Flask(__name__)
 
@@ -32,13 +34,25 @@ app = Flask(__name__)
 @app.route("/ls", methods=["GET"])
 def hello_world():
     gstasks_exe = os.environ.get("GSTASKS_FLASK_GSTASKS_EXE", "./gstasks.py")
+    gstasks_profiles_fn = os.environ.get(
+        "GSTASKS_FLASK_GSTASKS_PROFILES", ".gstasks_flask_profiles.json"
+    )
+
+    with open(gstasks_profiles_fn) as f:
+        gstasks_profiles = json.load(f)
 
     args = request.args
-    keys = " ".join([f"-{k} {v}" for k, v in request.args.to_dict().items()])
-    logging.warning(f"args: {args}")
+    args = request.args.to_dict()
+    profile = "standard"
+    if "profile" in args:
+        profile = args.pop("profile")
+    keys = " ".join([f"-{k} {v}" for k, v in args.items()])
+    logging.warning(dict(args=args, profile=profile))
 
     out_fn = f"/tmp/{uuid.uuid4()}.html"
-    cmd = f"{gstasks_exe} ls -o html -b today {keys} --out-file {out_fn}"
+    cmd = Template(gstasks_profiles[profile]).render(
+        dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
+    )
     logging.warning(f"cmd: `{cmd}`")
     ec, out = subprocess.getstatusoutput(cmd)
     assert ec == 0, (cmd, ec, out)
@@ -48,7 +62,6 @@ def hello_world():
 
 
 if __name__ == "__main__":
-
     env_fns = [
         path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
         ".env",

@@ -5,6 +5,18 @@
 ### edit
 ./gstasks.py ls -g ! -ojson|jq '.[]|.uuid' -r|./gstasks.py edit -f- --comment 'test'
 
+### helpful `.envrc` exceprts
+
+```
+export GSTASKS_EDIT_POST_HOOK="./gstasks.py ls -o html"
+```
+
+### how to run server
+
+```sh
+flask --app gstasks-flask run --debug
+```
+
 ### terminology
 
 #### marks, tags, labels, flabels
