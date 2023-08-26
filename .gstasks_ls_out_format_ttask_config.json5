@@ -63,7 +63,7 @@ td {\
       column_name: "_insertion_date",
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
     },
-    { column_name: "tags", jinja_tpl: "{{utils.json5.loads(x)}}" },
+      { column_name: "tags", jinja_tpl: "{{utils.json5.loads(x)|select('ne','7cd20942-def7-41c3-9f32-b818e6781566')}}" },
     { column_name: "comment" },
     {
       column_name: "_last_modification_date",
