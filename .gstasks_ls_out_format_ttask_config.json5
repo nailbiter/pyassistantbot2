@@ -1,11 +1,7 @@
 {
   is_use_style: true,
   out_file: "ttask_tasks.html",
-  sorting_sql: "\
-select uuid, 1 as x, udf__md5(uuid) as hash \
-from (select *, scheduled_date is null as sdin from tasks) \
-order by sdin,scheduled_date asc, _last_modification_date desc \
-",
+  sorting_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/sorting.jinja.sql",
   row_styling_sql: "\
     select uuid,\
 iif(date(scheduled_date)=date('{{now}}'),'is_today','') as class,\

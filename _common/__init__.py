@@ -106,7 +106,7 @@ def parse_cmdline_datetime(s, fail_callback=None):
             return res
         elif (m := re.match(r"next (mon|tue|wed|thu|fri|sat|sun)", s)) is not None:
             weekday = "mon|tue|wed|thu|fri|sat|sun".split("|").index(m.group(1))
-            res = datetime.now().date()
+            res = datetime.now().date() + timedelta(days=1)
             while res.weekday() != weekday:
                 res += timedelta(days=1)
             return datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
