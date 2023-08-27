@@ -82,7 +82,7 @@ td {\
     },
     {
       column_name: "is_engage",
-      jinja_tpl: "{{r.uuid==last_engaged_task_uuid}}",
+      jinja_tpl: "{{'E' if (r.uuid==last_engaged_task_uuid) else ''}}",
     },
     { column_name: "labels", jinja_tpl: "{{r.label}}" },
     /*{
