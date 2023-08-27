@@ -18,7 +18,7 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
-from flask import Flask, request
+from flask import Flask, request, g
 from dotenv import load_dotenv
 import os
 from os import path
@@ -32,10 +32,16 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+#my_g = {}
+
+# @app.before_first_request
+# def before_first_request():
+#     g.test = 1
 
 
 @app.route("/ls", methods=["GET"])
 def hello_world():
+    #logging.warning(f"g: {my_g}")
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
@@ -91,4 +97,5 @@ if __name__ == "__main__":
             break
 
     port = int(os.getenv("PORT", 5000))
+    #my_g["test"] = 1
     app.run(host="0.0.0.0", port=port)
