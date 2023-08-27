@@ -51,6 +51,7 @@ import uuid
 import pymongo
 from _common.click_format_dataframe import AVAILABLE_OUT_FORMATS, format_df
 import operator
+import copy
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -386,7 +387,7 @@ def edit(
                 elif k == "label":
                     r["label"] = {
                         **ifnull(r.get("label", {}), {}),
-                        **{kk:vv for kk,vv in v}
+                        **{kk: vv for kk, vv in v},
                     }
                 else:
                     r[k] = None if v == _UNSET else v
@@ -395,6 +396,34 @@ def edit(
     if post_hook is not None:
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
+
+
+@gstasks.command()
+@click_option_with_envvar_explicit(
+    "-u", "--uuid-text", "uuid_texts", required=True, multiple=True
+)
+@click.pass_context
+def cp(ctx, uuid_texts):
+    # taken from https://stackoverflow.com/a/13514318
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
+    logger = logging.getLogger(__name__).getChild(this_function_name)
+
+    task_list = ctx.obj["task_list"]
+
+    uuid_texts = list(
+        map(
+            functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj["uuid_cache_db"]),
+            uuid_texts,
+        )
+    )
+    for uuid_text in tqdm.tqdm(uuid_texts):
+        r, _ = task_list.get_task(uuid_text=uuid_text)
+        new_r = copy.deepcopy(r)
+        _uuid = new_r.pop("uuid")
+        new_r["label"] = {**ifnull(r.get("label", {}), {}), "cloned_from": _uuid}
+        logger.warning(f"r:\n{pd.Series(r)}")
+        logger.warning(f"new_r:\n{pd.Series(new_r)}")
+        task_list.insert_or_replace_record(new_r, action_comment=f"cloned from '{_uuid}'")
 
 
 @gstasks.command()

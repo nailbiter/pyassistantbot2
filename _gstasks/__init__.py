@@ -32,6 +32,7 @@ import types
 import uuid
 from datetime import datetime, timedelta
 from typing import cast
+import typing
 import click
 import pandas as pd
 from jinja2 import Template
@@ -133,7 +134,9 @@ class TaskList:
 
         return res
 
-    def insert_or_replace_record(self, r, index=None, action_comment=None):
+    def insert_or_replace_record(
+        self, r, index=None, action_comment: typing.Optional[str] = None
+    ):
         action = "inserting" if index is None else "replacing"
 
         assert action in "inserting replacing".split()
