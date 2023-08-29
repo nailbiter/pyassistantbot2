@@ -423,7 +423,9 @@ def cp(ctx, uuid_texts):
         new_r["label"] = {**ifnull(r.get("label", {}), {}), "cloned_from": _uuid}
         logger.warning(f"r:\n{pd.Series(r)}")
         logger.warning(f"new_r:\n{pd.Series(new_r)}")
-        task_list.insert_or_replace_record(new_r, action_comment=f"cloned from '{_uuid}'")
+        task_list.insert_or_replace_record(
+            new_r, action_comment=f"cloned from '{_uuid}'"
+        )
 
 
 @gstasks.command()
@@ -448,6 +450,7 @@ def cp(ctx, uuid_texts):
 @click_option_with_envvar_explicit(
     "--create-new-tag/--no-create-new-tag", default=False
 )
+@click_option_with_envvar_explicit("-l", "--label", type=(str, str), multiple=True)
 @click_option_with_envvar_explicit("--post-hook")
 @click.pass_context
 def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
@@ -468,6 +471,7 @@ def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
     )
 
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
+    kwargs["label"] = {k: v for k, v in kwargs["label"]}
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
@@ -477,6 +481,47 @@ def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
     if post_hook is not None:
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
+
+
+@gstasks.command()
+@click_option_with_envvar_explicit(
+    "--json-file-name", "-f", type=click.Path(allow_dash=True)
+)
+@click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
+@click_option_with_envvar_explicit(
+    "--create-new-tag/--no-create-new-tag", default=False
+)
+@click_option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
+@click_option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
+@click.pass_context
+def import_file(ctx, json_file_name, create_new_tag, dry_run, **kwargs):
+    task_list = ctx.obj["task_list"]
+    _process_tag = TagProcessor(
+        task_list.get_coll("tags"),
+        create_new_tag=create_new_tag,
+        flag_name="--create-new-tag",
+    )
+
+    kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
+
+    with click.open_file(json_file_name) as f:
+        # df = pd.read_json(f)
+        df = pd.DataFrame([{**r, **kwargs} for r in json.load(f)])
+
+    for k in ["due", "URL"]:
+        if k not in df.columns:
+            df[k] = None
+
+    logging.warning(df)
+
+    for kwargs in tqdm.tqdm(df.to_dict(orient="records")):
+        name = kwargs["name"]
+        assert name is not None
+        uuid = task_list.insert_or_replace_record(
+            copy.deepcopy(kwargs), dry_run=dry_run
+        )
+        if not dry_run:
+            UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
 
 @gstasks.command()

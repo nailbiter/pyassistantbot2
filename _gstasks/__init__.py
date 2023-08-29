@@ -135,7 +135,11 @@ class TaskList:
         return res
 
     def insert_or_replace_record(
-        self, r, index=None, action_comment: typing.Optional[str] = None
+        self,
+        r,
+        index=None,
+        action_comment: typing.Optional[str] = None,
+        dry_run: bool = False,
     ):
         action = "inserting" if index is None else "replacing"
 
@@ -164,9 +168,12 @@ class TaskList:
                 r[k] = None
 
         self._log(action=action, r=r, action_comment=action_comment, **log_kwargs)
-        self.get_coll().replace_one(
-            filter={"uuid": r["uuid"]}, replacement=r, upsert=True
-        )
+        if dry_run:
+            self._logger.warning(f"dry run {r}")
+        else:
+            self.get_coll().replace_one(
+                filter={"uuid": r["uuid"]}, replacement=r, upsert=True
+            )
         print(r["uuid"])
         return r["uuid"]
 

@@ -25,6 +25,7 @@ import _common
 import pymongo
 import pandas as pd
 from datetime import datetime, timedelta
+import operator
 import inspect
 import types
 from typing import cast
@@ -62,7 +63,15 @@ def ttask(
             click.echo(df.drop(columns=["_id"]).to_string())
             click.echo(f"{l} tasks")
         elif out_format == "json":
-            click.echo(df.drop(columns=["_id"]).to_json())
+            click.echo(
+                pd.DataFrame(
+                    {
+                        **df,
+                        "_id": df["_id"].apply(str),
+                        "date": df["date"].apply(operator.methodcaller("isoformat")),
+                    }
+                ).reset_index().to_json(orient="records")
+            )
         else:
             raise NotImplementedError(dict(out_format=out_format))
     return df, coll
