@@ -32,7 +32,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-#my_g = {}
+# my_g = {}
 
 # @app.before_first_request
 # def before_first_request():
@@ -41,7 +41,7 @@ app = Flask(__name__)
 
 @app.route("/ls", methods=["GET"])
 def hello_world():
-    #logging.warning(f"g: {my_g}")
+    # logging.warning(f"g: {my_g}")
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
@@ -64,7 +64,7 @@ def hello_world():
 
     with TimeItContext("run", report_dict=timings):
         out_fn = f"/tmp/{uuid.uuid4()}.html"
-        cmd = Template(gstasks_profiles[profile]).render(
+        cmd = Template(gstasks_profiles[profile]["cmd"]).render(
             dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
         )
         logging.warning(f"cmd: `{cmd}`")
@@ -97,5 +97,5 @@ if __name__ == "__main__":
             break
 
     port = int(os.getenv("PORT", 5000))
-    #my_g["test"] = 1
+    # my_g["test"] = 1
     app.run(host="0.0.0.0", port=port)

@@ -452,8 +452,9 @@ def cp(ctx, uuid_texts):
 )
 @click_option_with_envvar_explicit("-l", "--label", type=(str, str), multiple=True)
 @click_option_with_envvar_explicit("--post-hook")
+@click_option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
 @click.pass_context
-def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
+def add(ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwargs):
     names = list(names)
     if names_batch_file is not None:
         with click.open_file(names_batch_file) as f:
@@ -475,10 +476,11 @@ def add(ctx, create_new_tag, names_batch_file, post_hook, names, **kwargs):
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
-        uuid = task_list.insert_or_replace_record({**kwargs})
-        UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
+        uuid = task_list.insert_or_replace_record(copy.deepcopy(kwargs),dry_run=dry_run)
+        if not dry_run:
+            UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
-    if post_hook is not None:
+    if (post_hook is not None) and (not dry_run):
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
 
