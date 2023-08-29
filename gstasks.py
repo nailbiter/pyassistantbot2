@@ -965,6 +965,7 @@ def real_ls(
             is_drop_hidden_fields=out_format not in ["html"],
             tags=tags,
         )
+        logging.warning(f"fetched {len(df)}")
     with TimeItContext("weekend", report_dict=timings):
         before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
         _when = set()
