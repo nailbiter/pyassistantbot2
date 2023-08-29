@@ -1075,10 +1075,11 @@ def dump(ctx, retention, mongodump_cmd, user_password_none_value, **user_passwor
             user_password[k] = None
     logging.warning(f"user_password: {user_password}")
 
-    _COLLECTION_NAMES = {
-        k: k
-        for k in ["actions", "engage", "remind", "tags", "tasks", "regular_checkup"]
-    }
+    # _COLLECTION_NAMES = {
+    #     k: k
+    #     for k in ["actions", "engage", "remind", "tags", "tasks", "regular_checkup"]
+    # }
+
     _DUMP_TS_FORMAT = "%Y%m%dT%H%M%S%f"
 
     mongo_url = ctx.obj["task_list"].mongo_url
