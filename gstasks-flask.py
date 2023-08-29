@@ -28,15 +28,32 @@ import logging
 import json
 from jinja2 import Template
 from _gstasks.timing import TimeItContext
+from _gstasks import TaskList
 import pandas as pd
 from datetime import datetime, timedelta
+import collections
+from gstasks import real_ls
+
+MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 
 app = Flask(__name__)
 # my_g = {}
 
+
 # @app.before_first_request
 # def before_first_request():
 #     g.test = 1
+def _init_g(g):
+    if hasattr(g, "ctx"):
+        logging.warning(f"`g` has `ctx` (={g.ctx}) ==> do nothing")
+    else:
+        logging.warning(f"`g` has no `ctx` ==> init")
+        g.ctx = MockClickContext()
+        g.ctx.obj["task_list"] = TaskList(
+            mongo_url=os.environ["GSTASKS_MONGO_URL"],
+            database_name="gstasks",
+            collection_name="tasks",
+        )
 
 
 @app.route("/ls", methods=["GET"])
@@ -45,6 +62,7 @@ def hello_world():
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
+        _init_g(g)
         gstasks_exe = os.environ.get("GSTASKS_FLASK_GSTASKS_EXE", "./gstasks.py")
         gstasks_profiles_fn = os.environ.get(
             "GSTASKS_FLASK_GSTASKS_PROFILES", ".gstasks_flask_profiles.json"
@@ -64,12 +82,21 @@ def hello_world():
 
     with TimeItContext("run", report_dict=timings):
         out_fn = f"/tmp/{uuid.uuid4()}.html"
-        cmd = Template(gstasks_profiles[profile]["cmd"]).render(
-            dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
-        )
-        logging.warning(f"cmd: `{cmd}`")
-        ec, out = subprocess.getstatusoutput(cmd)
-        assert ec == 0, (cmd, ec, out)
+        if True:
+            real_ls(
+                **{
+                    **gstasks_profiles[profile]["kwargs"],
+                    "out_file": out_fn,
+                    "ctx": g.ctx,
+                }
+            )
+        else:
+            cmd = Template(gstasks_profiles[profile]["cmd"]).render(
+                dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
+            )
+            logging.warning(f"cmd: `{cmd}`")
+            ec, out = subprocess.getstatusoutput(cmd)
+            assert ec == 0, (cmd, ec, out)
 
     with TimeItContext("read output", report_dict=timings):
         with open(out_fn) as f:

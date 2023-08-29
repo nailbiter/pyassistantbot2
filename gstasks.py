@@ -42,7 +42,14 @@ import tqdm
 from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
-from _gstasks import CLI_DATETIME, CLI_TIME, TagProcessor, TaskList, UuidCacher
+from _gstasks import (
+    CLI_DATETIME,
+    CLI_TIME,
+    TagProcessor,
+    TaskList,
+    UuidCacher,
+    CLICK_DEFAULT_VALUES,
+)
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull, get_last_engaged_task_uuid
 import requests
@@ -476,7 +483,9 @@ def add(ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwar
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
-        uuid = task_list.insert_or_replace_record(copy.deepcopy(kwargs),dry_run=dry_run)
+        uuid = task_list.insert_or_replace_record(
+            copy.deepcopy(kwargs), dry_run=dry_run
+        )
         if not dry_run:
             UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
@@ -895,13 +904,22 @@ def sweep_remind(
 @click_option_with_envvar_explicit("-x", "--text")
 @click_option_with_envvar_explicit("-b", "--before-date")
 @click_option_with_envvar_explicit("-a", "--after-date")
-@click_option_with_envvar_explicit("-u", "--un-scheduled", is_flag=True, default=False)
+@click_option_with_envvar_explicit(
+    "-u",
+    "--un-scheduled",
+    is_flag=True,
+    default=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
+)
 @click_option_with_envvar_explicit(
     "-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS)
 )
 @click_option_with_envvar_explicit("-h", "--head", type=int)
 @click_option_with_envvar_explicit("-s", "--sample", type=int)
-@click_option_with_envvar_explicit("--name-lenght-limit", type=int, default=50)
+@click_option_with_envvar_explicit(
+    "--name-length-limit",
+    type=int,
+    default=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
+)
 @click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
 @click_option_with_envvar_explicit(
     "--out-format-config",
@@ -911,23 +929,28 @@ def sweep_remind(
 @click_option_with_envvar_explicit("--out-file", type=click.Path())
 @click_option_with_envvar_explicit("-c", "--column", "columns", type=str, multiple=True)
 @click.pass_context
-def ls(
-    ctx,
-    when,
-    text,
-    before_date,
-    after_date,
-    un_scheduled,
-    head,
-    out_format,
-    sample,
-    name_lenght_limit,
-    tags,
-    out_format_config,
-    scheduled_date_query,
-    out_file,
-    columns,
+def ls(*args, **kwargs):
+    real_ls(*args, **kwargs)
+
+
+def real_ls(
+    ctx=None,
+    when=CLICK_DEFAULT_VALUES["ls"]["when"],
+    text=None,
+    before_date=None,
+    after_date=None,
+    un_scheduled=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
+    head=None,
+    out_format=None,
+    sample=None,
+    name_length_limit=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
+    tags=CLICK_DEFAULT_VALUES["ls"]["tags"],
+    out_format_config=None,
+    scheduled_date_query=None,
+    out_file=None,
+    columns=None,
 ):
+    #logging.warning(when)
     task_list = ctx.obj["task_list"]
     df = task_list.get_all_tasks(
         is_post_processing=out_format not in ["html"],
@@ -990,9 +1013,9 @@ def ls(
     pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
     pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
 
-    if name_lenght_limit > 0:
+    if name_length_limit > 0:
         pretty_df.name = pretty_df.name.apply(
-            lambda s: s if len(s) < name_lenght_limit else f"{s[:name_lenght_limit]}..."
+            lambda s: s if len(s) < name_length_limit else f"{s[:name_length_limit]}..."
         )
 
     if columns:

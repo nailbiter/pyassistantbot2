@@ -336,3 +336,13 @@ class StringContractor:
         if len(s) > self._maxlen:
             s = s[: self._maxlen - len(self._ellipsis_symbol)] + self._ellipsis_symbol
         return s
+
+
+CLICK_DEFAULT_VALUES = {
+    "ls": {
+        "name_length_limit": 50,
+        "un_scheduled": False,
+        "tags": tuple(),
+        "when":tuple(),
+    },
+}
