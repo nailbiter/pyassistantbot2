@@ -30,12 +30,13 @@ import string
 import subprocess
 import types
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import path
 from typing import cast
 import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
+from _gstasks.timing import TimeItContext
 import click
 import pandas as pd
 import tqdm
@@ -950,118 +951,143 @@ def real_ls(
     out_file=None,
     columns=None,
 ):
-    #logging.warning(when)
-    task_list = ctx.obj["task_list"]
-    df = task_list.get_all_tasks(
-        is_post_processing=out_format not in ["html"],
-        is_drop_hidden_fields=out_format not in ["html"],
-    )
-    before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
-    _when = set()
-    for w in when:
-        if w == "appropriate":
-            n = datetime.now()
-            if n.weekday() in [5, 6]:
-                _when.add("WEEKEND")
-            elif 10 <= n.hour <= 18:
-                _when.add("PARTTIME")
+    # logging.warning(when)
+    timings = {}
+
+    with TimeItContext("prep & tags", report_dict=timings):
+        task_list = ctx.obj["task_list"]
+        _process_tag = TagProcessor(task_list.get_coll("tags"))
+        tags = [_process_tag(tag) for tag in tags]
+
+    with TimeItContext("fetch", report_dict=timings):
+        df = task_list.get_all_tasks(
+            is_post_processing=out_format not in ["html"],
+            is_drop_hidden_fields=out_format not in ["html"],
+            tags=tags,
+        )
+    with TimeItContext("weekend", report_dict=timings):
+        before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
+        _when = set()
+        for w in when:
+            if w == "appropriate":
+                n = datetime.now()
+                if n.weekday() in [5, 6]:
+                    _when.add("WEEKEND")
+                elif 10 <= n.hour <= 18:
+                    _when.add("PARTTIME")
+                else:
+                    _when.add("EVENING")
+            elif w == "all":
+                _when.update({"WEEKEND", "PARTTIME", "EVENING"})
             else:
-                _when.add("EVENING")
-        elif w == "all":
-            _when.update({"WEEKEND", "PARTTIME", "EVENING"})
-        else:
-            _when.add(w)
-    when = _when
+                _when.add(w)
+        when = _when
 
-    _process_tag = TagProcessor(task_list.get_coll("tags"))
-    tags = [_process_tag(tag) for tag in tags]
+    with TimeItContext("filter (status, tags)", report_dict=timings):
+        df = df.query("status!='DONE' and status!='FAILED'")
+        if len(tags) > 0:
+            df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
 
-    df = df.query("status!='DONE' and status!='FAILED'")
-    if len(tags) > 0:
-        df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
+    with TimeItContext("filter (DatesQueryEvaluator)", report_dict=timings):
+        if scheduled_date_query is not None:
+            df = df[
+                df["scheduled_date"].apply(DatesQueryEvaluator(scheduled_date_query))
+            ]
+    with TimeItContext("filter (dates misc)", report_dict=timings):
+        if un_scheduled and len(df) > 0:
+            df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
+        if len(when) > 0 and len(df) > 0:
+            df = df[df["when"].isin(when)]
+        if text is not None and len(df) > 0:
+            df = df[[text in n for n in df.name]]
+        if before_date is not None and len(df) > 0:
+            df = df[[sd <= before_date for sd in df["scheduled_date"]]]
+        if after_date is not None and len(df) > 0:
+            df = df[[sd >= after_date for sd in df["scheduled_date"]]]
 
-    if scheduled_date_query is not None:
-        df = df[df["scheduled_date"].apply(DatesQueryEvaluator(scheduled_date_query))]
-    if un_scheduled and len(df) > 0:
-        df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
-    if len(when) > 0 and len(df) > 0:
-        df = df[df["when"].isin(when)]
-    if text is not None and len(df) > 0:
-        df = df[[text in n for n in df.name]]
-    if before_date is not None and len(df) > 0:
-        df = df[[sd <= before_date for sd in df["scheduled_date"]]]
-    if after_date is not None and len(df) > 0:
-        df = df[[sd >= after_date for sd in df["scheduled_date"]]]
-
-    df["tags"] = df["tags"].apply(
-        lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags))
-    )
-
-    if head is not None:
-        df = df.head(head)
-    if sample is not None:
-        click.echo(f"{len(df)} tasks initially")
-        df = df.sample(n=sample)
-
-    df = df.sort_values(
-        by=["status", "due", "when", "uuid"],
-        ascending=[False, True, True, True],
-        kind="stable",
-    )
-
-    pretty_df = df.copy()
-    pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
-    pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
-
-    if name_length_limit > 0:
-        pretty_df.name = pretty_df.name.apply(
-            lambda s: s if len(s) < name_length_limit else f"{s[:name_length_limit]}..."
+    with TimeItContext("filter (tags)", report_dict=timings):
+        ## FIXME takes long time (26s)
+        df["tags"] = df["tags"].apply(
+            lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags))
         )
 
-    if columns:
-        pretty_df = pretty_df[list(columns)]
+    with TimeItContext("cut & sort", report_dict=timings):
+        if head is not None:
+            df = df.head(head)
+        if sample is not None:
+            click.echo(f"{len(df)} tasks initially")
+            df = df.sample(n=sample)
 
-    # if out_format is None:
-    #     click.echo(pretty_df)
-    # elif out_format == "str":
-    #     click.echo(pretty_df.to_string())
-    # elif out_format == "json":
-    #     click.echo(pretty_df.to_json(orient="records"))
-    # elif out_format == "csv":
-    #     click.echo(pretty_df.to_csv())
-    # elif out_format == "html":
-    #     format_html(
-    #         df,
-    #         out_format_config,
-    #         task_list,
-    #         print_callback=click.echo,
-    #         out_file=out_file,
-    #     )
-    #     logging.warning(f"{len(pretty_df)} tasks matched")
-    # else:
-    #     raise NotImplementedError((out_format,))
-
-    click.echo(
-        format_df(
-            pretty_df,
-            "plain" if not out_format else out_format,
-            formatters=dict(
-                html=lambda _: format_html(
-                    df,
-                    out_format_config,
-                    task_list,
-                    print_callback=click.echo,
-                    out_file=out_file,
-                )
-            ),
+        df = df.sort_values(
+            by=["status", "due", "when", "uuid"],
+            ascending=[False, True, True, True],
+            kind="stable",
         )
-    )
 
-    s = f"{len(pretty_df)} tasks matched"
-    if out_format in ["html"]:
-        logging.warning(s)
-    if out_format not in ["json", "html", "csv"]:
-        click.echo(s)
+    with TimeItContext("pretty_df", report_dict=timings):
+        pretty_df = df.copy()
+        pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
+        pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
+
+        if name_length_limit > 0:
+            pretty_df.name = pretty_df.name.apply(
+                lambda s: s
+                if len(s) < name_length_limit
+                else f"{s[:name_length_limit]}..."
+            )
+
+        if columns:
+            pretty_df = pretty_df[list(columns)]
+
+    with TimeItContext("format_df", report_dict=timings):
+        # if out_format is None:
+        #     click.echo(pretty_df)
+        # elif out_format == "str":
+        #     click.echo(pretty_df.to_string())
+        # elif out_format == "json":
+        #     click.echo(pretty_df.to_json(orient="records"))
+        # elif out_format == "csv":
+        #     click.echo(pretty_df.to_csv())
+        # elif out_format == "html":
+        #     format _html(
+        #         df,
+        #         out_format_config,
+        #         task_list,
+        #         print_callback=click.echo,
+        #         out_file=out_file,
+        #     )
+        #     logging.warning(f"{len(pretty_df)} tasks matched")
+        # else:
+        #     raise NotImplementedError((out_format,))
+
+        click.echo(
+            format_df(
+                pretty_df,
+                "plain" if not out_format else out_format,
+                formatters=dict(
+                    html=lambda _: format_html(
+                        df,
+                        out_format_config,
+                        task_list,
+                        print_callback=click.echo,
+                        out_file=out_file,
+                    )
+                ),
+            )
+        )
+
+        s = f"{len(pretty_df)} tasks matched"
+        if out_format in ["html"]:
+            logging.warning(s)
+        if out_format not in ["json", "html", "csv"]:
+            click.echo(s)
+
+    timings_df = pd.Series(timings).to_frame("duration_seconds")
+    timings_df["dur"] = timings_df["duration_seconds"].apply(
+        lambda s: timedelta(seconds=s)
+    )
+    timings_df["perc"] = timings_df["dur"] / timings_df["dur"].sum() * 100
+    logging.warning(timings_df)
 
 
 # FIXME: short group names, long final command names

@@ -23,6 +23,7 @@ import hashlib
 import inspect
 import json
 import logging
+import functools
 import re
 import sqlite3
 import string
@@ -89,9 +90,15 @@ class TaskList:
         return self._mongo_url
 
     def get_all_tasks(
-        self, is_post_processing=True, is_drop_hidden_fields=True
+        self,
+        is_post_processing: bool = True,
+        is_drop_hidden_fields: bool = True,
+        tags: list[str] = [],
     ) -> pd.DataFrame:
-        df = pd.DataFrame(self.get_coll().find())
+        filter_ = {}
+        if tags:
+            filter_["tags"] = {"$all": tags}
+        df = pd.DataFrame(self.get_coll().find(filter=filter_))
         #        df = df.sort_values(by=["_insertion_date", "_id"])
         if is_drop_hidden_fields:
             df.drop(columns=[x for x in list(df) if x.startswith("_")], inplace=True)
@@ -290,6 +297,7 @@ class TagProcessor:
         tag_r = self._get_tag_record_or_impute(tag=tag)
         return tag_r["uuid"]
 
+    @functools.cache
     def tag_uuid_to_tag_name(self, uuid):
         return self._get_tag_record_or_impute(uuid=uuid)
 
@@ -343,6 +351,6 @@ CLICK_DEFAULT_VALUES = {
         "name_length_limit": 50,
         "un_scheduled": False,
         "tags": tuple(),
-        "when":tuple(),
+        "when": tuple(),
     },
 }

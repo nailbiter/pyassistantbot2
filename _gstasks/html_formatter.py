@@ -44,6 +44,7 @@ import importlib.util
 # FIXME
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
+from _gstasks.timing import TimeItContext
 
 
 def ifnull(x, y, method: typing.Literal["isna"] = "isna", is_loud: bool = False):

@@ -70,7 +70,9 @@ def ttask(
                         "_id": df["_id"].apply(str),
                         "date": df["date"].apply(operator.methodcaller("isoformat")),
                     }
-                ).reset_index().to_json(orient="records")
+                )
+                .reset_index()
+                .to_json(orient="records")
             )
         else:
             raise NotImplementedError(dict(out_format=out_format))
