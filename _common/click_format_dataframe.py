@@ -34,7 +34,8 @@ def format_df(df: pd.DataFrame, out_format: str, formatters: dict = {}) -> str:
     elif out_format == "str":
         s = df.to_string()
     elif out_format == "json":
-        s = df.to_json(orient="records")
+        s = df.to_json(orient="records", #force_ascii=False
+                       )
     elif out_format == "csv":
         s = df.to_csv()
     elif out_format == "html":

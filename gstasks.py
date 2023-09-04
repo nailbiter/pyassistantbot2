@@ -551,12 +551,16 @@ def tags(ctx):
 _TAG_NONE = "NONE"
 
 
-@tags.command(name="show")
+@tags.command(name="ls")
 @click_option_with_envvar_explicit(
-    "-r", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+)
+@click_option_with_envvar_explicit("--raw/--no-raw", "-r/ ", default=False)
+@click_option_with_envvar_explicit(
+    "-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS)
 )
 @click.pass_context
-def show_tags(ctx, sort_order):
+def ls_tags(ctx, sort_order, raw, out_format):
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks()
     tasks_df = tasks_df.query("status!='DONE'")
@@ -565,27 +569,61 @@ def show_tags(ctx, sort_order):
     _process_tag = TagProcessor(task_list.get_coll("tags"))
     tags_df = _process_tag.get_all_tags()
 
-    tasks_df = pd.DataFrame({"uuid": tasks_df.tags, "name": tasks_df.name})
-    tasks_df = tags_df.set_index("uuid").join(
-        tasks_df.set_index("uuid"), lsuffix="_tag", how="outer"
-    )
-    assert _TAG_NONE not in list(tags_df.name)
-    tasks_df.name_tag = tasks_df.name_tag.fillna(_TAG_NONE)
-    tasks_df = tasks_df.groupby("name_tag").count()
-    tasks_df = tasks_df.reset_index().drop(columns=["_id"])
-    tasks_df["frac (%)"] = tasks_df.name / tasks_df.name.sum() * 100
+    if raw:
+        df = tags_df
+    else:
+        tasks_df = pd.DataFrame({"uuid": tasks_df.tags, "name": tasks_df.name})
+        tasks_df = tags_df.set_index("uuid").join(
+            tasks_df.set_index("uuid"), lsuffix="_tag", how="outer"
+        )
+        assert _TAG_NONE not in list(tags_df.name)
+        tasks_df.name_tag = tasks_df.name_tag.fillna(_TAG_NONE)
+        tasks_df = tasks_df.groupby("name_tag").count()
+        tasks_df = tasks_df.reset_index().drop(columns=["_id"])
+        tasks_df["frac (%)"] = tasks_df.name / tasks_df.name.sum() * 100
+        df = tasks_df
 
-    if len(tasks_df) > 0:
+    if len(df) > 0:
         if len(sort_order) > 0:
             kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
         else:
             kwargs = dict(by=["name"], ascending=[False])
         logging.warning(f"sort {kwargs}")
-        tasks_df.sort_values(
+        df.sort_values(
             **kwargs,
             inplace=True,
         )
-    print(tasks_df)
+
+    ##FIXME: `json` does not work (ascii-related error)
+    click.echo(format_df(df, "plain" if not out_format else out_format))
+
+
+@gstasks.command(help="ls object")
+@click.pass_context
+def lso(ctx):
+    pass
+
+
+@tags.command(name="edit")
+@click_option_with_envvar_explicit("-u", "--tag-uuid", required=True)
+@click.option("-n", "--name")
+@click.option("-c", "--comment")
+@click.pass_context
+def edit_tags(ctx, tag_uuid, **kwargs):
+    task_list = ctx.obj["task_list"]
+    tags_coll = task_list.get_coll("tags")
+    #help(tags_coll.update_one)
+    res = tags_coll.update_one(
+        filter={"uuid": tag_uuid},
+        update={"$set": {k: v for k, v in kwargs.items() if v is not None}},
+    )
+    logging.warning(res)
+
+
+@tags.command(name="add")
+@click.pass_context
+def add_tags(ctx):
+    pass
 
 
 @tags.command(name="mv")
@@ -764,7 +802,7 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
     "-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"])
 )
 @click_option_with_envvar_explicit(
-    "-r", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
 )
 @click_option_with_envvar_explicit(
     "-o",
