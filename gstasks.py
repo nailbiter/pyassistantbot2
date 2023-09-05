@@ -612,7 +612,7 @@ def lso(ctx):
 def edit_tags(ctx, tag_uuid, **kwargs):
     task_list = ctx.obj["task_list"]
     tags_coll = task_list.get_coll("tags")
-    #help(tags_coll.update_one)
+    # help(tags_coll.update_one)
     res = tags_coll.update_one(
         filter={"uuid": tag_uuid},
         update={"$set": {k: v for k, v in kwargs.items() if v is not None}},
@@ -967,6 +967,10 @@ def sweep_remind(
 @click_option_with_envvar_explicit("-q", "--scheduled-date-query")
 @click_option_with_envvar_explicit("--out-file", type=click.Path())
 @click_option_with_envvar_explicit("-c", "--column", "columns", type=str, multiple=True)
+@click_option_with_envvar_explicit(
+    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
+)
+@click_option_with_envvar_explicit("--drop-hidden-fields/--no-drop-hidden-fields")
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -984,12 +988,14 @@ def real_ls(
     sample=None,
     name_length_limit=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
     tags=CLICK_DEFAULT_VALUES["ls"]["tags"],
+    sort_order=CLICK_DEFAULT_VALUES["ls"]["sort_order"],
     out_format_config=None,
     scheduled_date_query=None,
     out_file=None,
     columns=None,
+    drop_hidden_fields: bool = None,
 ):
-    # logging.warning(when)
+    logging.warning(f"dhf: {drop_hidden_fields}")
     timings = {}
 
     with TimeItContext("prep & tags", report_dict=timings):
@@ -1000,7 +1006,9 @@ def real_ls(
     with TimeItContext("fetch", report_dict=timings):
         df = task_list.get_all_tasks(
             is_post_processing=out_format not in ["html"],
-            is_drop_hidden_fields=out_format not in ["html"],
+            is_drop_hidden_fields=(out_format not in ["html"])
+            if drop_hidden_fields is None
+            else drop_hidden_fields,
             tags=tags,
         )
         logging.warning(f"fetched {len(df)}")
@@ -1057,11 +1065,21 @@ def real_ls(
             click.echo(f"{len(df)} tasks initially")
             df = df.sample(n=sample)
 
-        df = df.sort_values(
-            by=["status", "due", "when", "uuid"],
-            ascending=[False, True, True, True],
-            kind="stable",
-        )
+        if len(df) > 0:
+            if sort_order:
+                kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
+                logging.warning(f"sort {kwargs}")
+                df.sort_values(
+                    **kwargs,
+                    inplace=True,
+                    kind="stable",
+                )
+            else:
+                df = df.sort_values(
+                    by=["status", "due", "when", "uuid"],
+                    ascending=[False, True, True, True],
+                    kind="stable",
+                )
 
     with TimeItContext("pretty_df", report_dict=timings):
         pretty_df = df.copy()
@@ -1118,7 +1136,7 @@ def real_ls(
         s = f"{len(pretty_df)} tasks matched"
         if out_format in ["html"]:
             logging.warning(s)
-        if out_format not in ["json", "html", "csv"]:
+        if out_format not in ["json", "html", "csv","csvfn"]:
             click.echo(s)
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")

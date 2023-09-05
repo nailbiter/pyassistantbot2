@@ -19,6 +19,7 @@ ORGANIZATION:
 ==============================================================================="""
 import pandas as pd
 import operator
+from _common import get_random_fn
 
 AVAILABLE_OUT_FORMATS = ["str", "csv", "json", "html", "plain", "csvfn"]
 
@@ -34,15 +35,17 @@ def format_df(df: pd.DataFrame, out_format: str, formatters: dict = {}) -> str:
     elif out_format == "str":
         s = df.to_string()
     elif out_format == "json":
-        s = df.to_json(orient="records", #force_ascii=False
-                       )
+        s = df.to_json(
+            orient="records",  # force_ascii=False
+        )
     elif out_format == "csv":
         s = df.to_csv()
     elif out_format == "html":
         s = formatters[out_format](df)
         # logging.warning(f"{len(df)} tasks matched")
     elif out_format == "csvfn":
-        raise NotImplementedError(dict(out_format=out_format))
+        s = get_random_fn(".csv")
+        df.to_csv(s)
     else:
         raise NotImplementedError(dict(out_format=out_format))
 

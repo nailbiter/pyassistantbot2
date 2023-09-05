@@ -352,5 +352,6 @@ CLICK_DEFAULT_VALUES = {
         "un_scheduled": False,
         "tags": tuple(),
         "when": tuple(),
+        "sort_order":tuple(),
     },
 }
