@@ -61,7 +61,7 @@ td {\
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
     },
     { column_name: "status" },
-    { column_name: "when" },
+    { column_name: "when", jinja_tpl: "{{x[0]}}" },
     {
       column_name: "due",
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
