@@ -24,6 +24,9 @@ import inspect
 import json
 import logging
 import functools
+import numpy as np
+import os
+from os import path
 import re
 import sqlite3
 import string
@@ -352,6 +355,73 @@ CLICK_DEFAULT_VALUES = {
         "un_scheduled": False,
         "tags": tuple(),
         "when": tuple(),
-        "sort_order":tuple(),
+        "sort_order": tuple(),
     },
 }
+
+
+def ssj(s: str) -> str:
+    "Strip Split Join"
+    return " ".join(s.strip().split())
+
+
+def dynamic_wait(
+    check_interval_minutes: int, now: typing.Optional[datetime] = None
+) -> (datetime, timedelta):
+    if now is None:
+        now = datetime.now()
+    now_min = datetime.timestamp(now) / 60
+    wait_min = check_interval_minutes * np.ceil(now_min / check_interval_minutes)
+    wait_dt = datetime.fromtimestamp(60 * wait_min)
+    td = wait_dt - now
+    return wait_dt, td
+
+
+def cmdline_keys_to_sort_kwargs(sort_order: tuple) -> dict:
+    kwargs = dict(
+        by=[k for k, _ in sort_order],
+        ascending=[(a == "asc") for _, a in sort_order],
+    )
+    return kwargs
+
+
+def _check_pid(pid):
+    """
+    Check For the existence of a unix pid.
+    taken from https://stackoverflow.com/a/568285
+    """
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
+
+def is_sweep_demon_running(obj: dict) -> (bool, dict):
+    fn = obj["sweep_demon_pid_file"]
+    is_demon_running, rest = False, {}
+    if path.isfile(fn):
+        with open(fn) as f:
+            rest = json.load(f)
+        pid = rest["pid"]
+        is_demon_running = _check_pid(pid)
+    res= is_demon_running, rest
+    logging.warning(res)
+    return res
+
+
+def dump_demon_pid(is_sweep_demon_pid: bool, sweep_demon_pid_file: str, **_):
+    logging.warning(
+        dict(
+            is_sweep_demon_pid=is_sweep_demon_pid,
+            sweep_demon_pid_file=sweep_demon_pid_file,
+        )
+    )
+    if is_sweep_demon_pid:
+        fn = sweep_demon_pid_file
+        logging.warning(f"saving pid to `{fn}`")
+        with open(fn, "w") as f:
+            json.dump(
+                {"pid": os.getpid(), "timestamp_iso": datetime.now().isoformat()}, f
+            )

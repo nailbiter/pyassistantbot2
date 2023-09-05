@@ -50,6 +50,11 @@ from _gstasks import (
     TaskList,
     UuidCacher,
     CLICK_DEFAULT_VALUES,
+    ssj,
+    dynamic_wait,
+    cmdline_keys_to_sort_kwargs,
+    is_sweep_demon_running,
+    dump_demon_pid,
 )
 from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks.html_formatter import format_html, ifnull, get_last_engaged_task_uuid
@@ -585,7 +590,7 @@ def ls_tags(ctx, sort_order, raw, out_format):
 
     if len(df) > 0:
         if len(sort_order) > 0:
-            kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
+            kwargs = cmdline_keys_to_sort_kwargs(sort_order)
         else:
             kwargs = dict(by=["name"], ascending=[False])
         logging.warning(f"sort {kwargs}")
@@ -740,29 +745,6 @@ def remind(ctx, **kwargs):
         ctx.obj[k] = v
 
 
-def _check_pid(pid):
-    """
-    Check For the existence of a unix pid.
-    taken from https://stackoverflow.com/a/568285
-    """
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    else:
-        return True
-
-
-def _is_sweep_demon_running(obj):
-    fn = obj["sweep_demon_pid_file"]
-    is_demon_running = False
-    if path.isfile(fn):
-        with open(fn) as f:
-            pid = json.load(f)["pid"]
-        is_demon_running = _check_pid(pid)
-    return is_demon_running
-
-
 @remind.command(name="add")
 @click_option_with_envvar_explicit("-u", "--uuid-text")
 # align cmdline's keys with `gstask add`
@@ -771,8 +753,27 @@ def _is_sweep_demon_running(obj):
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if ctx.obj["is_sweep_demon_pid"]:
-        is_demon_running = _is_sweep_demon_running(ctx.obj)
-        logging.warning(f'sweep demon {"" if is_demon_running else "IS NOT "}running')
+        is_demon_running, rest = is_sweep_demon_running(ctx.obj)
+        logging.warning(
+            ssj(
+                Template(
+                    """
+                {%if is_demon_running%}
+                sweep demon is running (last check {{datetime.fromisoformat(rest.timestamp_iso).strftime('%Y-%m-%d %H:%M')}} [{{now-datetime.fromisoformat(rest.timestamp_iso)}} ago])
+                {%else%}
+                sweep demon IS NOT running
+                {%endif%}
+                """
+                ).render(
+                    dict(
+                        is_demon_running=is_demon_running,
+                        rest=rest,
+                        datetime=datetime,
+                        now=datetime.now(),
+                    )
+                )
+            )
+        )
 
     if remind_datetime is None:
         remind_datetime = datetime.now()
@@ -829,7 +830,7 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
     logging.warning(f"{len(df)} reminds")
 
     if len(df) > 0 and len(sort_order) > 0:
-        kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
+        kwargs = cmdline_keys_to_sort_kwargs(sort_order)
         logging.warning(f"sort {kwargs}")
         df.sort_values(
             **kwargs,
@@ -837,14 +838,6 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
         )
 
     click.echo(df.to_csv(sep="\t", index=None))
-
-
-def _cmdline_keys_to_sort_kwargs(sort_order):
-    kwargs = dict(
-        by=[k for k, _ in sort_order],
-        ascending=[(a == "asc") for _, a in sort_order],
-    )
-    return kwargs
 
 
 @remind.command(name="mark")
@@ -871,26 +864,23 @@ def mark_remind(ctx, uuids, **kwargs):
 @click_option_with_envvar_explicit(
     "-t", "--template-filename", default="sweep_message.jinja.txt"
 )
-@click_option_with_envvar_explicit("--snap-to-grid/--no-snap-to-grid", default=False)
+@click_option_with_envvar_explicit(
+    "-g",
+    "--snap-to-grid",
+    type=click.Choice(["none", "static", "dynamic"]),
+    default="none",
+)
 @click.pass_context
 def sweep_remind(
     ctx, dry_run, slack_url, check_interval_minutes, template_filename, snap_to_grid
 ):
-    if ctx.obj["is_sweep_demon_pid"]:
-        fn = ctx.obj["sweep_demon_pid_file"]
-        logging.warning(f"saving pid to `{fn}`")
-        with open(fn, "w") as f:
-            json.dump({"pid": os.getpid()}, f)
+    dump_demon_pid(**ctx.obj)
 
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
 
-    if snap_to_grid and (check_interval_minutes is not None):
-        now = datetime.now()
-        now_min = datetime.timestamp(now) / 60
-        wait_min = check_interval_minutes * np.ceil(now_min / check_interval_minutes)
-        wait_dt = datetime.fromtimestamp(60 * wait_min)
-        td = wait_dt - now
+    if (snap_to_grid in {"static", "dynamic"}) and (check_interval_minutes is not None):
+        wait_dt, td = dynamic_wait(check_interval_minutes)
         logging.warning(
             f"waiting till {wait_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {td})"
         )
@@ -927,10 +917,18 @@ def sweep_remind(
         if check_interval_minutes is None:
             break
         else:
+            if snap_to_grid == "dynamic":
+                _, td = dynamic_wait(check_interval_minutes)
+                sleep_sec = td.total_seconds()
+            else:
+                sleep_sec = check_interval_minutes * 60
+
             logging.warning(
-                f"sleep {check_interval_minutes} minute(s)... ({now.isoformat()} now)"
+                f"sleep {timedelta(seconds=sleep_sec)}... ({now.isoformat()} now)"
             )
-            time.sleep(check_interval_minutes * 60)
+            time.sleep(sleep_sec)
+
+        dump_demon_pid(**ctx.obj)
 
 
 @gstasks.command()
@@ -1067,7 +1065,7 @@ def real_ls(
 
         if len(df) > 0:
             if sort_order:
-                kwargs = _cmdline_keys_to_sort_kwargs(sort_order)
+                kwargs = cmdline_keys_to_sort_kwargs(sort_order)
                 logging.warning(f"sort {kwargs}")
                 df.sort_values(
                     **kwargs,
@@ -1136,7 +1134,7 @@ def real_ls(
         s = f"{len(pretty_df)} tasks matched"
         if out_format in ["html"]:
             logging.warning(s)
-        if out_format not in ["json", "html", "csv","csvfn"]:
+        if out_format not in ["json", "html", "csv", "csvfn"]:
             click.echo(s)
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")
