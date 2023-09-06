@@ -11,6 +11,7 @@ from tasks\
 ",
   template: "\
 <html>\
+<link rel='icon' type='image/x-icon' href='https://st.depositphotos.com/3212945/5107/v/950/depositphotos_51079249-stock-illustration-letter-t-from-technologys-stylized.jpg'>\
   <style>\
   table {\
     border: 1px solid;\
