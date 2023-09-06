@@ -406,21 +406,22 @@ def is_sweep_demon_running(obj: dict) -> (bool, dict):
             rest = json.load(f)
         pid = rest["pid"]
         is_demon_running = _check_pid(pid)
-    res= is_demon_running, rest
+    res = is_demon_running, rest
     logging.warning(res)
     return res
 
 
 def dump_demon_pid(is_sweep_demon_pid: bool, sweep_demon_pid_file: str, **_):
-    logging.warning(
-        dict(
-            is_sweep_demon_pid=is_sweep_demon_pid,
-            sweep_demon_pid_file=sweep_demon_pid_file,
-        )
-    )
+    # logging.warning(
+    #     dict(
+    #         is_sweep_demon_pid=is_sweep_demon_pid,
+    #         sweep_demon_pid_file=sweep_demon_pid_file,
+    #     )
+    # )
+
     if is_sweep_demon_pid:
         fn = sweep_demon_pid_file
-        logging.warning(f"saving pid to `{fn}`")
+        # logging.warning(f"saving pid to `{fn}`")
         with open(fn, "w") as f:
             json.dump(
                 {"pid": os.getpid(), "timestamp_iso": datetime.now().isoformat()}, f
