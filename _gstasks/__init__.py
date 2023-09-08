@@ -215,20 +215,20 @@ class ConvenientCliTimeParamType(click.ParamType):
                 r"\+([\d]+)([" + "".join(_common.TIMEDELTA_ABBREVIATIONS) + "])$", value
             )
         ) is not None:
-            return self._now + relativedelta(
+            res = self._now + relativedelta(
                 **{_common.TIMEDELTA_ABBREVIATIONS[m.group(2)]: int(m.group(1))}
             )
         elif (m := re.match(r"(\d{2}):(\d{2})$", value)) is not None:
-            return self._now.replace(
+            res = self._now.replace(
                 **{k: int(m.group(i + 1)) for i, k in enumerate(["hour", "minute"])},
-                second=0,
-                microsecond=0,
             )
         else:
             res = pd.to_datetime(value, errors="coerce")
             if pd.isna(res):
                 self.fail(f'cannot parse "{value}"', param, ctx)
-            return res
+
+        res = res.replace(second=0, microsecond=0)
+        return res
 
 
 CLI_TIME = ConvenientCliTimeParamType
