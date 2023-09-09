@@ -417,6 +417,10 @@ def edit(
 )
 @click.pass_context
 def cp(ctx, uuid_texts):
+    """
+    FIXME: copy and fixup (same as in `edit`)
+    """
+
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
