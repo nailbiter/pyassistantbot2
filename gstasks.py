@@ -415,8 +415,9 @@ def edit(
 @click_option_with_envvar_explicit(
     "-u", "--uuid-text", "uuid_texts", required=True, multiple=True
 )
+@click_option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.pass_context
-def cp(ctx, uuid_texts):
+def cp(ctx, uuid_texts, scheduled_date):
     """
     FIXME: copy and fixup (same as in `edit`)
     """
@@ -438,6 +439,8 @@ def cp(ctx, uuid_texts):
         new_r = copy.deepcopy(r)
         _uuid = new_r.pop("uuid")
         new_r["label"] = {**ifnull(r.get("label", {}), {}), "cloned_from": _uuid}
+        if scheduled_date is not None:
+            new_r["scheduled_date"] = scheduled_date
         logger.warning(f"r:\n{pd.Series(r)}")
         logger.warning(f"new_r:\n{pd.Series(new_r)}")
         task_list.insert_or_replace_record(
