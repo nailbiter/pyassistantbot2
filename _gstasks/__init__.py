@@ -407,7 +407,7 @@ def is_sweep_demon_running(obj: dict) -> (bool, dict):
         pid = rest["pid"]
         is_demon_running = _check_pid(pid)
     res = is_demon_running, rest
-    logging.warning(res)
+    # logging.warning(res)
     return res
 
 
