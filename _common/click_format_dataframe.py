@@ -20,6 +20,11 @@ ORGANIZATION:
 import pandas as pd
 import operator
 from _common import get_random_fn
+import logging
+
+logging.warning(
+    "module `click_format_dataframe` is DEPRECATED ==> switch to `alex_leontiev_toolbox_python.utils.click_format_dataframe`"
+)
 
 AVAILABLE_OUT_FORMATS = ["str", "csv", "json", "html", "plain", "csvfn"]
 
