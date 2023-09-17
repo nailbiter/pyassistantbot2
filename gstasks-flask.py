@@ -27,6 +27,7 @@ import uuid
 import logging
 import json
 from jinja2 import Template
+import tqdm
 from _gstasks.timing import TimeItContext
 from _gstasks import TaskList
 import pandas as pd
@@ -102,31 +103,37 @@ def hello_world():
             jinja_env["habits_df"] = _get_habits()
 
     with TimeItContext("run", report_dict=timings):
-        out_fn = f"/tmp/{uuid.uuid4()}.html"
-        if True:
-            real_ls(
-                **{
-                    **gstasks_profile["kwargs"],
-                    "out_file": out_fn,
-                    "ctx": g.ctx,
-                }
-            )
-        else:
-            cmd = Template(gstasks_profiles[profile]["cmd"]).render(
-                dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
-            )
-            logging.warning(f"cmd: `{cmd}`")
-            ec, out = subprocess.getstatusoutput(cmd)
-            assert ec == 0, (cmd, ec, out)
+        out_fns = {}
+        for k, v in tqdm.tqdm(gstasks_profile["blocks"].items()):
+            out_fn = f"/tmp/{uuid.uuid4()}.html"
+            if True:
+                real_ls(
+                    **{
+                        **v["kwargs"],
+                        "out_file": out_fn,
+                        "ctx": g.ctx,
+                    }
+                )
+            else:
+                cmd = Template(v["cmd"]).render(
+                    dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
+                )
+                logging.warning(f"cmd: `{cmd}`")
+                ec, out = subprocess.getstatusoutput(cmd)
+                assert ec == 0, (cmd, ec, out)
+            out_fns[k] = out_fn
 
     with TimeItContext("read output", report_dict=timings):
-        logging.warning(out_fn)
-        with open(out_fn) as f:
-            out = f.read()
+        outs = {}
+        for k, out_fn in out_fns.items():
+            logging.warning(out_fn)
+            with open(out_fn) as f:
+                out = f.read()
+            outs[k] = out
         if "template" in gstasks_profile:
             with open(gstasks_profile["template"]) as f:
                 template = f.read()
-            jinja_env["table_html"] = out
+            jinja_env["table_htmls"] = outs
             out = Template(template).render(jinja_env)
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")
