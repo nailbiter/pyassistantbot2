@@ -47,12 +47,16 @@ def _get_habits() -> pd.DataFrame:
     _now = datetime.now()
     filter_ = {
         "$and": [
-            {"due": {"$gt": _now}},
+            {"due": {"$gt": _now - timedelta(hours=9)}},
             {"status": {"$exists": False}},
         ]
     }
     coll = mongo_client["logistics"]["alex.habitspunch2"]
     df = pd.DataFrame(coll.find(filter=filter_))
+    df[["due", "date"]] += timedelta(hours=9)
+    df.drop(columns=["_id"], inplace=True)
+    df.sort_values(by=["due", "name"], ascending=[False, True], inplace=True)
+
     return df
 
 
