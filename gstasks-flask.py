@@ -33,11 +33,26 @@ import pandas as pd
 from datetime import datetime, timedelta
 import collections
 from gstasks import real_ls
+import pymongo
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 
 app = Flask(__name__)
+mongo_client = pymongo.MongoClient(os.environ["MONGO_URL"])
 # my_g = {}
+
+
+def _get_habits() -> pd.DataFrame:
+    _now = datetime.now()
+    filter_ = {
+        "$and": [
+            {"due": {"$gt": _now}},
+            {"status": {"$exists": False}},
+        ]
+    }
+    coll = mongo_client["logistics"]["alex.habitspunch2"]
+    df = pd.DataFrame(coll.find(filter=filter_))
+    return df
 
 
 # @app.before_first_request
@@ -84,7 +99,7 @@ def hello_world():
         gstasks_profile = gstasks_profiles[profile]
         jinja_env = {}
         if gstasks_profile.get("is_include_habits", False):
-            pass
+            jinja_env["habits_df"] = _get_habits()
 
     with TimeItContext("run", report_dict=timings):
         out_fn = f"/tmp/{uuid.uuid4()}.html"
