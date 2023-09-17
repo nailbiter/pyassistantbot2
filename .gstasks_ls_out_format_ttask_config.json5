@@ -9,46 +9,7 @@ iif(date(scheduled_date)=date('{{now}}'),'is_today','') as class,\
 --status as class \n\
 from tasks\
 ",
-  template: "\
-<html>\
-<link rel='icon' type='image/x-icon' href='https://st.depositphotos.com/3212945/5107/v/950/depositphotos_51079249-stock-illustration-letter-t-from-technologys-stylized.jpg'>\
-  <style>\
-  table {\
-    border: 1px solid;\
-    /* outline: 0.5rem solid khaki; */\
-    /* box-shadow: 0 0 0 2rem skyblue; */\
-    /* border-radius: 12px; */ \
-    /* font: bold 1rem sans-serif; */\
-    /* margin: 2rem; */\
-    /* padding: 1rem; */\
-    /* outline-offset: 0.5rem; */\
-\
-    table-layout: fixed; width: 100%\
-}\
-\
-\
-th {\
-    border: 1px solid;\
-}\
-\
-.col0 {\
-}\
-\
-td {\
-    border: 1px solid;\
-}\
-\
-.is_today {\
-    background-color: lightgray;\
-}\
-.REGULAR {\
-    background-color: brown;\
-}\
->\
-</style>\
-  <p>$row_num tasks</p>\
-  ${table_html}\
-</html>",
+  //template: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
   sql_udfs_file: "gstasks_sql_uds.py",
   index_style: "{{x.split('-')[0]}}",
   output_columns: [

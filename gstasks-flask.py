@@ -80,12 +80,18 @@ def hello_world():
         keys = " ".join([f"-{k} {v}" for k, v in args.items()])
         logging.warning(dict(args=args, profile=profile))
 
+    with TimeItContext("habits", report_dict=timings):
+        gstasks_profile = gstasks_profiles[profile]
+        jinja_env = {}
+        if gstasks_profile.get("is_include_habits", False):
+            pass
+
     with TimeItContext("run", report_dict=timings):
         out_fn = f"/tmp/{uuid.uuid4()}.html"
         if True:
             real_ls(
                 **{
-                    **gstasks_profiles[profile]["kwargs"],
+                    **gstasks_profile["kwargs"],
                     "out_file": out_fn,
                     "ctx": g.ctx,
                 }
@@ -99,8 +105,14 @@ def hello_world():
             assert ec == 0, (cmd, ec, out)
 
     with TimeItContext("read output", report_dict=timings):
+        logging.warning(out_fn)
         with open(out_fn) as f:
             out = f.read()
+        if "template" in gstasks_profile:
+            with open(gstasks_profile["template"]) as f:
+                template = f.read()
+            jinja_env["table_html"] = out
+            out = Template(template).render(jinja_env)
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")
     timings_df["dur"] = timings_df["duration_seconds"].apply(
