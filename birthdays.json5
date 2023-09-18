@@ -1,154 +1,304 @@
-var birthdays = [
+[
+    {
+        month: 1,
+        date: 15,
+        info: "www.google.com",
+        name: "Test von Test",
+        enabled: false,
+    },
+    {
+        month: 9,
+        date: 1,
+        name: "Kolya Servetnik",
+    },
+    {
+        month: 9,
+        date: 24,
+        name: "Lesya Zakoretskaya",
+        info: "https://www.facebook.com/alesia.zakoretska",
+    },
+    {
+        month: 9,
+        date: 24,
+        name: "Mike Wasilewich",
+    },
+    {
+        month: 9,
+        date: 20,
+        name: "Naboychenko Sergii",
+        info: "https://www.facebook.com/Serega.does.not.exist/",
+    },
+    {
+        month: 10,
+        date: 1,
+        name: "Dad",
+    },
+    {
+        month: 8,
+        date: 24,
+        name: "mom",
+    },
+    {
+        month: 11,
+        date: 24,
+        name: "Ruslana",
+    },
+    {
+        month: 9,
+        date: 23,
+        name: "masha",
+    },
+    {
+        month: 2,
+        date: 24,
+        name: "brother mike",
+    },
+    {
+        month: 9,
+        date: 13,
+        name: "Aunt Anya",
+    },
+    {
+        month: 7,
+        date: 29,
+        name: "Uncle Vanya",
+    },
+    {
+        month: 5,
+        date: 31,
+        name: "Yura Gavrilenko",
+    },
+    {
+        month: 4,
+        date: 30,
+        name: "Uncle Vlad",
+        info: "https://www.facebook.com/profile.php?id=100010184923548",
+    },
+    {
+        month: 5,
+        date: 8,
+        name: "Aunt Ira",
+        info: "https://www.facebook.com/profile.php?id=100000057449112",
+    },
+    {
+        month: 12,
+        date: 22,
+        name: "Aleksandros",
+        info: "https://www.facebook.com/aleksandrs.dmitrenko",
+    },
+    {
+        month: 3,
+        date: 14,
+        name: "Natalia Danovich",
+        info: "https://www.facebook.com/profile.php?id=100001636841686",
+    },
+    {
+        month: 11,
+        date: 22,
+        name: "Liu BeiBei",
+        info: "https://www.facebook.com/profile.php?id=100006490411915",
+    },
+    {
+        month: 3,
+        date: 6,
+        name: "Maslechkin Vasil",
+        info: "https://www.messenger.com/t/MaslechkinVasiliy",
+    },
+    {
+        name: "Sean Lin",
+        month: 12,
+        date: 4,
+    },
+    {
+        name: "Ira Ansi",
+        month: 12,
+        date: 18,
+        info: "https://www.facebook.com/ira.ansi",
+    },
+    {
+        name: "grandfather",
+        month: 5,
+        date: 1,
+    },
+    {
+        name: "grandmother",
+        month: 1,
+        date: 28,
+    },
+    {
+        name: "\u041a\u043e\u043d\u0441\u0442\u0430\u043d\u0442\u0438\u043d \u0413\u0440\u0438\u0446\u0430\u043a",
+        month: 1,
+        date: 24,
+        info: "https://www.facebook.com/kostiantyn.gritsak/",
+    },
+    {
+        name: "zafar avzalshoev",
+        month: 1,
+        date: 3,
+        info: "mr.zafarjon@gmail.com",
+    },
+    {
+        name: "aunt Lylya",
+        month: 5,
+        date: 20,
+        info: "https://www.facebook.com/ezhovalila/about?lst=100000573172334%3A100009173133010%3A1558314808",
+    },
+    {
+        name: "Taras Pavlov",
+        month: 3,
+        date: 25,
+        info: "",
+    },
+]
+[
   {
-    month: 01,
+    month: 1,
     date: 15,
     info: "www.google.com",
     name: "Test von Test",
-    enabled: false
+    enabled: false,
   },
   {
-    month: 09,
-    date: 01,
-    name: "Kolya Servetnik"
+    month: 9,
+    date: 1,
+    name: "Kolya Servetnik",
   },
   {
-    month: 09,
+    month: 9,
     date: 24,
     name: "Lesya Zakoretskaya",
-    info: "https://www.facebook.com/alesia.zakoretska"
+    info: "https://www.facebook.com/alesia.zakoretska",
   },
   {
-    month: 09,
+    month: 9,
     date: 24,
-    name: "Mike Wasilewich"
+    name: "Mike Wasilewich",
   },
   {
-    month: 09,
+    month: 9,
     date: 20,
     name: "Naboychenko Sergii",
-    info: "https://www.facebook.com/Serega.does.not.exist/"
+    info: "https://www.facebook.com/Serega.does.not.exist/",
   },
   {
     month: 10,
-    date: 01,
-    name: "Dad"
+    date: 1,
+    name: "Dad",
   },
   {
-    month: 08,
+    month: 8,
     date: 24,
-    name: "mom"
+    name: "mom",
   },
   {
     month: 11,
     date: 24,
-    name: "Ruslana"
+    name: "Ruslana",
   },
   {
-    month: 09,
+    month: 9,
     date: 23,
-    name: "masha"
+    name: "masha",
   },
   {
-    month: 02,
+    month: 2,
     date: 24,
-    name: "brother mike"
+    name: "brother mike",
   },
   {
-    month: 09,
+    month: 9,
     date: 13,
-    name: "Aunt Anya"
+    name: "Aunt Anya",
   },
   {
-    month: 07,
+    month: 7,
     date: 29,
-    name: "Uncle Vanya"
+    name: "Uncle Vanya",
   },
   {
-    month: 05,
+    month: 5,
     date: 31,
-    name: "Yura Gavrilenko"
+    name: "Yura Gavrilenko",
   },
   {
-    month: 04,
+    month: 4,
     date: 30,
     name: "Uncle Vlad",
-    info: "https://www.facebook.com/profile.php?id=100010184923548"
+    info: "https://www.facebook.com/profile.php?id=100010184923548",
   },
   {
-    month: 05,
-    date: 08,
+    month: 5,
+    date: 8,
     name: "Aunt Ira",
-    info: "https://www.facebook.com/profile.php?id=100000057449112"
+    info: "https://www.facebook.com/profile.php?id=100000057449112",
   },
   {
     month: 12,
     date: 22,
     name: "Aleksandros",
-    info: "https://www.facebook.com/aleksandrs.dmitrenko"
+    info: "https://www.facebook.com/aleksandrs.dmitrenko",
   },
   {
-    month: 03,
+    month: 3,
     date: 14,
     name: "Natalia Danovich",
-    info: "https://www.facebook.com/profile.php?id=100001636841686"
+    info: "https://www.facebook.com/profile.php?id=100001636841686",
   },
   {
     month: 11,
     date: 22,
     name: "Liu BeiBei",
-    info: "https://www.facebook.com/profile.php?id=100006490411915"
+    info: "https://www.facebook.com/profile.php?id=100006490411915",
   },
   {
-    month: 03,
-    date: 06,
+    month: 3,
+    date: 6,
     name: "Maslechkin Vasil",
-    info: "https://www.messenger.com/t/MaslechkinVasiliy"
+    info: "https://www.messenger.com/t/MaslechkinVasiliy",
   },
   {
     name: "Sean Lin",
     month: 12,
-    date: 04
+    date: 4,
   },
   {
     name: "Ira Ansi",
     month: 12,
     date: 18,
-    info: "https://www.facebook.com/ira.ansi"
+    info: "https://www.facebook.com/ira.ansi",
   },
   {
     name: "grandfather",
-    month: 05,
-    date: 01
+    month: 5,
+    date: 1,
   },
   {
     name: "grandmother",
-    month: 01,
-    date: 28
+    month: 1,
+    date: 28,
   },
   {
     name: "Константин Грицак",
-    month: 01,
+    month: 1,
     date: 24,
-    info: "https://www.facebook.com/kostiantyn.gritsak/"
+    info: "https://www.facebook.com/kostiantyn.gritsak/",
   },
   {
     name: "zafar avzalshoev",
-    month: 01,
-    date: 03,
-    info: "mr.zafarjon@gmail.com"
+    month: 1,
+    date: 3,
+    info: "mr.zafarjon@gmail.com",
   },
   {
     name: "aunt Lylya",
-    month: 05,
+    month: 5,
     date: 20,
-    info:
-      "https://www.facebook.com/ezhovalila/about?lst=100000573172334%3A100009173133010%3A1558314808"
+    info: "https://www.facebook.com/ezhovalila/about?lst=100000573172334%3A100009173133010%3A1558314808",
   },
   {
     name: "Taras Pavlov",
-    month: 03,
+    month: 3,
     date: 25,
-    info: ""
-  }
-];
-module.exports = birthdays;
+    info: "",
+  },
+]
