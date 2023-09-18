@@ -419,7 +419,9 @@ def edit(
 @click.pass_context
 def cp(ctx, uuid_texts, scheduled_date):
     """
-    FIXME: copy and fixup (same as in `edit`)
+    FIXME:
+    1(done). copy and fixup (same as in `edit`)
+    2. copy and `done`
     """
 
     # taken from https://stackoverflow.com/a/13514318
