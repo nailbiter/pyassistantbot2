@@ -1,0 +1,50 @@
+table {
+    border: 1px solid;
+    /* outline: 0.5rem solid khaki; */
+    /* box-shadow: 0 0 0 2rem skyblue; */
+    /* border-radius: 12px; */ 
+    /* font: bold 1rem sans-serif; */
+    /* margin: 2rem; */
+    /* padding: 1rem; */
+    /* outline-offset: 0.5rem; */
+
+    table-layout: fixed;
+    width: 100%;
+    overflow-y: scroll;
+    height: 70vh;
+    display: block;
+}
+table.dataframe{
+    border: 1px solid;
+    /* outline: 0.5rem solid khaki; */
+    /* box-shadow: 0 0 0 2rem skyblue; */
+    /* border-radius: 12px; */ 
+    /* font: bold 1rem sans-serif; */
+    /* margin: 2rem; */
+    /* padding: 1rem; */
+    /* outline-offset: 0.5rem; */
+
+    table-layout: fixed;
+    width: 100%;
+    overflow-y: scroll;
+    height: 30vh;
+    display: block;
+  }
+
+th {
+    border: 1px solid;
+}
+
+.col0 {
+}
+
+td {
+    border: 1px solid;
+}
+
+.is_today {
+    background-color: lightgray;
+}
+.REGULAR {
+    background-color: brown;
+}

@@ -39,7 +39,8 @@ import json5
 import typing
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
-app = Flask(__name__)
+## https://stackoverflow.com/a/42791810
+app = Flask(__name__, static_url_path="", static_folder="gstasks-flask-static")
 # my_g = {}
 
 
@@ -145,7 +146,11 @@ def hello_world():
             with open(gstasks_profile["template"]) as f:
                 template = f.read()
             jinja_env["table_htmls"] = outs
-            out = Template(template).render(jinja_env)
+            jinja_env["static_files"] = {}
+            for k, fn in gstasks_profile.get("static_files", {}).items():
+                with open(fn) as f:
+                    jinja_env["static_files"][k] = f.read()
+            out = Template(template).render({**jinja_env})
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")
     timings_df["dur"] = timings_df["duration_seconds"].apply(
