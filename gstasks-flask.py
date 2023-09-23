@@ -102,7 +102,6 @@ def hello_world():
         profile = "standard"
         if "profile" in args:
             profile = args.pop("profile")
-        keys = " ".join([f"-{k} {v}" for k, v in args.items()])
         logging.warning(dict(args=args, profile=profile))
 
     with TimeItContext("habits", report_dict=timings):
@@ -115,6 +114,7 @@ def hello_world():
 
     with TimeItContext("run", report_dict=timings):
         out_fns = {}
+        keys = " ".join([f"-{k} {v}" for k, v in args.items()])
         for k, v in tqdm.tqdm(gstasks_profile["blocks"].items()):
             out_fn = f"/tmp/{uuid.uuid4()}.html"
             if gstasks_profile.get("is_use_shell", False):
