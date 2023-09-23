@@ -426,3 +426,10 @@ def dump_demon_pid(is_sweep_demon_pid: bool, sweep_demon_pid_file: str, **_):
             json.dump(
                 {"pid": os.getpid(), "timestamp_iso": datetime.now().isoformat()}, f
             )
+
+
+def str_or_envvar(s: str, envvar_prefix: str = "$"):
+    if s.startswith(envvar_prefix):
+        return os.environ[s[len(envvar_prefix) :]]
+    else:
+        return s

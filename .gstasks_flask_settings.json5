@@ -1,0 +1,24 @@
+{
+  gstasks_exe: "./gstasks.py",
+  habits_mongo_url: "$MONGO_URL",
+  mongo_url: "$PYASSISTANTBOT_MONGO_URL",
+  profiles: {
+    standard: {
+      cmd: "{{gstasks_exe}} ls -o html -b today {{keys}} --out-file {{out_fn}}",
+    },
+    ttask: {
+      cmd: "{{gstasks_exe}} --debug @random ls -g 7cd20942-def7-41c3-9f32-b818e6781566 -o html --out-format-config .gstasks_ls_out_format_ttask_config.json5 --out-file {{out_fn}}",
+      is_include_habits: true,
+      template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
+      blocks: {
+        ttask: {
+          kwargs: {
+            out_format: "html",
+            out_format_config: ".gstasks_ls_out_format_ttask_config.json5",
+            tags: ["7cd20942-def7-41c3-9f32-b818e6781566"],
+          },
+        },
+      },
+    },
+  },
+}

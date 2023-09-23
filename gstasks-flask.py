@@ -29,12 +29,14 @@ import json
 from jinja2 import Template
 import tqdm
 from _gstasks.timing import TimeItContext
-from _gstasks import TaskList
+from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
 from gstasks import real_ls
 import pymongo
+import json5
+import typing
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 app = Flask(__name__)
@@ -42,7 +44,8 @@ app = Flask(__name__)
 
 
 def _get_habits(mongo_url: str) -> pd.DataFrame:
-    mongo_client = pymongo.MongoClient(os.environ["MONGO_URL"])
+    logging.warning(f"mongo_url: {mongo_url}")
+    mongo_client = pymongo.MongoClient(mongo_url)
     _now = datetime.now()
     filter_ = {
         "$and": [
@@ -62,14 +65,14 @@ def _get_habits(mongo_url: str) -> pd.DataFrame:
 # @app.before_first_request
 # def before_first_request():
 #     g.test = 1
-def _init_g(g):
+def _init_g(g, mongo_url: typing.Optional[str]):
     if hasattr(g, "ctx"):
         logging.warning(f"`g` has `ctx` (={g.ctx}) ==> do nothing")
     else:
         logging.warning(f"`g` has no `ctx` ==> init")
         g.ctx = MockClickContext()
         g.ctx.obj["task_list"] = TaskList(
-            mongo_url=os.environ["GSTASKS_MONGO_URL"],
+            mongo_url=mongo_url,
             database_name="gstasks",
             collection_name="tasks",
         )
@@ -81,14 +84,17 @@ def hello_world():
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
-        _init_g(g)
-        gstasks_exe = os.environ.get("GSTASKS_FLASK_GSTASKS_EXE", "./gstasks.py")
-        gstasks_profiles_fn = os.environ.get(
-            "GSTASKS_FLASK_GSTASKS_PROFILES", ".gstasks_flask_profiles.json"
+        gstasks_settings_fn = os.environ.get(
+            "GSTASKS_FLASK_GSTASKS_SETTINGS", ".gstasks_flask_settings.json5"
         )
+        with open(gstasks_settings_fn) as f:
+            gstasks_settings = json5.load(f)
+        gstasks_profiles = gstasks_settings["profiles"]
 
-        with open(gstasks_profiles_fn) as f:
-            gstasks_profiles = json.load(f)
+        mongo_url = str_or_envvar(gstasks_settings["mongo_url"])
+        _init_g(g, mongo_url=mongo_url)
+
+        gstasks_exe = gstasks_settings["gstasks_exe"]
 
     with TimeItContext("parse flask", report_dict=timings):
         args = request.args
@@ -103,13 +109,22 @@ def hello_world():
         gstasks_profile = gstasks_profiles[profile]
         jinja_env = {}
         if gstasks_profile.get("is_include_habits", False):
-            jinja_env["habits_df"] = _get_habits()
+            jinja_env["habits_df"] = _get_habits(
+                str_or_envvar(gstasks_settings["habits_mongo_url"])
+            )
 
     with TimeItContext("run", report_dict=timings):
         out_fns = {}
         for k, v in tqdm.tqdm(gstasks_profile["blocks"].items()):
             out_fn = f"/tmp/{uuid.uuid4()}.html"
-            if True:
+            if gstasks_profile.get("is_use_shell", False):
+                cmd = Template(v["cmd"]).render(
+                    dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
+                )
+                logging.warning(f"cmd: `{cmd}`")
+                ec, out = subprocess.getstatusoutput(cmd)
+                assert ec == 0, (cmd, ec, out)
+            else:
                 real_ls(
                     **{
                         **v["kwargs"],
@@ -117,13 +132,6 @@ def hello_world():
                         "ctx": g.ctx,
                     }
                 )
-            else:
-                cmd = Template(v["cmd"]).render(
-                    dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
-                )
-                logging.warning(f"cmd: `{cmd}`")
-                ec, out = subprocess.getstatusoutput(cmd)
-                assert ec == 0, (cmd, ec, out)
             out_fns[k] = out_fn
 
     with TimeItContext("read output", report_dict=timings):
@@ -160,6 +168,6 @@ if __name__ == "__main__":
             load_dotenv(dotenv_path=env_fn)
             break
 
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))
     # my_g["test"] = 1
     app.run(host="0.0.0.0", port=port)
