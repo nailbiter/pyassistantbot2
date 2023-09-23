@@ -37,13 +37,12 @@ from gstasks import real_ls
 import pymongo
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
-
 app = Flask(__name__)
-mongo_client = pymongo.MongoClient(os.environ["MONGO_URL"])
 # my_g = {}
 
 
-def _get_habits() -> pd.DataFrame:
+def _get_habits(mongo_url: str) -> pd.DataFrame:
+    mongo_client = pymongo.MongoClient(os.environ["MONGO_URL"])
     _now = datetime.now()
     filter_ = {
         "$and": [
