@@ -26,3 +26,4 @@ flask --app gstasks-flask run --debug
 * **label** -- for every task, label can be set to arbitrary string (may change in future) value; think of a Python dictionary associated
 with every task
 * **flabel** -- (=fuzzy labels) same as label but instead of *dict* we have key-value pairs (meaning that the keys may duplicate)
+* **relation** -- relation between tasks (e.g. `blocks`, `included in`)
