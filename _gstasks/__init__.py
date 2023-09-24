@@ -357,6 +357,7 @@ CLICK_DEFAULT_VALUES = {
         "when": tuple(),
         "sort_order": tuple(),
     },
+    "mark": {"mark": "engage"},
 }
 
 

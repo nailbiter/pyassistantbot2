@@ -57,6 +57,7 @@ from _gstasks import (
     dump_demon_pid,
 )
 from _gstasks.additional_states import ADDITIONAL_STATES
+import json5
 from _gstasks.html_formatter import format_html, ifnull, get_last_engaged_task_uuid
 import requests
 import numpy as np
@@ -97,8 +98,9 @@ moption = functools.partial(click.option, show_envvar=True)
     default=path.join(path.dirname(__file__), "_gstasks/templates"),
     type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
 )
+@moption("--post-hook", type=click.Path())
 @click.pass_context
-def gstasks(ctx, mongo_url, debug, **kwargs):
+def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
     total_level = logging.INFO
     basic_config_kwargs = {"handlers": [], "level": total_level}
     if debug is not None:
@@ -129,6 +131,20 @@ def gstasks(ctx, mongo_url, debug, **kwargs):
     )
     for k, v in kwargs.items():
         ctx.obj[k] = v
+
+
+@gstasks.result_callback()
+@click.pass_context
+def gstasks_result_callback(ctx, _, **kwargs):
+    # logging.warning((args, kwargs))
+
+    post_hook = kwargs["post_hook"]
+    if post_hook is not None:
+        with open(post_hook) as f:
+            post_hook = json5.load(f)
+        return globals()[post_hook["callback"]](
+            ctx=ctx, **{**CLICK_DEFAULT_VALUES["mark"], **post_hook.get("kwargs", {})}
+        )
 
 
 @gstasks.command()
@@ -664,15 +680,18 @@ _MARK_UNSET_SYMBOL = "D"
     help=f'`{_MARK_UNSET_SYMBOL}` means "unset"',
 )
 @moption("--post-hook")
-@moption("-m", "--mark", default="engage")
+@moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
 @click.pass_context
-def mark(ctx, uuid_text, post_hook, mark):
+def mark(*args, **kwargs):
     """
     FIXME:
       1. re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
       2. set up fixed set of marks with fixed arity (=1 by default)
     """
+    return real_mark(*args, **kwargs)
 
+
+def real_mark(ctx=None, uuid_text=None, post_hook=None, mark=None):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
