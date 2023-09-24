@@ -62,7 +62,12 @@ import requests
 import numpy as np
 import uuid
 import pymongo
-from _common.click_format_dataframe import AVAILABLE_OUT_FORMATS, format_df
+from alex_leontiev_toolbox_python.utils.click_format_dataframe import (
+    AVAILABLE_OUT_FORMATS,
+    format_df,
+    build_click_options,
+    apply_click_options,
+)
 import operator
 import copy
 
@@ -75,19 +80,19 @@ _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
 
-click_option_with_envvar_explicit = functools.partial(click.option, show_envvar=True)
+moption = functools.partial(click.option, show_envvar=True)
 
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
-@click_option_with_envvar_explicit("--list-id", required=True)
-@click_option_with_envvar_explicit("--mongo-url", required=True)
-@click_option_with_envvar_explicit(
+@moption("--list-id", required=True)
+@moption("--mongo-url", required=True)
+@moption(
     "--uuid-cache-db",
     default=path.abspath(path.join(path.dirname(__file__), ".uuid_cache.db")),
 )
-@click_option_with_envvar_explicit("-d", "--debug")
-@click_option_with_envvar_explicit(
+@moption("-d", "--debug")
+@moption(
     "--template-dir",
     default=path.join(path.dirname(__file__), "_gstasks/templates"),
     type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
@@ -127,9 +132,9 @@ def gstasks(ctx, mongo_url, debug, **kwargs):
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-t", "--tag", "tags")
-@click_option_with_envvar_explicit("--contains")
-@click_option_with_envvar_explicit("--not-contains")
+@moption("-t", "--tag", "tags")
+@moption("--contains")
+@moption("--not-contains")
 @click.pass_context
 def mv(ctx, tags, contains, not_contains):
     list_id = ctx.obj["list_id"]
@@ -172,14 +177,14 @@ def mv(ctx, tags, contains, not_contains):
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-h", "--task-hash")
-@click_option_with_envvar_explicit(
+@moption("-h", "--task-hash")
+@moption(
     "-w",
     "--when",
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
 )
-@click_option_with_envvar_explicit("-s", "--scheduled-date")
-@click_option_with_envvar_explicit("--archive/--no-archive", default=True)
+@moption("-s", "--scheduled-date")
+@moption("--archive/--no-archive", default=True)
 @click.pass_context
 def mv_task(ctx, task_hash, when, scheduled_date, archive):
     task_list = ctx.obj["task_list"]
@@ -201,12 +206,12 @@ def mv_task(ctx, task_hash, when, scheduled_date, archive):
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
-@click_option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
-@click_option_with_envvar_explicit(
+@moption("-i", "--index", type=int, multiple=True)
+@moption("-u", "--uuid-text", multiple=True)
+@moption(
     "--web-browser",
 )
-@click_option_with_envvar_explicit("--open-url/--no-open-url", default=True)
+@moption("--open-url/--no-open-url", default=True)
 @click.pass_context
 def open_url(ctx, index, uuid_text, web_browser, open_url):
     task_list = ctx.obj["task_list"]
@@ -230,20 +235,18 @@ def _fetch_uuid(uuid, uuid_cache_db=None):
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
-@click_option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
-@click_option_with_envvar_explicit(
-    "--create-archived/--no-create-archived", default=True
-)
-@click_option_with_envvar_explicit(
+@moption("-u", "--uuid-text", multiple=True)
+@moption("-i", "--index", type=int, multiple=True)
+@moption("--create-archived/--no-create-archived", default=True)
+@moption(
     "-l",
     "--label",
     multiple=True,
 )
-@click_option_with_envvar_explicit(
+@moption(
     "--web-browser",
 )
-@click_option_with_envvar_explicit("--open-url/--no-open-url", default=False)
+@moption("--open-url/--no-open-url", default=False)
 @click.pass_context
 def create_card(ctx, index, uuid_text, create_archived, label, open_url, web_browser):
     # taken from https://stackoverflow.com/a/13514318
@@ -289,43 +292,37 @@ _NONE_CLICK_VALUE = "NONE"
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-u", "--uuid-text", multiple=True)
-@click_option_with_envvar_explicit("-i", "--index", type=int, multiple=True)
-@click_option_with_envvar_explicit(
-    "-f", "--uuid-list-file", type=click.Path(allow_dash=True)
-)
-@click_option_with_envvar_explicit("-n", "--name")
-@click_option_with_envvar_explicit(
+@moption("-u", "--uuid-text", multiple=True)
+@moption("-i", "--index", type=int, multiple=True)
+@moption("-f", "--uuid-list-file", type=click.Path(allow_dash=True))
+@moption("-n", "--name")
+@moption(
     "-t",
     "--status",
     type=click.Choice(["DONE", "FAILED", "REGULAR", *ADDITIONAL_STATES]),
 )
-@click_option_with_envvar_explicit(
+@moption(
     "-w",
     "--when",
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
 )
-@click_option_with_envvar_explicit("-s", "--scheduled-date")
-@click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
-@click_option_with_envvar_explicit(
+@moption("-s", "--scheduled-date")
+@moption("-g", "--tag", "tags", multiple=True)
+@moption(
     "--tag-operation",
     type=click.Choice(["symmetric_difference", "union", "difference"]),
     default="symmetric_difference",
 )
-@click_option_with_envvar_explicit("--url", "URL")
+@moption("--url", "URL")
 # FIXME: allow `NONE` for `due` (use more carefully-written version of `parse_cmdline_datetime`)
 # FIXME: allow `NONE` for everything else
-@click_option_with_envvar_explicit("-d", "--due")
-@click_option_with_envvar_explicit("-a", "--action-comment")
-@click_option_with_envvar_explicit("-c", "--comment")
-@click_option_with_envvar_explicit(
-    "--create-new-tag/--no-create-new-tag", default=False
-)
-@click_option_with_envvar_explicit("-l", "--label", type=(str, str), multiple=True)
-@click_option_with_envvar_explicit(
-    "--string-set-mode", type=click.Choice(["set", "rappend"]), default="set"
-)
-@click_option_with_envvar_explicit("--post-hook")
+@moption("-d", "--due")
+@moption("-a", "--action-comment")
+@moption("-c", "--comment")
+@moption("--create-new-tag/--no-create-new-tag", default=False)
+@moption("-l", "--label", type=(str, str), multiple=True)
+@moption("--string-set-mode", type=click.Choice(["set", "rappend"]), default="set")
+@moption("--post-hook")
 @click.pass_context
 def edit(
     ctx,
@@ -412,10 +409,8 @@ def edit(
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit(
-    "-u", "--uuid-text", "uuid_texts", required=True, multiple=True
-)
-@click_option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
+@moption("-u", "--uuid-text", "uuid_texts", required=True, multiple=True)
+@moption("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.pass_context
 def cp(ctx, uuid_texts, scheduled_date):
     """
@@ -451,30 +446,24 @@ def cp(ctx, uuid_texts, scheduled_date):
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit("-n", "--name", "names", multiple=True)
-@click_option_with_envvar_explicit(
-    "--names-batch-file", "-f", type=click.Path(allow_dash=True)
-)
-@click_option_with_envvar_explicit(
+@moption("-n", "--name", "names", multiple=True)
+@moption("--names-batch-file", "-f", type=click.Path(allow_dash=True))
+@moption(
     "-w",
     "--when",
     type=click.Choice("WEEKEND,EVENING,PARTTIME".split(",")),
     required=True,
 )
-@click_option_with_envvar_explicit("-u", "--url", "URL")
-@click_option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
-@click_option_with_envvar_explicit(
-    "-t", "--status", type=click.Choice(["REGULAR", "DONE", *ADDITIONAL_STATES])
-)
-@click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
-@click_option_with_envvar_explicit("-d", "--due", type=CLI_DATETIME)
-@click_option_with_envvar_explicit("-c", "--comment")
-@click_option_with_envvar_explicit(
-    "--create-new-tag/--no-create-new-tag", default=False
-)
-@click_option_with_envvar_explicit("-l", "--label", type=(str, str), multiple=True)
-@click_option_with_envvar_explicit("--post-hook")
-@click_option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
+@moption("-u", "--url", "URL")
+@moption("-s", "--scheduled-date", type=CLI_DATETIME)
+@moption("-t", "--status", type=click.Choice(["REGULAR", "DONE", *ADDITIONAL_STATES]))
+@moption("-g", "--tag", "tags", multiple=True)
+@moption("-d", "--due", type=CLI_DATETIME)
+@moption("-c", "--comment")
+@moption("--create-new-tag/--no-create-new-tag", default=False)
+@moption("-l", "--label", type=(str, str), multiple=True)
+@moption("--post-hook")
+@moption("--dry-run/--no-dry-run", default=False)
 @click.pass_context
 def add(ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwargs):
     names = list(names)
@@ -510,15 +499,11 @@ def add(ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwar
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit(
-    "--json-file-name", "-f", type=click.Path(allow_dash=True)
-)
-@click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
-@click_option_with_envvar_explicit(
-    "--create-new-tag/--no-create-new-tag", default=False
-)
-@click_option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
-@click_option_with_envvar_explicit("-s", "--scheduled-date", type=CLI_DATETIME)
+@moption("--json-file-name", "-f", type=click.Path(allow_dash=True))
+@moption("-g", "--tag", "tags", multiple=True)
+@moption("--create-new-tag/--no-create-new-tag", default=False)
+@moption("--dry-run/--no-dry-run", default=False)
+@moption("-s", "--scheduled-date", type=CLI_DATETIME)
 @click.pass_context
 def import_file(ctx, json_file_name, create_new_tag, dry_run, **kwargs):
     task_list = ctx.obj["task_list"]
@@ -566,13 +551,9 @@ _TAG_NONE = "NONE"
 
 
 @tags.command(name="ls")
-@click_option_with_envvar_explicit(
-    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
-)
-@click_option_with_envvar_explicit("--raw/--no-raw", "-r/ ", default=False)
-@click_option_with_envvar_explicit(
-    "-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS)
-)
+@moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
+@moption("--raw/--no-raw", "-r/ ", default=False)
+@moption("-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS))
 @click.pass_context
 def ls_tags(ctx, sort_order, raw, out_format):
     task_list = ctx.obj["task_list"]
@@ -619,7 +600,7 @@ def lso(ctx):
 
 
 @tags.command(name="edit")
-@click_option_with_envvar_explicit("-u", "--tag-uuid", required=True)
+@moption("-u", "--tag-uuid", required=True)
 @click.option("-n", "--name")
 @click.option("-c", "--comment")
 @click.pass_context
@@ -643,9 +624,7 @@ def add_tags(ctx):
 @tags.command(name="mv")
 @click.argument("tag_from")
 @click.argument("tag_to")
-@click_option_with_envvar_explicit(
-    "--remove-tag-from/--no-remove-tag-from", default=False
-)
+@moption("--remove-tag-from/--no-remove-tag-from", default=False)
 @click.pass_context
 def move_tags(ctx, tag_from, tag_to, remove_tag_from):
     task_list = ctx.obj["task_list"]
@@ -679,13 +658,13 @@ _MARK_UNSET_SYMBOL = "D"
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit(
+@moption(
     "-u",
     "--uuid-text",
     help=f'`{_MARK_UNSET_SYMBOL}` means "unset"',
 )
-@click_option_with_envvar_explicit("--post-hook")
-@click_option_with_envvar_explicit("-m", "--mark", default="engage")
+@moption("--post-hook")
+@moption("-m", "--mark", default="engage")
 @click.pass_context
 def mark(ctx, uuid_text, post_hook, mark):
     """
@@ -737,10 +716,8 @@ def mark(ctx, uuid_text, post_hook, mark):
 
 
 @gstasks.group()
-@click_option_with_envvar_explicit(
-    "--is-sweep-demon-pid/--no-is-sweep-demon-pid", default=False
-)
-@click_option_with_envvar_explicit(
+@moption("--is-sweep-demon-pid/--no-is-sweep-demon-pid", default=False)
+@moption(
     "--sweep-demon-pid-file",
     type=click.Path(),
     default=path.join(path.dirname(__file__), ".gstasks_sweep_demon.pid.json"),
@@ -755,10 +732,10 @@ def remind(ctx, **kwargs):
 
 
 @remind.command(name="add")
-@click_option_with_envvar_explicit("-u", "--uuid-text")
+@moption("-u", "--uuid-text")
 # align cmdline's keys with `gstask add`
-@click_option_with_envvar_explicit("-n", "--message")
-@click_option_with_envvar_explicit("-s", "--remind-datetime", type=CLI_TIME())
+@moption("-n", "--message")
+@moption("-s", "--remind-datetime", type=CLI_TIME())
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message):
     if ctx.obj["is_sweep_demon_pid"]:
@@ -805,16 +782,12 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
 
 
 @remind.command(name="ls")
-@click_option_with_envvar_explicit(
+@moption(
     "-d", "--remind-datetime", type=click.Choice(["before_now", "after_now", "none"])
 )
-@click_option_with_envvar_explicit(
-    "-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"])
-)
-@click_option_with_envvar_explicit(
-    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
-)
-@click_option_with_envvar_explicit(
+@moption("-s", "--sweeped-on", type=click.Choice(["before_now", "after_now", "none"]))
+@moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
+@moption(
     "-o",
     "--out-format",
 )
@@ -867,13 +840,11 @@ def mark_remind(ctx, uuids, **kwargs):
 
 
 @remind.command(name="sweep")
-@click_option_with_envvar_explicit("--dry-run/--no-dry-run", default=False)
-@click_option_with_envvar_explicit("-s", "--slack-url")
-@click_option_with_envvar_explicit("-i", "--check-interval-minutes", type=int)
-@click_option_with_envvar_explicit(
-    "-t", "--template-filename", default="sweep_message.jinja.txt"
-)
-@click_option_with_envvar_explicit(
+@moption("--dry-run/--no-dry-run", default=False)
+@moption("-s", "--slack-url")
+@moption("-i", "--check-interval-minutes", type=int)
+@moption("-t", "--template-filename", default="sweep_message.jinja.txt")
+@moption(
     "-g",
     "--snap-to-grid",
     type=click.Choice(["none", "static", "dynamic"]),
@@ -941,43 +912,39 @@ def sweep_remind(
 
 
 @gstasks.command()
-@click_option_with_envvar_explicit(
+@moption(
     "-w",
     "--when",
     multiple=True,
     type=click.Choice("WEEKEND,EVENING,PARTTIME,appropriate,all".split(",")),
 )
-@click_option_with_envvar_explicit("-x", "--text")
-@click_option_with_envvar_explicit("-b", "--before-date")
-@click_option_with_envvar_explicit("-a", "--after-date")
-@click_option_with_envvar_explicit(
+@moption("-x", "--text")
+@moption("-b", "--before-date")
+@moption("-a", "--after-date")
+@moption(
     "-u",
     "--un-scheduled",
     is_flag=True,
     default=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
 )
-@click_option_with_envvar_explicit(
-    "-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS)
-)
-@click_option_with_envvar_explicit("-h", "--head", type=int)
-@click_option_with_envvar_explicit("-s", "--sample", type=int)
-@click_option_with_envvar_explicit(
+@moption("-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS))
+@moption("-h", "--head", type=int)
+@moption("-s", "--sample", type=int)
+@moption(
     "--name-length-limit",
     type=int,
     default=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
 )
-@click_option_with_envvar_explicit("-g", "--tag", "tags", multiple=True)
-@click_option_with_envvar_explicit(
+@moption("-g", "--tag", "tags", multiple=True)
+@moption(
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
 )
-@click_option_with_envvar_explicit("-q", "--scheduled-date-query")
-@click_option_with_envvar_explicit("--out-file", type=click.Path())
-@click_option_with_envvar_explicit("-c", "--column", "columns", type=str, multiple=True)
-@click_option_with_envvar_explicit(
-    "-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True
-)
-@click_option_with_envvar_explicit("--drop-hidden-fields/--no-drop-hidden-fields")
+@moption("-q", "--scheduled-date-query")
+@moption("--out-file", type=click.Path())
+@moption("-c", "--column", "columns", type=str, multiple=True)
+@moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
+@moption("--drop-hidden-fields/--no-drop-hidden-fields")
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -1157,7 +1124,7 @@ def real_ls(
 # FIXME: short group names, long final command names
 # or other way round??
 @gstasks.group(name="dr")
-@click_option_with_envvar_explicit(
+@moption(
     "--dump-dir",
     type=click.Path(file_okay=False, dir_okay=True),
     default=path.join(path.dirname(__file__), ".gstasks_dump"),
@@ -1172,13 +1139,11 @@ def dump_restore(ctx, **kwargs):
 
 @dump_restore.command()
 @click.pass_context
-@click_option_with_envvar_explicit(
-    "-r", "--retention", type=(click.Choice(["num", "dur_days"]), int)
-)
-@click_option_with_envvar_explicit("-u", "--username")
-@click_option_with_envvar_explicit("-p", "--password")
-@click_option_with_envvar_explicit("--user-password-none-value", default="NONE")
-@click_option_with_envvar_explicit("--mongodump-cmd", default="mongodump")
+@moption("-r", "--retention", type=(click.Choice(["num", "dur_days"]), int))
+@moption("-u", "--username")
+@moption("-p", "--password")
+@moption("--user-password-none-value", default="NONE")
+@moption("--mongodump-cmd", default="mongodump")
 def dump(ctx, retention, mongodump_cmd, user_password_none_value, **user_password):
     """
     adapted from https://gist.github.com/Lh4cKg/939ce683e2876b314a205b3f8c6e8e9d
@@ -1247,8 +1212,8 @@ def analysis(ctx):
 
 
 @analysis.command()
-@click_option_with_envvar_explicit("-t", "--target-status", default="DONE")
-@click_option_with_envvar_explicit("--resample/--no-resample", "-r/ ", default=False)
+@moption("-t", "--target-status", default="DONE")
+@moption("--resample/--no-resample", "-r/ ", default=False)
 @click.pass_context
 def daily_progress(ctx, target_status, resample):
     task_list = ctx.obj["task_list"]
@@ -1283,6 +1248,43 @@ def daily_progress(ctx, target_status, resample):
     df.sort_index(inplace=True)
 
     click.echo(df.tail())
+
+
+@gstasks.group()
+@click.pass_context
+def relations(ctx):
+    pass
+
+
+@relations.command(name="ls")
+@build_click_options
+@moption("-t", "--listing-type", type=click.Choice(["relations", "issues"]))
+@click.pass_context
+def list_relations(ctx, listing_type, **format_df_kwargs):
+    raise NotImplementedError()  # 2
+
+
+@relations.command(name="import")
+@moption("-f", "--file-name", type=click.Path(allow_dash=True))
+@moption("--pre-clean/--no-pre-clean", "-p/ ", default=False)
+@click.pass_context
+def import_relations(ctx, file_name, pre_clean):
+    raise NotImplementedError()  # 1
+
+
+@relations.command(name="add")
+@moption("-f", "--from", "from_", type=str, required=True)
+@moption("-t", "--to", type=str, required=True)
+@click.pass_context
+def add_relation(ctx, from_, to):
+    raise NotImplementedError()  # 3
+
+
+@relations.command(name="rm")
+@moption("-u", "--uuud", "uuid_", type=str, required=True)
+@click.pass_context
+def delete_relation(ctx, uuid_):
+    raise NotImplementedError()  # 4
 
 
 if __name__ == "__main__":
