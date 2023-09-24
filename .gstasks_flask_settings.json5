@@ -1,5 +1,5 @@
 {
-  gstasks_exe: "./gstasks.py",
+  gstasks_exe: "/usr/local/anaconda3/envs/base-with-altp/bin/python3 ./gstasks.py",
   habits_mongo_url: "$MONGO_URL",
   mongo_url: "$PYASSISTANTBOT_MONGO_URL",
   profiles: {
