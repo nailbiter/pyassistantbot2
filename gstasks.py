@@ -687,11 +687,20 @@ def mark(ctx, uuid_text, post_hook, mark):
             task = task_uuid
         else:
             task, _ = task_list.get_task(uuid_text=task_uuid)
+
         logger.warning(task)
+        echo_kwargs = {}
+        if task is None:
+            echo_kwargs["bg"] = "red"
+        else:
+            echo_kwargs["fg"] = "green"
         click.echo(
-            Template(
-                """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
-            ).render(dict(task=task))
+            click.style(
+                Template(
+                    """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
+                ).render(dict(task=task)),
+                **echo_kwargs,
+            )
         )
     else:
         if uuid_text == _MARK_UNSET_SYMBOL:
