@@ -19,19 +19,22 @@ ORGANIZATION:
 
 ==============================================================================="""
 
-import click
-import pandas as pd
-import pymongo
-import _common
-import logging
-from datetime import datetime, timedelta
-import numpy as np
 import functools
 import inspect
+import logging
 import types
+from datetime import datetime, timedelta
 from typing import cast
+
+import click
+import numpy as np
+import pandas as pd
+import pymongo
+
+import _common
 from _common.simple_math_eval import eval_expr
-#import logging
+
+# import logging
 
 _TIME_CATEGORIES = [
     "useless",
@@ -54,9 +57,9 @@ def _process_limit(limit_str):
     for suff, hours_in_unit in {"d": 24}.items():
         if limit_str.endswith(suff):
             limit_str = limit_str[:-1]
-            coeff = hours_in_unit*(timedelta(hours=1)/_TD)
+            coeff = hours_in_unit * (timedelta(hours=1) / _TD)
             break
-    return int(eval_expr(limit_str)*coeff)
+    return int(eval_expr(limit_str) * coeff)
 
 
 @click.group()
@@ -79,8 +82,10 @@ def _ctx_obj_to_filter(obj):
         dt = datetime(day.year, day.month, day.day)
         # FIXME: this can be done more robustly, without hardcoding
         dt -= timedelta(hours=9)
-        res["$and"] = [{"date": {"$gte": dt}}, {
-            "date": {"$lt": dt+timedelta(days=1)}}]
+        res["$and"] = [
+            {"date": {"$gte": dt}},
+            {"date": {"$lt": dt + timedelta(days=1)}},
+        ]
     return res
 
 
@@ -97,14 +102,16 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
     if remote_filter is not None:
         filter_["category"] = remote_filter
     df = pd.DataFrame(
-        coll.find(filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]))
+        coll.find(
+            filter=filter_, sort=[("date", pymongo.DESCENDING)], limit=ctx.obj["limit"]
+        )
+    )
     df = df[["_id", "date", "category"]]
     # server write date in JST <-- maybe, better to be changed to UTC?
-    df.date = df.date-timedelta(hours=9)
-    df.date = df.date.apply(functools.partial(
-        _common.to_utc_datetime, inverse=True))
+    df.date = df.date - timedelta(hours=9)
+    df.date = df.date.apply(functools.partial(_common.to_utc_datetime, inverse=True))
 
-#    click.echo(df)
+    #    click.echo(df)
     to_impute = _common.fill_gaps(df.date, _TD)
 
     if local_filter:
@@ -116,22 +123,33 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
     else:
         _df = np.array(df.query(f"category=='{grep_cat}'").index)
         if len(_df) > 0:
-            print(df[[min(abs(_df-i)) <= grep_cnt for i in df.index]].to_csv())
+            print(df[[min(abs(_df - i)) <= grep_cnt for i in df.index]].to_csv())
         else:
-            print(f"no category \"{grep_cat}\"!")
+            print(f'no category "{grep_cat}"!')
 
     if len(to_impute) > 0:
         to_impute = [_common.to_utc_datetime(dt) for dt in to_impute]
         # FIXME: print consecutive periods
         logging.warning(
-            f"{len(to_impute)} dates can be imputed {[(r['start'].strftime('%Y-%m-%d %H:%M'), r['end'].strftime('%Y-%m-%d %H:%M')) for r in _common.consecutive_periods(to_impute,_TD)]}")
+            f"{len(to_impute)} dates can be imputed {[(r['start'].strftime('%Y-%m-%d %H:%M'), r['end'].strftime('%Y-%m-%d %H:%M')) for r in _common.consecutive_periods(to_impute,_TD)]}"
+        )
         if impute is None:
             logging.warning(f"use `-i useless` to perform imputation")
         else:
-            logging.warning(f"perform imputation with \"{impute}\"")
+            logging.warning(f'perform imputation with "{impute}"')
             res = coll.insert_many(
-                [{"date": dt, "category": impute, "telegram_message_id": "imputation"} for dt in to_impute])
+                [
+                    {
+                        "date": dt,
+                        "category": impute,
+                        "telegram_message_id": "imputation",
+                    }
+                    for dt in to_impute
+                ]
+            )
             logging.warning(f"exit {res} after imputation")
+
+
 #            exit(0)
 
 
@@ -144,8 +162,7 @@ def edit(ctx, category, start, endpoint_inclusive):
     #    logger = logging.getLogger("edit")
 
     # taken from https://stackoverflow.com/a/13514318
-    this_function_name = cast(
-        types.FrameType, inspect.currentframe()).f_code.co_name
+    this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
 
     if endpoint_inclusive is None:
@@ -154,13 +171,12 @@ def edit(ctx, category, start, endpoint_inclusive):
     coll = _common.get_coll(ctx.obj["mongo_pass"])
 
     limit = ctx.obj["limit"]
-    if endpoint_inclusive+1 > limit:
+    if endpoint_inclusive + 1 > limit:
         logger.warning(f"update limit: {limit} --> {endpoint_inclusive+1}")
-        limit = endpoint_inclusive+1
+        limit = endpoint_inclusive + 1
 
-    df = pd.DataFrame(
-        coll.find(sort=[("date", pymongo.DESCENDING)], limit=limit))
-    records = df.to_dict(orient="records")[start:endpoint_inclusive+1]
+    df = pd.DataFrame(coll.find(sort=[("date", pymongo.DESCENDING)], limit=limit))
+    records = df.to_dict(orient="records")[start : endpoint_inclusive + 1]
     logger.info(records)
     for r in records:
         logger.info(f"{r['_id']}: {r['category']} => {category}")
@@ -182,7 +198,9 @@ def fix_db(ctx, start, dry_run, category):
     )
     datemin = df.date.min()
     df.date = df.date.apply(
-        lambda dt: datemin+timedelta(minutes=((dt-datemin).total_seconds()//(30*60))*30))
+        lambda dt: datemin
+        + timedelta(minutes=((dt - datemin).total_seconds() // (30 * 60)) * 30)
+    )
     click.echo(df)
 
     dup_df = df.groupby("date").agg({"_id": len}).query("_id>1")
@@ -199,23 +217,21 @@ def fix_db(ctx, start, dry_run, category):
 
     df_ = [datemin]
     while df_[-1] < df.date.max():
-        df_.append(df_[-1]+timedelta(minutes=30))
+        df_.append(df_[-1] + timedelta(minutes=30))
     df_ = pd.DataFrame({"date": df_}).set_index("date")
 
-    df = df_.join(df.set_index("date")).sort_index(
-        ascending=False).reset_index()
+    df = df_.join(df.set_index("date")).sort_index(ascending=False).reset_index()
 
-#    click.echo(pd.DataFrame(df))
+    #    click.echo(pd.DataFrame(df))
     for r in df.to_dict(orient="records"):
         if pd.isna(r["_id"]):
             click.echo(f"insert {r['date']} with cat=\"{category}\"")
             if not dry_run:
                 coll.insert_one({"category": category, "date": r["date"]})
         elif r["category"] not in _TIME_CATEGORIES:
-            click.echo(f"replace {r} with cat=\"{category}\"")
+            click.echo(f'replace {r} with cat="{category}"')
             if not dry_run:
-                coll.update_one({"_id": r["_id"]}, {
-                                "$set": {"category": category}})
+                coll.update_one({"_id": r["_id"]}, {"$set": {"category": category}})
         else:
             pass
 
