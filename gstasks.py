@@ -713,13 +713,11 @@ def real_mark(ctx=None, uuid_text=None, post_hook=None, mark=None):
             echo_kwargs["bg"] = "red"
         else:
             echo_kwargs["fg"] = "green"
-        click.echo(
-            click.style(
-                Template(
-                    """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
-                ).render(dict(task=task)),
-                **echo_kwargs,
-            )
+        click.secho(
+            Template(
+                """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
+            ).render(dict(task=task)),
+            **echo_kwargs,
         )
     else:
         if uuid_text == _MARK_UNSET_SYMBOL:
