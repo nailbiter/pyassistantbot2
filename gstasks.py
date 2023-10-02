@@ -427,8 +427,9 @@ def edit(
 @gstasks.command()
 @moption("-u", "--uuid-text", "uuid_texts", required=True, multiple=True)
 @moption("-s", "--scheduled-date", type=CLI_DATETIME)
+@moption("--done/--no-done", "-d/ ", "is_done", default=False)
 @click.pass_context
-def cp(ctx, uuid_texts, scheduled_date):
+def cp(ctx, uuid_texts, scheduled_date, is_done):
     """
     FIXME:
     1(done). copy and fixup (same as in `edit`)
@@ -456,6 +457,10 @@ def cp(ctx, uuid_texts, scheduled_date):
             new_r["scheduled_date"] = scheduled_date
         logger.warning(f"r:\n{pd.Series(r)}")
         logger.warning(f"new_r:\n{pd.Series(new_r)}")
+
+        if is_done:
+            r["status"] = "DONE"
+            task_list.insert_or_replace_record(r)
         task_list.insert_or_replace_record(
             new_r, action_comment=f"cloned from '{_uuid}'"
         )

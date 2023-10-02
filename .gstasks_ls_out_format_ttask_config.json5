@@ -13,6 +13,7 @@ from tasks\
   sql_udfs_file: "gstasks_sql_uds.py",
   index_style: "{{x.split('-')[0]}}",
   output_columns: [
+    { column_name: "i", jinja_tpl: "{{i}}" },
     { column_name: "name" },
     {
       column_name: "URL",

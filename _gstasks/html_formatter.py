@@ -237,11 +237,10 @@ def format_html(
 
     out_file = config.get("out_file") if out_file is None else out_file
     is_use_style = config.get("is_use_style", False)
-    df.index = (
-        df.index.to_series()
-        .apply(lambda x: Template(config.get("index_style", "{{x}}")).render(dict(x=x)))
-        .to_list()
-    )
+    df.index = [
+        Template(config.get("index_style", "{{x}}")).render(dict(x=x, i=i))
+        for i, x in enumerate(df.index)
+    ]
     s = (
         _style_to_buf(buf=out_file, config=config, df=df, classes=classes)
         if is_use_style
@@ -255,17 +254,18 @@ def format_html(
 def _render_column(output_column, rs, env):
     # logging.warning(f"_render_column in: {output_column, rs[:5]}")
     res = map(
-        lambda r: Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
+        lambda t: Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
         .render(
             {
                 **env,
-                "r": r,
+                "r": t[1],
+                "i": t[0],
                 "column_name": output_column["column_name"],
-                "x": r.get(output_column["column_name"]),
+                "x": t[1].get(output_column["column_name"]),
             }
         )
         .strip(),
-        rs,
+        enumerate(rs),
     )
     res = list(res)
     # logging.warning(res)
