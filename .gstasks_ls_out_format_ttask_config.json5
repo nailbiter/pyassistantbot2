@@ -44,7 +44,7 @@ from tasks\
       jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d %H:%M')}}",
     },
     {
-      column_name: "is_engage",
+      column_name: "E?",
       jinja_tpl: "{{'E' if (r.uuid==last_engaged_task_uuid) else ''}}",
     },
     { column_name: "labels", jinja_tpl: "{{r.label}}" },
