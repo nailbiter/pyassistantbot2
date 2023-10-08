@@ -721,6 +721,7 @@ def mark_ls(ctx, from_, to, is_use_from, is_use_to, set_dt, remove, **format_df_
     1(done). ls
     2. edit
     3. remove
+    4. compute stats (groupby)
     """
     mark = ctx.obj["mark_group"]["mark"]
     if from_ is None:
@@ -1343,6 +1344,10 @@ def analysis(ctx):
 @moption("--resample/--no-resample", "-r/ ", default=False)
 @click.pass_context
 def daily_progress(ctx, target_status, resample):
+    """
+    TODO:
+    1. show planned
+    """
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks(is_drop_hidden_fields=False)
 
@@ -1352,8 +1357,6 @@ def daily_progress(ctx, target_status, resample):
         )
     )
     actions_df["uuid"] = actions_df["r"].apply(operator.itemgetter("uuid"))
-    # logging.warning(actions_df[["timestamp"]])
-    # logging.warning(actions_df)
     done_s = actions_df.groupby(
         actions_df["timestamp"].apply(operator.methodcaller("date"))
     )["uuid"].nunique()
