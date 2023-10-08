@@ -676,6 +676,25 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
         print(_process_tag.remove_tag_by_uuid(tag_uuid_from))
 
 
+@gstasks.command()
+@moption("-t", "--text", required=True)
+@moption("-c", "--column-name", default="name")
+@moption("--is-apply-lower/--no-is-apply-lower", " /-n", default=True)
+@build_click_options
+@click.pass_context
+def grep(ctx, text, column_name, is_apply_lower, **format_df_kwargs):
+    task_list = ctx.obj["task_list"]
+    tasks_df = task_list.get_all_tasks(
+        is_post_processing=False, is_drop_hidden_fields=False
+    )
+    tasks_df = tasks_df[
+        tasks_df[column_name]
+        .apply(lambda s: (s.lower() if is_apply_lower else s))
+        .apply(lambda s: text in s)
+    ]
+    click.echo(apply_click_options(tasks_df, format_df_kwargs))
+
+
 _MARK_UNSET_SYMBOL = "D"
 
 
@@ -691,12 +710,14 @@ def mark_group(ctx, mark):
 @moption("-t", "--to", type=click.DateTime())
 @moption("--is-use-from/--no-is-use-from", default=True)
 @moption("--is-use-to/--no-is-use-to", default=True)
+@moption("-s", "--set-dt", type=(str, click.DateTime()), multiple=True)
+@moption("-r", "--remove", type=str, multiple=True)
 @build_click_options
 @click.pass_context
-def mark_ls(ctx, from_, to, is_use_from, is_use_to, **format_df_kwargs):
+def mark_ls(ctx, from_, to, is_use_from, is_use_to, set_dt, remove, **format_df_kwargs):
     """
     TODO:
-    1. ls
+    1(done). ls
     2. edit
     3. remove
     """
@@ -726,6 +747,13 @@ def mark_ls(ctx, from_, to, is_use_from, is_use_to, **format_df_kwargs):
     )
     marks_df.sort_values(by="dt", inplace=True)
     click.echo(apply_click_options(marks_df.drop(columns=["_id"]), format_df_kwargs))
+
+    if set_dt:
+        # TODO
+        raise NotImplementedError(set_dt)
+    if remove:
+        # TODO
+        raise NotImplementedError(remove)
 
 
 @gstasks.command()
