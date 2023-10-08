@@ -691,8 +691,9 @@ def mark_group(ctx, mark):
 @moption("-t", "--to", type=click.DateTime())
 @moption("--is-use-from/--no-is-use-from", default=True)
 @moption("--is-use-to/--no-is-use-to", default=True)
+@build_click_options
 @click.pass_context
-def mark_ls(ctx, from_, to, is_use_from, is_use_to):
+def mark_ls(ctx, from_, to, is_use_from, is_use_to, **format_df_kwargs):
     """
     TODO:
     1. ls
@@ -723,7 +724,8 @@ def mark_ls(ctx, from_, to, is_use_from, is_use_to):
         .apply(operator.itemgetter(0))
         .apply(operator.itemgetter("name"))
     )
-    click.echo(marks_df)
+    marks_df.sort_values(by="dt", inplace=True)
+    click.echo(apply_click_options(marks_df.drop(columns=["_id"]), format_df_kwargs))
 
 
 @gstasks.command()
