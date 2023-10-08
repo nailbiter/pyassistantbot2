@@ -797,7 +797,14 @@ def real_mark(
         #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
         coll = task_list.get_coll("engage")
-        coll.insert_one({"dt": time_, "task_uuid": r["uuid"], "mark": mark})
+        coll.insert_one(
+            {
+                "dt": time_,
+                "task_uuid": r["uuid"],
+                "mark": mark,
+                "uuid": str(uuid.uuid4()),
+            }
+        )
 
         if post_hook is not None:
             logging.warning(f'executing post_hook "{post_hook}"')
