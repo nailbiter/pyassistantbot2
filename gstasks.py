@@ -20,6 +20,7 @@ ORGANIZATION:
 ==============================================================================="""
 
 import inspect
+import typing
 import json
 import logging
 import os
@@ -679,19 +680,50 @@ _MARK_UNSET_SYMBOL = "D"
 
 
 @gstasks.group(name="m")
+@moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
 @click.pass_context
-def mark_group(ctx):
-    pass
+def mark_group(ctx, mark):
+    ctx.obj["mark_group"] = dict(mark=mark)
 
 
 @mark_group.command(name="ls")
+@moption("-f", "--from", "from_", type=click.DateTime())
+@moption("-t", "--to", type=click.DateTime())
+@moption("--is-use-from/--no-is-use-from", default=True)
+@moption("--is-use-to/--no-is-use-to", default=True)
 @click.pass_context
-def mark_ls(ctx):
-    """"""
-    # TODO:
-    # 1. ls
-    # 2. edit
-    # 2. remove
+def mark_ls(ctx, from_, to, is_use_from, is_use_to):
+    """
+    TODO:
+    1. ls
+    2. edit
+    3. remove
+    """
+    mark = ctx.obj["mark_group"]["mark"]
+    if from_ is None:
+        from_ = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    if to is None:
+        to = datetime.now()
+    logging.warning((from_, to, mark))
+
+    task_list = ctx.obj["task_list"]
+    coll = task_list.get_coll("engage")
+    filter_ = dict(mark=mark)
+    if is_use_to:
+        filter_["dt"] = filter_.get("dt", {})
+        filter_["dt"]["$lte"] = to
+    if is_use_from:
+        filter_["dt"] = filter_.get("dt", {})
+        filter_["dt"]["$gte"] = from_
+    logging.warning(f"f: {filter_}")
+    marks_df = pd.DataFrame(coll.find(filter=filter_))
+    marks_df.loc[marks_df["task_uuid"].notna(), "task_name"] = (
+        marks_df.loc[marks_df["task_uuid"].notna(), "task_uuid"]
+        .apply(task_list.get_task)
+        .apply(operator.itemgetter(0))
+        .apply(operator.itemgetter("name"))
+    )
+    click.echo(marks_df)
 
 
 @gstasks.command()
