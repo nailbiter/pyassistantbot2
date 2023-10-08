@@ -678,6 +678,22 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 _MARK_UNSET_SYMBOL = "D"
 
 
+@gstasks.group(name="m")
+@click.pass_context
+def mark_group(ctx):
+    pass
+
+
+@mark_group.command(name="ls")
+@click.pass_context
+def mark_ls(ctx):
+    """"""
+    # TODO:
+    # 1. ls
+    # 2. edit
+    # 2. remove
+
+
 @gstasks.command()
 @moption(
     "-u",
@@ -686,6 +702,7 @@ _MARK_UNSET_SYMBOL = "D"
 )
 @moption("--post-hook")
 @moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
+@moption("-t", "--time", "time_", type=click.DateTime())
 @click.pass_context
 def mark(*args, **kwargs):
     """
@@ -696,10 +713,19 @@ def mark(*args, **kwargs):
     return real_mark(*args, **kwargs)
 
 
-def real_mark(ctx=None, uuid_text=None, post_hook=None, mark=None):
+def real_mark(
+    ctx=None,
+    uuid_text: typing.Optional[str] = None,
+    post_hook: typing.Optional[str] = None,
+    mark: typing.Optional[str] = None,
+    time_: typing.Optional[datetime] = None,
+):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
+
+    if time_ is None:
+        time_ = datetime.now()
 
     task_list = ctx.obj["task_list"]
 
@@ -739,7 +765,7 @@ def real_mark(ctx=None, uuid_text=None, post_hook=None, mark=None):
         #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
         coll = task_list.get_coll("engage")
-        coll.insert_one({"dt": datetime.now(), "task_uuid": r["uuid"], "mark": mark})
+        coll.insert_one({"dt": time_, "task_uuid": r["uuid"], "mark": mark})
 
         if post_hook is not None:
             logging.warning(f'executing post_hook "{post_hook}"')
