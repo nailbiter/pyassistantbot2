@@ -683,6 +683,7 @@ def move_tags(ctx, tag_from, tag_to, remove_tag_from):
 @build_click_options
 @click.pass_context
 def grep(ctx, text, column_name, is_apply_lower, **format_df_kwargs):
+    logging.warning(f"is_apply_lower: {is_apply_lower}")
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks(
         is_post_processing=False, is_drop_hidden_fields=False
