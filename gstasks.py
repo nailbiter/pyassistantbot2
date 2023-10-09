@@ -713,9 +713,12 @@ def mark_group(ctx, mark):
 @moption("--is-use-to/--no-is-use-to", default=True)
 @moption("-s", "--set-dt", type=(str, click.DateTime()), multiple=True)
 @moption("-r", "--remove", type=str, multiple=True)
+@moption("--groupby/--no-groupby", "-g/ ", default=False)
 @build_click_options
 @click.pass_context
-def mark_ls(ctx, from_, to, is_use_from, is_use_to, set_dt, remove, **format_df_kwargs):
+def mark_ls(
+    ctx, from_, to, is_use_from, is_use_to, set_dt, remove, groupby, **format_df_kwargs
+):
     """
     TODO:
     1(done). ls
@@ -748,7 +751,24 @@ def mark_ls(ctx, from_, to, is_use_from, is_use_to, set_dt, remove, **format_df_
         .apply(operator.itemgetter("name"))
     )
     marks_df.sort_values(by="dt", inplace=True)
-    click.echo(apply_click_options(marks_df.drop(columns=["_id"]), format_df_kwargs))
+
+    if groupby:
+        df = marks_df.copy()
+        df.drop(columns=["mark", "_id"], inplace=True)
+        df["next_dt"] = df["dt"].shift(-1)
+        df["next_dt"].iloc[-1] = datetime.now()
+        df["next_task"] = df["task_uuid"].shift(-1)
+        df["dur"] = df["next_dt"] - df["dt"]
+        df = df[["task_uuid", "task_name", "dt", "dur"]]
+        df = df.groupby("task_uuid").agg({"task_name": "last", "dur": "sum"})
+        df.reset_index(inplace=True)
+
+        logging.warning("\n" + df.to_string())
+        exit(0)
+
+    click.echo(
+        apply_click_options(marks_df.drop(columns=["_id", "mark"]), format_df_kwargs)
+    )
 
     if set_dt:
         # TODO
@@ -1381,9 +1401,17 @@ def daily_progress(ctx, target_status, resample):
 
 
 @gstasks.group()
+@moption(
+    "--relations-config-file",
+    type=click.Path(),
+    default=path.join(path.dirname(__file__), ".gstasks_relations.json5"),
+)
 @click.pass_context
-def relations(ctx):
-    pass
+def relations(ctx, relations_config_file):
+    with open(relations_config_file) as f:
+        config = json5.load(f)
+    logging.warning(f"config: {config}")
+    ctx.obj["relations"] = dict(config=config)
 
 
 @relations.command(name="ls")
@@ -1391,15 +1419,16 @@ def relations(ctx):
 @moption("-t", "--listing-type", type=click.Choice(["relations", "issues"]))
 @click.pass_context
 def list_relations(ctx, listing_type, **format_df_kwargs):
-    raise NotImplementedError()  # 2
+    """"""
+    # raise NotImplementedError()  # 2
 
 
-@relations.command(name="import")
-@moption("-f", "--file-name", type=click.Path(allow_dash=True))
-@moption("--pre-clean/--no-pre-clean", "-p/ ", default=False)
-@click.pass_context
-def import_relations(ctx, file_name, pre_clean):
-    raise NotImplementedError()  # 1
+# @relations.command(name="import")
+# @moption("-f", "--file-name", type=click.Path(allow_dash=True))
+# @moption("--pre-clean/--no-pre-clean", "-p/ ", default=False)
+# @click.pass_context
+# def import_relations(ctx, file_name, pre_clean):
+#     raise NotImplementedError()  # 1
 
 
 @relations.command(name="add")
