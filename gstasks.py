@@ -20,6 +20,7 @@ ORGANIZATION:
 ==============================================================================="""
 
 import inspect
+import pytz
 import typing
 import json
 import logging
@@ -72,6 +73,9 @@ from alex_leontiev_toolbox_python.utils.click_format_dataframe import (
 )
 import operator
 import copy
+
+## https://stackoverflow.com/a/11875813
+from bson import json_util
 
 # FIXME: do without global env
 LOADED_DOTENV = None
@@ -616,9 +620,40 @@ def ls_tags(ctx, sort_order, raw, out_format):
 
 
 @gstasks.command(help="ls object")
+@moption("-u", "--uuid", "uuids", type=str, required=True, multiple=True)
+@moption("-t", "--object-type", type=click.Choice(["task", "tag"]), default="task")
 @click.pass_context
-def lso(ctx):
-    pass
+def lso(ctx, uuids, object_type):
+    """
+    output in JSON(L) format
+    """
+    if object_type == "task":
+        task_list = ctx.obj["task_list"]
+        for uuid_text in uuids:
+            r, _ = task_list.get_task(
+                uuid_text=uuid_text,
+                index=None,
+                get_all_tasks_kwargs=dict(is_drop_hidden_fields=False),
+            )
+
+            for k in [
+                "scheduled_date",
+                "_insertion_date",
+                "_last_modification_date",
+                "due",
+            ]:
+                if pd.isna(r[k]):
+                    r[k] = None
+                else:
+                    # r[k] = r[k].tz_localize(pytz.UTC)
+                    r[k] = r[k].to_pydatetime()
+                # logging.warning(r[k].tzinfo)
+            # r.pop("_id")
+
+            logging.info(r)
+            click.echo(json.dumps(r, default=json_util.default))
+    else:
+        raise NotImplementedError(dict(object_type=object_type))
 
 
 @tags.command(name="edit")
