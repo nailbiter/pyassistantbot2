@@ -118,6 +118,7 @@ class TaskList:
 
     def get_task(self, uuid_text=None, index=None, get_all_tasks_kwargs: dict = {}):
         assert sum([x is not None for x in [index, uuid_text]]) == 1
+        ## FIXME: this should be cached
         df = self.get_all_tasks(is_post_processing=False, **get_all_tasks_kwargs)
         if index is not None:
             r = df.to_dict(orient="records")[index]
