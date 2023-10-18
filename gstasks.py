@@ -1348,6 +1348,25 @@ def real_ls(
     logging.warning(timings_df)
 
 
+@gstasks.command()
+@moption("-u", "--uuid-text", type=str, required=True)
+@build_click_options
+@click.pass_context
+def actions_ls(ctx, uuid_text, **format_df_kwargs):
+    # TODO
+    task_list = ctx.obj["task_list"]
+
+    # for _uuid_text, _index in tqdm.tqdm(
+    #     [(x, None) for x in uuid_text] + [(None, x) for x in index]
+    # ):
+
+    r, _ = task_list.get_task(uuid_text=uuid_text)
+    coll = task_list.get_coll("actions")
+    df = pd.DataFrame(coll.find({"r.uuid": r["uuid"]}))
+    click.echo(apply_click_options(df, format_df_kwargs))
+    # raise NotImplementedError()
+
+
 # FIXME: short group names, long final command names
 # or other way round??
 @gstasks.group(name="dr")
