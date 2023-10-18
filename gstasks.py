@@ -65,6 +65,9 @@ import requests
 import numpy as np
 import uuid
 import pymongo
+from alex_leontiev_toolbox_python.utils.click_helpers.datetime_classes import (
+    SimpleCliDatetimeParamType,
+)
 from alex_leontiev_toolbox_python.utils.click_format_dataframe import (
     AVAILABLE_OUT_FORMATS,
     format_df,
@@ -746,7 +749,23 @@ def mark_group(ctx, mark):
 @moption("-t", "--to", type=click.DateTime())
 @moption("--is-use-from/--no-is-use-from", default=True)
 @moption("--is-use-to/--no-is-use-to", default=True)
-@moption("-s", "--set-dt", type=(str, click.DateTime()), multiple=True)
+@moption(
+    "-s",
+    "--set-dt",
+    type=(
+        str,
+        SimpleCliDatetimeParamType(
+            formats=[
+                "%Y-%m-%d %H:%M",
+                "%H:%M",
+            ],
+            short_dt_types={
+                "%H:%M": {"year", "month", "day"},
+            },
+        ),
+    ),
+    multiple=True,
+)
 @moption("-r", "--remove", type=str, multiple=True)
 @moption("--groupby/--no-groupby", "-g/ ", default=False)
 @build_click_options
@@ -807,10 +826,12 @@ def mark_ls(
 
     if set_dt:
         # TODO
-        raise NotImplementedError(set_dt)
+        for uuid_, dt in tqdm.tqdm(set_dt):
+            res = coll.update_one({"uuid": uuid_}, {"$set": {"dt": dt}})
+            logging.info(res)
     if remove:
-        # TODO
-        raise NotImplementedError(remove)
+        for uuid_ in tqdm.tqdm(remove):
+            logging.info(coll.delete_one({"uuid": uuid_}))
 
 
 @gstasks.command()
@@ -821,7 +842,20 @@ def mark_ls(
 )
 @moption("--post-hook")
 @moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
-@moption("-t", "--time", "time_", type=click.DateTime())
+@moption(
+    "-t",
+    "--time",
+    "time_",
+    type=SimpleCliDatetimeParamType(
+        formats=[
+            "%Y-%m-%d %H:%M",
+            "%H:%M",
+        ],
+        short_dt_types={
+            "%H:%M": {"year", "month", "day"},
+        },
+    ),
+)
 @click.pass_context
 def mark(*args, **kwargs):
     """
@@ -1128,6 +1162,7 @@ def sweep_remind(
 @moption("-c", "--column", "columns", type=str, multiple=True)
 @moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
 @moption("--drop-hidden-fields/--no-drop-hidden-fields")
+@moption("-l", "--label", "labels", multiple=True, type=(str, str))
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -1137,6 +1172,7 @@ def real_ls(
     ctx=None,
     when=CLICK_DEFAULT_VALUES["ls"]["when"],
     text=None,
+    labels=[],
     before_date=None,
     after_date=None,
     un_scheduled=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
@@ -1191,6 +1227,14 @@ def real_ls(
         df = df.query("status!='DONE' and status!='FAILED'")
         if len(tags) > 0:
             df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
+        if len(labels) > 0:
+            for k, v in labels:
+                df = df[
+                    df["label"]
+                    .apply(lambda x: {} if pd.isna(x) else x)
+                    .apply(operator.methodcaller("get", k))
+                    == v
+                ]
 
     with TimeItContext("filter (DatesQueryEvaluator)", report_dict=timings):
         if scheduled_date_query is not None:
