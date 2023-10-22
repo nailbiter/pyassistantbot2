@@ -68,7 +68,7 @@ import pymongo
 from alex_leontiev_toolbox_python.utils.click_helpers.datetime_classes import (
     SimpleCliDatetimeParamType,
 )
-from alex_leontiev_toolbox_python.utils.click_format_dataframe import (
+from alex_leontiev_toolbox_python.utils.click_helpers.format_dataframe import (
     AVAILABLE_OUT_FORMATS,
     format_df,
     build_click_options,
@@ -804,7 +804,7 @@ def mark_ls(
         .apply(operator.itemgetter(0))
         .apply(operator.itemgetter("name"))
     )
-    marks_df.sort_values(by="dt", inplace=True)
+    marks_df.sort_values(by="dt", inplace=True, ignore_index=True)
 
     if groupby:
         df = marks_df.copy()
@@ -1496,6 +1496,80 @@ def daily_progress(ctx, target_status, resample):
     df.sort_index(inplace=True)
 
     click.echo(df.tail())
+
+
+@gstasks.group(name="rl")
+@moption("-u", "--uuid-text", type=str, required=True)
+@click.pass_context
+def rolling_log(ctx, uuid_text):
+    task_list = ctx.obj["task_list"]
+    r, _ = task_list.get_task(uuid_text=uuid_text)
+    ctx.obj["coll"] = task_list.get_coll("rolling_log")
+    ctx.obj["uuid"] = r["uuid"]
+
+
+@rolling_log.command(name="add")
+@moption("-u", "--url", type=str, required=True)
+@moption("-c", "--comment", type=str)
+@moption(
+    "-d",
+    "--date-time",
+    type=SimpleCliDatetimeParamType(
+        formats=[
+            "%Y-%m-%d %H:%M",
+            "%H:%M",
+        ],
+        short_dt_types={
+            "%H:%M": {"year", "month", "day"},
+        },
+    ),
+)
+@click.pass_context
+def rolling_log_add(ctx, url, comment, date_time):
+    r = dict(
+        uuid=str(uuid.uuid4()),
+        task_uuid=ctx.obj["uuid"],
+        date_time=datetime.now() if date_time is None else date_time,
+        url=url,
+        comment=comment,
+    )
+    logging.warning(r)
+    ctx.obj["coll"].insert_one(r)
+
+
+@rolling_log.command(name="rm")
+@moption("-u", "--uuid", "uuid_", required=True)
+@click.pass_context
+def rolling_log_rm(ctx, uuid_):
+    res = ctx.obj["coll"].delete_one({"uuid": uuid_})
+    logging.warning(f"rm: {res}")
+
+
+@rolling_log.command(name="ls")
+@moption("--raw/--no-raw", "-r/ ", default=False)
+@build_click_options
+@click.pass_context
+def rolling_log_ls(ctx, raw, **format_df_kwargs):
+    df = pd.DataFrame(ctx.obj["coll"].find({"task_uuid": ctx.obj["uuid"]}))
+    if len(df) == 0:
+        logging.warning("rolling log is empty")
+        return
+
+    df.sort_values(by="date_time", inplace=True, ignore_index=True)
+    if raw:
+        click.echo(apply_click_options(df, format_df_kwargs))
+    else:
+        df["dt"] = df["date_time"].apply(
+            operator.methodcaller("strftime", "%Y-%m-%d (%a)")
+        )
+        for dt, slice_ in df.groupby("dt"):
+            click.echo("## `{dt}`")
+            for i, r in enumerate(slice_.to_dict(orient="records")):
+                click.echo(
+                    Template(
+                        "1. {{r.url}}{%if r.comment%} ({{r.comment}}){%endif%}"
+                    ).render(r)
+                )
 
 
 @gstasks.group()
