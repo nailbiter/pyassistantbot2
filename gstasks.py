@@ -960,7 +960,7 @@ def remind(ctx, **kwargs):
 # align cmdline's keys with `gstask add`
 @moption("-n", "--message")
 @moption("-s", "--remind-datetime", type=CLI_TIME())
-@moption("-m", "--media", type=click.Choice(["slack", "popup"]), default="media")
+@moption("-m", "--media", type=click.Choice(["slack", "popup"]), default="slack")
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message, media):
     if ctx.obj["is_sweep_demon_pid"]:
