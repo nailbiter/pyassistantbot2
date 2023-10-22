@@ -940,6 +940,12 @@ def real_mark(
     type=click.Path(),
     default=path.join(path.dirname(__file__), ".gstasks_sweep_demon.pid.json"),
 )
+@moption(
+    "--popup-cmd-tpl",
+    type=str,
+    default="""osascript -e 'tell app "System Events" to display dialog "{{message}}"'""",
+    help="should contain ref to {{message}}",
+)
 @click.pass_context
 def remind(ctx, **kwargs):
     ctx.obj["jinja_env"] = Environment(
@@ -1089,11 +1095,11 @@ def sweep_remind(
     while True:
         df = pd.DataFrame(coll.find({"sweeped_on": None}))
         now = datetime.now()
-        if len(df) > 0:
+        if (len(df) > 0) and (df["remind_datetime"] <= now).any():
             df = df[df["remind_datetime"] <= now]
             logging.warning(df)
-            for r in df.to_dict(orient="records"):
-                if r["media"] == "slack":
+            for media, df_ in df.groupby("media"):
+                if media == "slack":
                     if slack_url is not None:
                         logging.warning(slack_url)
                         requests.post(
@@ -1105,15 +1111,18 @@ def sweep_remind(
                                     .render(
                                         dict(
                                             now=now,
-                                            df=df.drop(columns=["_id", "sweeped_on"]),
+                                            df=df_.drop(columns=["_id", "sweeped_on"]),
                                         )
                                     )
                                 }
                             ),
                             headers={"Content-type": "application/json"},
                         )
-                elif r["media"] == "popup":
-                    pass
+                elif media == "popup":
+                    for r in df_.to_dict(orient="records"):
+                        cmd = Template(ctx.obj["popup_cmd_tpl"]).render(r)
+                        logging.warning(f"> {cmd}")
+                        os.system(cmd)
                 else:
                     raise NotImplementedError(r)
 
