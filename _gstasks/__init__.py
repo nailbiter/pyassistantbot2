@@ -435,3 +435,11 @@ def str_or_envvar(s: str, envvar_prefix: str = "$"):
         return os.environ[s[len(envvar_prefix) :]]
     else:
         return s
+
+
+def get_last_engaged_task_uuid(task_list, mark="engage") -> typing.Optional[str]:
+    l = list(task_list.get_coll("engage").find({"mark": mark}).sort("dt", -1).limit(1))
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]["task_uuid"]

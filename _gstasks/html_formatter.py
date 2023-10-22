@@ -44,6 +44,7 @@ import importlib.util
 # FIXME
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
+from _gstasks import get_last_engaged_task_uuid
 from _gstasks.timing import TimeItContext
 
 
@@ -108,14 +109,6 @@ def _df_env(df):
     #    for k, df in res.items():
     #        logging.warning(f"{k}:\n{df.head().to_string()}")
     return res
-
-
-def get_last_engaged_task_uuid(task_list, mark="engage"):
-    l = list(task_list.get_coll("engage").find({"mark": mark}).sort("dt", -1).limit(1))
-    if len(l) == 0:
-        return None
-    else:
-        return l[0]["task_uuid"]
 
 
 def _load_code_from_config_value(config_value):

@@ -1500,13 +1500,21 @@ def daily_progress(ctx, target_status, resample):
 
 
 @gstasks.group(name="rl")
-@moption("-u", "--uuid-text", type=str, required=True)
+@moption("-u", "--uuid-text", type=str, required=False)
 @click.pass_context
 def rolling_log(ctx, uuid_text):
     task_list = ctx.obj["task_list"]
-    r, _ = task_list.get_task(uuid_text=uuid_text)
+
+    if uuid_text is None:
+        uuid_text = get_last_engaged_task_uuid(task_list)
+        assert uuid_text is not None
+    else:
+        raise NotImplementedError()
+        r, _ = task_list.get_task(uuid_text=uuid_text)
+        uuid_text = r["uuid"]
+
     ctx.obj["coll"] = task_list.get_coll("rolling_log")
-    ctx.obj["uuid"] = r["uuid"]
+    ctx.obj["uuid"] = uuid_text
 
 
 @rolling_log.command(name="add")
