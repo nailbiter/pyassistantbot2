@@ -901,6 +901,7 @@ def real_mark(
             Template(
                 """currently engaged: {%if task is none%}none{%else%}"{{task.name}}"{%endif%}"""
             ).render(dict(task=task)),
+            err=True,
             **echo_kwargs,
         )
     else:
@@ -1566,12 +1567,12 @@ def rolling_log_ls(ctx, raw, **format_df_kwargs):
         for dt, slice_ in df.groupby("dt"):
             if not is_first:
                 click.echo("\n")
-            click.echo("## `{dt}`")
+            click.echo(f"## `{dt}`")
             for i, r in enumerate(slice_.to_dict(orient="records")):
                 click.echo(
                     Template(
-                        "1. {{r.url}}{%if r.comment%} ({{r.comment}}){%endif%}"
-                    ).render(r)
+                        "1. [{{r.url}}]({{r.url}}){%if r.comment%} ({{r.comment}}){%endif%}"
+                    ).render(dict(r=r))
                 )
             is_first = False
 
