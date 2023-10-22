@@ -1562,7 +1562,10 @@ def rolling_log_ls(ctx, raw, **format_df_kwargs):
         df["dt"] = df["date_time"].apply(
             operator.methodcaller("strftime", "%Y-%m-%d (%a)")
         )
+        is_first = True
         for dt, slice_ in df.groupby("dt"):
+            if not is_first:
+                click.echo("\n")
             click.echo("## `{dt}`")
             for i, r in enumerate(slice_.to_dict(orient="records")):
                 click.echo(
@@ -1570,6 +1573,7 @@ def rolling_log_ls(ctx, raw, **format_df_kwargs):
                         "1. {{r.url}}{%if r.comment%} ({{r.comment}}){%endif%}"
                     ).render(r)
                 )
+            is_first = False
 
 
 @gstasks.group()
