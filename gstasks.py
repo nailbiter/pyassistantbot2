@@ -1509,7 +1509,6 @@ def rolling_log(ctx, uuid_text):
         uuid_text = get_last_engaged_task_uuid(task_list)
         assert uuid_text is not None
     else:
-        raise NotImplementedError()
         r, _ = task_list.get_task(uuid_text=uuid_text)
         uuid_text = r["uuid"]
 
