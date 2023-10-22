@@ -954,8 +954,9 @@ def remind(ctx, **kwargs):
 # align cmdline's keys with `gstask add`
 @moption("-n", "--message")
 @moption("-s", "--remind-datetime", type=CLI_TIME())
+@moption("-m", "--media", type=click.Choice(["slack", "popup"]), default="media")
 @click.pass_context
-def add_remind(ctx, uuid_text, remind_datetime, message):
+def add_remind(ctx, uuid_text, remind_datetime, message, media):
     if ctx.obj["is_sweep_demon_pid"]:
         is_demon_running, rest = is_sweep_demon_running(ctx.obj)
         logging.warning(
@@ -993,6 +994,7 @@ def add_remind(ctx, uuid_text, remind_datetime, message):
         remind_datetime=remind_datetime,
         sweeped_on=None,
         message=message,
+        media=media,
         uuid=str(uuid.uuid4()),
     )
     logging.warning(f"inserting rem: {rem} (in {str(remind_datetime-datetime.now())})")
@@ -1090,21 +1092,30 @@ def sweep_remind(
         if len(df) > 0:
             df = df[df["remind_datetime"] <= now]
             logging.warning(df)
-            if slack_url is not None and len(df) > 0:
-                logging.warning(slack_url)
-                requests.post(
-                    slack_url,
-                    json.dumps(
-                        {
-                            "text": ctx.obj["jinja_env"]
-                            .get_template(template_filename)
-                            .render(
-                                dict(now=now, df=df.drop(columns=["_id", "sweeped_on"]))
-                            )
-                        }
-                    ),
-                    headers={"Content-type": "application/json"},
-                )
+            for r in df.to_dict(orient="records"):
+                if r["media"] == "slack":
+                    if slack_url is not None:
+                        logging.warning(slack_url)
+                        requests.post(
+                            slack_url,
+                            json.dumps(
+                                {
+                                    "text": ctx.obj["jinja_env"]
+                                    .get_template(template_filename)
+                                    .render(
+                                        dict(
+                                            now=now,
+                                            df=df.drop(columns=["_id", "sweeped_on"]),
+                                        )
+                                    )
+                                }
+                            ),
+                            headers={"Content-type": "application/json"},
+                        )
+                elif r["media"] == "popup":
+                    pass
+                else:
+                    raise NotImplementedError(r)
 
             if not dry_run:
                 logging.warning(f"sweep {len(df)} reminds")
