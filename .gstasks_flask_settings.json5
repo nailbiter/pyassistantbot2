@@ -7,7 +7,7 @@
       cmd: "{{gstasks_exe}} ls -o html -b today {{keys}} --out-file {{out_fn}}",
     },
     ttask: {
-      cmd: "{{gstasks_exe}} --debug @random ls -g 7cd20942-def7-41c3-9f32-b818e6781566 -o html --out-format-config .gstasks_ls_out_format_ttask_config.json5 --out-file {{out_fn}}",
+      cmd: "{{gstasks_exe}} --debug @random ls -o html --out-format-config .gstasks_ls_out_format_ttask_config.json5 --out-file {{out_fn}}",
       is_include_habits: true,
       template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
       static_files: {
