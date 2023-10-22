@@ -35,7 +35,7 @@ from tasks\
     },
     {
       column_name: "tags",
-      jinja_tpl: "{{utils.json5.loads(x)|list}}",
+      //jinja_tpl: "{{utils.json5.loads(x)|list}}",
     },
     //|select('ne','7cd20942-def7-41c3-9f32-b818e6781566')}}" },
     { column_name: "comment" },

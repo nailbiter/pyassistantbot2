@@ -246,22 +246,25 @@ def format_html(
 
 def _render_column(output_column, rs, env):
     # logging.warning(f"_render_column in: {output_column, rs[:5]}")
-    res = map(
-        lambda t: Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
-        .render(
-            {
-                **env,
-                "r": t[1],
-                "i": t[0],
-                "column_name": output_column["column_name"],
-                "x": t[1].get(output_column["column_name"]),
-            }
-        )
-        .strip(),
-        enumerate(rs),
-    )
-    res = list(res)
-    # logging.warning(res)
+    res = []
+    for i, r in enumerate(rs):
+        try:
+            res.append(
+                Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
+                .render(
+                    {
+                        **env,
+                        "r": r,
+                        "i": i,
+                        "column_name": output_column["column_name"],
+                        "x": r.get(output_column["column_name"]),
+                    }
+                )
+                .strip()
+            )
+        except ValueError as ve:
+            logging.error((i, r, output_column))
+            raise ve
     return res
 
 
