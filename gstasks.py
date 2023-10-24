@@ -842,6 +842,7 @@ def mark_ls(
 )
 @moption("--post-hook")
 @moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
+@moption("--is-out/--no-is-out", "-o/ ", default=False)
 @moption(
     "-t",
     "--time",
@@ -870,6 +871,7 @@ def real_mark(
     ctx=None,
     uuid_text: typing.Optional[str] = None,
     post_hook: typing.Optional[str] = None,
+    is_out: bool = False,
     mark: typing.Optional[str] = None,
     time_: typing.Optional[datetime] = None,
 ):
@@ -904,6 +906,8 @@ def real_mark(
             err=True,
             **echo_kwargs,
         )
+        if is_out:
+            click.echo(None if task is None else task["uuid"])
     else:
         if uuid_text == _MARK_UNSET_SYMBOL:
             r = {"uuid": None}
@@ -960,7 +964,9 @@ def remind(ctx, **kwargs):
 # align cmdline's keys with `gstask add`
 @moption("-n", "--message")
 @moption("-s", "--remind-datetime", type=CLI_TIME())
-@moption("-m", "--media", type=click.Choice(["slack", "popup"]), default="slack")
+@moption(
+    "-m", "--media", type=click.Choice(["slack", "popup", "file"]), default="slack"
+)
 @click.pass_context
 def add_remind(ctx, uuid_text, remind_datetime, message, media):
     if ctx.obj["is_sweep_demon_pid"]:
@@ -1070,6 +1076,7 @@ def mark_remind(ctx, uuids, **kwargs):
 @moption("-s", "--slack-url")
 @moption("-i", "--check-interval-minutes", type=int)
 @moption("-t", "--template-filename", default="sweep_message.jinja.txt")
+@moption("-r", "--reminder-file", type=click.Path())
 @moption(
     "-g",
     "--snap-to-grid",
@@ -1078,9 +1085,19 @@ def mark_remind(ctx, uuids, **kwargs):
 )
 @click.pass_context
 def sweep_remind(
-    ctx, dry_run, slack_url, check_interval_minutes, template_filename, snap_to_grid
+    ctx,
+    dry_run,
+    slack_url,
+    check_interval_minutes,
+    template_filename,
+    snap_to_grid,
+    reminder_file,
 ):
     dump_demon_pid(**ctx.obj)
+
+    if reminder_file is None:
+        reminder_file = get_random_fn(".txt")
+    logging.warning(f"reminder_file: {reminder_file}")
 
     task_list = ctx.obj["task_list"]
     coll = task_list.get_coll("remind")
@@ -1099,23 +1116,22 @@ def sweep_remind(
             df = df[df["remind_datetime"] <= now]
             logging.warning(df)
             for media, df_ in df.groupby("media"):
+                text = (
+                    ctx.obj["jinja_env"]
+                    .get_template(template_filename)
+                    .render(
+                        dict(
+                            now=now,
+                            df=df_.drop(columns=["_id", "sweeped_on"]),
+                        )
+                    )
+                )
                 if media == "slack":
                     if slack_url is not None:
                         logging.warning(slack_url)
                         requests.post(
                             slack_url,
-                            json.dumps(
-                                {
-                                    "text": ctx.obj["jinja_env"]
-                                    .get_template(template_filename)
-                                    .render(
-                                        dict(
-                                            now=now,
-                                            df=df_.drop(columns=["_id", "sweeped_on"]),
-                                        )
-                                    )
-                                }
-                            ),
+                            json.dumps({"text": text}),
                             headers={"Content-type": "application/json"},
                         )
                 elif media == "popup":
@@ -1123,6 +1139,9 @@ def sweep_remind(
                         cmd = Template(ctx.obj["popup_cmd_tpl"]).render(r)
                         logging.warning(f"> {cmd}")
                         os.system(cmd)
+                elif media == "file":
+                    with open(reminder_file, "a") as f:
+                        f.write(f"{datetime.now().isoformat()} {text}\n\n")
                 else:
                     raise NotImplementedError(r)
 
