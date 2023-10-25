@@ -965,10 +965,19 @@ def remind(ctx, **kwargs):
 @moption("-n", "--message")
 @moption("-s", "--remind-datetime", type=CLI_TIME())
 @moption(
-    "-m", "--media", type=click.Choice(["slack", "popup", "file"]), default="slack"
+    "-m",
+    "--media",
+    "medias",
+    type=click.Choice(["slack", "popup", "file", "voice"]),
+    default=("slack",),
+    multiple=True,
+    help="see https://click.palletsprojects.com/en/8.1.x/options/#multiple-values-from-environment-values",
 )
 @click.pass_context
-def add_remind(ctx, uuid_text, remind_datetime, message, media):
+def add_remind(ctx, uuid_text, remind_datetime, message, medias):
+    medias = list(set(medias))
+    logging.warning(f"medias: {medias}")
+
     if ctx.obj["is_sweep_demon_pid"]:
         is_demon_running, rest = is_sweep_demon_running(ctx.obj)
         logging.warning(
@@ -1001,16 +1010,19 @@ def add_remind(ctx, uuid_text, remind_datetime, message, media):
     else:
         r = dict(uuid=None)
     coll = task_list.get_coll("remind")
-    rem = dict(
-        task_uuid=r["uuid"],
-        remind_datetime=remind_datetime,
-        sweeped_on=None,
-        message=message,
-        media=media,
-        uuid=str(uuid.uuid4()),
-    )
-    logging.warning(f"inserting rem: {rem} (in {str(remind_datetime-datetime.now())})")
-    coll.insert_one(rem)
+    for media in medias:
+        rem = dict(
+            task_uuid=r["uuid"],
+            remind_datetime=remind_datetime,
+            sweeped_on=None,
+            message=message,
+            media=media,
+            uuid=str(uuid.uuid4()),
+        )
+        logging.warning(
+            f"inserting rem: {rem} (in {str(remind_datetime-datetime.now())})"
+        )
+        coll.insert_one(rem)
 
 
 @remind.command(name="ls")
@@ -1076,6 +1088,7 @@ def mark_remind(ctx, uuids, **kwargs):
 @moption("-s", "--slack-url")
 @moption("-i", "--check-interval-minutes", type=int)
 @moption("-t", "--template-filename", default="sweep_message.jinja.txt")
+@moption("-v", "--voice-template", type=str, default='say "you have task"')
 @moption("-r", "--reminder-file", type=click.Path())
 @moption(
     "-g",
@@ -1092,6 +1105,7 @@ def sweep_remind(
     template_filename,
     snap_to_grid,
     reminder_file,
+    voice_template,
 ):
     dump_demon_pid(**ctx.obj)
 
@@ -1127,8 +1141,8 @@ def sweep_remind(
                     )
                 )
                 if media == "slack":
+                    logging.warning(f"slack_url: {slack_url}")
                     if slack_url is not None:
-                        logging.warning(slack_url)
                         requests.post(
                             slack_url,
                             json.dumps({"text": text}),
@@ -1139,11 +1153,16 @@ def sweep_remind(
                         cmd = Template(ctx.obj["popup_cmd_tpl"]).render(r)
                         logging.warning(f"> {cmd}")
                         os.system(cmd)
+                elif media == "voice":
+                    for r in df_.to_dict(orient="records"):
+                        cmd = Template(voice_template).render(dict(df=df_))
+                        logging.warning(f"> {cmd}")
+                        os.system(cmd)
                 elif media == "file":
                     with open(reminder_file, "a") as f:
                         f.write(f"{datetime.now().isoformat()} {text}\n\n")
                 else:
-                    raise NotImplementedError(r)
+                    raise NotImplementedError(dict(media=media))
 
             if not dry_run:
                 logging.warning(f"sweep {len(df)} reminds")
