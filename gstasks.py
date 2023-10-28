@@ -1063,6 +1063,8 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
             filter_[k] = v
     df = pd.DataFrame(coll.find(filter_))
     logging.warning(f"{len(df)} reminds")
+    df["until"] = df["remind_datetime"] - datetime.now()
+    df.drop(columns=["_id"], inplace=True)
 
     if len(df) > 0 and len(sort_order) > 0:
         kwargs = cmdline_keys_to_sort_kwargs(sort_order)
