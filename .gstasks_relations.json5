@@ -1,7 +1,5 @@
-[
-    //fields: name:str (required), symmetric:str (optional)
-  { name: "blocks", symmetric: "is blocked by" },
-  { symmetric: "blocks", name: "is blocked by" },
-  { name: "included in", symmetric: "includes" },
-  { symmetric: "included in", name: "includes" },
-]
+{
+  //fields: name:str (required), symmetric:str (optional)
+  Blocks: { inward: "is blocked by", outward: "blocks" },
+  Contains: { outward: "contains", inward: "is contained in" },
+}

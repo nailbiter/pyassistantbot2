@@ -20,6 +20,7 @@ ORGANIZATION:
 ==============================================================================="""
 
 import inspect
+import itertools
 import pytz
 import typing
 import json
@@ -57,6 +58,7 @@ from _gstasks import (
     cmdline_keys_to_sort_kwargs,
     is_sweep_demon_running,
     dump_demon_pid,
+    GSTASK_UUID,
 )
 from _gstasks.additional_states import ADDITIONAL_STATES
 import json5
@@ -1643,7 +1645,7 @@ def rolling_log_ls(ctx, raw, **format_df_kwargs):
             is_first = False
 
 
-@gstasks.group()
+@gstasks.group(name="rel")
 @moption(
     "--relations-config-file",
     type=click.Path(),
@@ -1659,11 +1661,40 @@ def relations(ctx, relations_config_file):
 
 @relations.command(name="ls")
 @build_click_options
-@moption("-t", "--listing-type", type=click.Choice(["relations", "issues"]))
+@moption("-u", "--uuid-text", type=GSTASK_UUID)
+@moption("-d", "--direction-filter", type=click.Choice(["inward", "outward"]))
+@moption("-n", "--relation-name", type=str)
 @click.pass_context
-def list_relations(ctx, listing_type, **format_df_kwargs):
+def list_relations(ctx, uuid_text, relation_name, direction_filter, **format_df_kwargs):
     """"""
-    # raise NotImplementedError()  # 2
+    coll = ctx.obj["task_list"].get_coll("relations")
+
+    filter_ = {}
+    if relation_name is not None:
+        filter_["relation_name"] = relation_name
+
+    if uuid_text is None:
+        df = pd.DataFrame(coll.find(filter_))
+    else:
+        if direction_filter is None:
+            filter_["$or"] = [dict(inward=uuid_text), dict(outward=uuid_text)]
+        elif direction_filter == "inward":
+            filter_["inward"] = uuid_text
+        elif direction_filter == "outward":
+            filter_["outward"] = uuid_text
+        else:
+            raise NotImplementedError(dict(direction_filter=direction_filter))
+        df = pd.DataFrame(coll.find(filter_))
+        for k in ["inward", "outward"]:
+            df[f"{k}_name"] = (
+                df[k]
+                .apply(lambda u: ctx.obj["task_list"].get_task(uuid_text=u))
+                .apply(operator.itemgetter(0))
+                .apply(operator.itemgetter("name"))
+            )
+        df.drop(columns=["_id"], inplace=True)
+
+    click.echo(apply_click_options(df, format_df_kwargs))
 
 
 # @relations.command(name="import")
@@ -1675,18 +1706,34 @@ def list_relations(ctx, listing_type, **format_df_kwargs):
 
 
 @relations.command(name="add")
-@moption("-f", "--from", "from_", type=str, required=True)
-@moption("-t", "--to", type=str, required=True)
+@moption("-f", "--from", "froms", type=GSTASK_UUID, required=True, multiple=True)
+@moption("-t", "--to", "tos", type=GSTASK_UUID, required=True, multiple=True)
+@moption("-n", "--relation-name", type=str, required=True)
 @click.pass_context
-def add_relation(ctx, from_, to):
-    raise NotImplementedError()  # 3
+def add_relation(ctx, froms, tos, relation_name):
+    rel_config = ctx.obj["relations"]["config"]
+    assert relation_name in rel_config, (relation_name, rel_config)
+
+    coll = ctx.obj["task_list"].get_coll("relations")
+    for from_, to in itertools.product(froms, tos):
+        r = dict(
+            inward=to,
+            outward=from_,
+            uuid=str(uuid.uuid4()),
+            relation_name=relation_name,
+        )
+        logging.warning(f"rel: {r}")
+
+        coll.insert_one(r)
 
 
 @relations.command(name="rm")
 @moption("-u", "--uuud", "uuid_", type=str, required=True)
 @click.pass_context
 def delete_relation(ctx, uuid_):
-    raise NotImplementedError()  # 4
+    coll = ctx.obj["task_list"].get_coll("relations")
+    res = coll.delete_one(dict(uuid=uuid_))
+    logging.warning(f"del_res: {res}")
 
 
 if __name__ == "__main__":

@@ -116,7 +116,9 @@ class TaskList:
         self._logger.info(r)
         self.get_coll(collection_name="actions").insert_one(r)
 
-    def get_task(self, uuid_text=None, index=None, get_all_tasks_kwargs: dict = {}):
+    def get_task(
+        self, uuid_text=None, index=None, get_all_tasks_kwargs: dict = {}
+    ) -> (dict, int):
         assert sum([x is not None for x in [index, uuid_text]]) == 1
         ## FIXME: this should be cached
         df = self.get_all_tasks(is_post_processing=False, **get_all_tasks_kwargs)
@@ -443,3 +445,21 @@ def get_last_engaged_task_uuid(task_list, mark="engage") -> typing.Optional[str]
         return None
     else:
         return l[0]["task_uuid"]
+
+
+class GstaskUuid(click.ParamType):
+    name = "gstask_uuid"
+
+    def convert(self, uuid_text: str, param, ctx):
+        task_list = ctx.obj["task_list"]
+
+        r, _ = task_list.get_task(uuid_text=uuid_text)
+        uuid_text = r["uuid"]
+
+        # return _common.parse_cmdline_datetime(
+        #     value, fail_callback=lambda msg: self.fail(msg, param, ctx)
+        # )
+        return uuid_text
+
+
+GSTASK_UUID = GstaskUuid()
