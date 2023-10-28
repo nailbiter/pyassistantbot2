@@ -982,7 +982,12 @@ def add_remind(ctx, uuid_text, remind_datetime, message, medias):
 
     if ctx.obj["is_sweep_demon_pid"]:
         is_demon_running, rest = is_sweep_demon_running(ctx.obj)
-        logging.warning(
+        echo_kwargs = {}
+        if is_demon_running:
+            echo_kwargs["fg"] = "green"
+        else:
+            echo_kwargs["bg"] = "red"
+        click.secho(
             ssj(
                 Template(
                     """
@@ -1000,7 +1005,9 @@ def add_remind(ctx, uuid_text, remind_datetime, message, medias):
                         now=datetime.now(),
                     )
                 )
-            )
+            ),
+            err=True,
+            **echo_kwargs,
         )
 
     if remind_datetime is None:
