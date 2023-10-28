@@ -1,6 +1,5 @@
 {
   gstasks_exe: "/usr/local/anaconda3/envs/base-with-altp/bin/python3 ./gstasks.py",
-  habits_mongo_url: "$MONGO_URL",
   mongo_url: "$PYASSISTANTBOT_MONGO_URL",
   profiles: {
     standard: {
@@ -8,7 +7,19 @@
     },
     ttask: {
       cmd: "{{gstasks_exe}} --debug @random ls -o html --out-format-config .gstasks_ls_out_format_ttask_config.json5 --out-file {{out_fn}}",
-      is_include_habits: true,
+      widgets: {
+        habits: { mongo_url: "$MONGO_URL" },
+        tags: {
+          mongo_url: "$PYASSISTANTBOT_MONGO_URL",
+          tags: [
+            "drag",
+            "drag/weekly/sat",
+            "drag/weekly/sun",
+            "drag/dad",
+            "go-out-activity",
+          ],
+        },
+      },
       template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
       static_files: {
         style: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/style.css",

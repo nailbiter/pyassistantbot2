@@ -7,7 +7,10 @@
     </style>
   </head>
   <body>
-  {{table_htmls['ttask']|safe}}
-  {{habits_df.to_html()|safe}}
+    {{table_htmls['ttask']|safe}}
+    <div class='container'>
+      {{widgets.habits_df.to_html(classes=['habits_df'])|safe}}
+      {{widgets.tags_df.to_html(classes=['tags_df'])|safe}}
+    </div>
   </body>
 </html>

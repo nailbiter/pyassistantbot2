@@ -1107,6 +1107,7 @@ def sweep_remind(
     reminder_file,
     voice_template,
 ):
+    logging.warning(slack_url)
     dump_demon_pid(**ctx.obj)
 
     if reminder_file is None:

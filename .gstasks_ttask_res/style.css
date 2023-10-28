@@ -14,7 +14,7 @@ table {
     height: 70vh;
     display: block;
 }
-table.dataframe{
+table.dataframe.habits_df{
     border: 1px solid;
     /* outline: 0.5rem solid khaki; */
     /* box-shadow: 0 0 0 2rem skyblue; */
@@ -25,11 +25,21 @@ table.dataframe{
     /* outline-offset: 0.5rem; */
 
     table-layout: fixed;
-    width: 100%;
+    width: 40%;
+    float:left;
     overflow-y: scroll;
     height: 30vh;
     display: block;
-  }
+}
+table.dataframe.tags_df{
+    border: 1px solid;
+    table-layout: fixed;
+    width: 40%;
+    float:right;
+    overflow-y: scroll;
+    height: 30vh;
+    display: block;
+}
 
 th {
     border: 1px solid;

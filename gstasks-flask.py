@@ -105,13 +105,46 @@ def hello_world():
             profile = args.pop("profile")
         logging.warning(dict(args=args, profile=profile))
 
-    with TimeItContext("habits", report_dict=timings):
+    with TimeItContext("widgets", report_dict=timings):
         gstasks_profile = gstasks_profiles[profile]
-        jinja_env = {}
-        if gstasks_profile.get("is_include_habits", False):
-            jinja_env["habits_df"] = _get_habits(
-                str_or_envvar(gstasks_settings["habits_mongo_url"])
-            )
+        jinja_env = {"widgets": {}}
+        for widget, widget_config in gstasks_profile.get("widgets", {}).items():
+            if widget == "habits":
+                jinja_env["widgets"]["habits_df"] = _get_habits(
+                    str_or_envvar(widget_config["mongo_url"])
+                )
+            elif widget == "tags":
+                tags_df = pd.DataFrame(dict(tag_name=["tag"], cnt=[999]))
+                mongo_client = pymongo.MongoClient(
+                    str_or_envvar(widget_config["mongo_url"])
+                )
+                tags_df = (
+                    pd.DataFrame(mongo_client["gstasks"]["tags"].find())
+                    .drop(columns=["_id"])
+                    .merge(
+                        pd.DataFrame(
+                            mongo_client["gstasks"]["tasks"].aggregate(
+                                [
+                                    {"$match": {"status": None}},
+                                    {"$unwind": "$tags"},
+                                    {"$group": {"_id": "$tags", "count": {"$sum": 1}}},
+                                ]
+                            )
+                        ),
+                        how="inner",
+                        left_on="uuid",
+                        right_on="_id",
+                    )[["name", "count"]]
+                )
+                tags_df.rename(columns={"name": "tag_name"}, inplace=True)
+                tag_names = widget_config.get("tags", [])
+                if len(tag_names) > 0:
+                    tags_df = tags_df[tags_df["tag_name"].isin(tag_names)]
+                tags_df.set_index("tag_name", inplace=True)
+                tags_df.sort_index(inplace=True)
+                jinja_env["widgets"]["tags_df"] = tags_df
+            else:
+                logging.error(dict(widget=widget))
 
     with TimeItContext("run", report_dict=timings):
         out_fns = {}
