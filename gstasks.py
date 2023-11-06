@@ -1589,6 +1589,7 @@ def rolling_log(ctx, uuid_text):
 @rolling_log.command(name="add")
 @moption("-u", "--url", type=str, required=True)
 @moption("-c", "--comment", type=str)
+@moption("--omit-url-check/--no-omit-url-check", default=False)
 @moption(
     "-d",
     "--date-time",
@@ -1603,7 +1604,14 @@ def rolling_log(ctx, uuid_text):
     ),
 )
 @click.pass_context
-def rolling_log_add(ctx, url, comment, date_time):
+def rolling_log_add(ctx, url, comment, date_time, omit_url_check):
+    if not omit_url_check:
+        allowed_url_prefixes = ["http://", "https://"]
+        assert np.any([url.startswith(k) for k in allowed_url_prefixes]), (
+            allowed_url_prefixes,
+            url,
+        )
+
     r = dict(
         uuid=str(uuid.uuid4()),
         task_uuid=ctx.obj["uuid"],
