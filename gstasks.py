@@ -1063,18 +1063,19 @@ def ls_remind(ctx, sort_order, out_format, **kwargs):
             filter_[k] = v
     df = pd.DataFrame(coll.find(filter_))
     logging.warning(f"{len(df)} reminds")
-    df["until"] = df["remind_datetime"] - datetime.now()
-    df.drop(columns=["_id"], inplace=True)
+    if len(df) > 0:
+        df["until"] = df["remind_datetime"] - datetime.now()
+        df.drop(columns=["_id"], inplace=True)
 
-    if len(df) > 0 and len(sort_order) > 0:
-        kwargs = cmdline_keys_to_sort_kwargs(sort_order)
-        logging.warning(f"sort {kwargs}")
-        df.sort_values(
-            **kwargs,
-            inplace=True,
-        )
+        if len(sort_order) > 0:
+            kwargs = cmdline_keys_to_sort_kwargs(sort_order)
+            logging.warning(f"sort {kwargs}")
+            df.sort_values(
+                **kwargs,
+                inplace=True,
+            )
 
-    click.echo(df.to_csv(sep="\t", index=None))
+        click.echo(df.to_csv(sep="\t", index=None))
 
 
 @remind.command(name="mark")
