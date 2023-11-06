@@ -402,29 +402,29 @@ def _check_pid(pid):
         return True
 
 
-def is_sweep_demon_running(obj: dict) -> (bool, dict):
-    fn = obj["sweep_demon_pid_file"]
-    is_demon_running, rest = False, {}
+def is_sweep_daemon_running(obj: dict) -> (bool, dict):
+    fn = obj["sweep_daemon_pid_file"]
+    is_daemon_running, rest = False, {}
     if path.isfile(fn):
         with open(fn) as f:
             rest = json.load(f)
         pid = rest["pid"]
-        is_demon_running = _check_pid(pid)
-    res = is_demon_running, rest
+        is_daemon_running = _check_pid(pid)
+    res = is_daemon_running, rest
     # logging.warning(res)
     return res
 
 
-def dump_demon_pid(is_sweep_demon_pid: bool, sweep_demon_pid_file: str, **_):
+def dump_daemon_pid(is_sweep_daemon_pid: bool, sweep_daemon_pid_file: str, **_):
     # logging.warning(
     #     dict(
-    #         is_sweep_demon_pid=is_sweep_demon_pid,
-    #         sweep_demon_pid_file=sweep_demon_pid_file,
+    #         is_sweep_daemon_pid=is_sweep_daemon_pid,
+    #         sweep_daemon_pid_file=sweep_daemon_pid_file,
     #     )
     # )
 
-    if is_sweep_demon_pid:
-        fn = sweep_demon_pid_file
+    if is_sweep_daemon_pid:
+        fn = sweep_daemon_pid_file
         # logging.warning(f"saving pid to `{fn}`")
         with open(fn, "w") as f:
             json.dump(

@@ -56,8 +56,8 @@ from _gstasks import (
     ssj,
     dynamic_wait,
     cmdline_keys_to_sort_kwargs,
-    is_sweep_demon_running,
-    dump_demon_pid,
+    is_sweep_daemon_running,
+    dump_daemon_pid,
     GSTASK_UUID,
 )
 from _gstasks.additional_states import ADDITIONAL_STATES
@@ -940,11 +940,11 @@ def real_mark(
 
 
 @gstasks.group()
-@moption("--is-sweep-demon-pid/--no-is-sweep-demon-pid", default=False)
+@moption("--is-sweep-daemon-pid/--no-is-sweep-daemon-pid", default=False)
 @moption(
-    "--sweep-demon-pid-file",
+    "--sweep-daemon-pid-file",
     type=click.Path(),
-    default=path.join(path.dirname(__file__), ".gstasks_sweep_demon.pid.json"),
+    default=path.join(path.dirname(__file__), ".gstasks_sweep_daemon.pid.json"),
 )
 @moption(
     "--popup-cmd-tpl",
@@ -980,10 +980,10 @@ def add_remind(ctx, uuid_text, remind_datetime, message, medias):
     medias = list(set(medias))
     logging.warning(f"medias: {medias}")
 
-    if ctx.obj["is_sweep_demon_pid"]:
-        is_demon_running, rest = is_sweep_demon_running(ctx.obj)
+    if ctx.obj["is_sweep_daemon_pid"]:
+        is_daemon_running, rest = is_sweep_daemon_running(ctx.obj)
         echo_kwargs = {}
-        if is_demon_running:
+        if is_daemon_running:
             echo_kwargs["fg"] = "green"
         else:
             echo_kwargs["bg"] = "red"
@@ -991,15 +991,15 @@ def add_remind(ctx, uuid_text, remind_datetime, message, medias):
             ssj(
                 Template(
                     """
-                {%if is_demon_running%}
-                sweep demon is running (last check {{datetime.fromisoformat(rest.timestamp_iso).strftime('%Y-%m-%d %H:%M')}} [{{now-datetime.fromisoformat(rest.timestamp_iso)}} ago])
+                {%if is_daemon_running%}
+                sweep daemon is running (last check {{datetime.fromisoformat(rest.timestamp_iso).strftime('%Y-%m-%d %H:%M')}} [{{now-datetime.fromisoformat(rest.timestamp_iso)}} ago])
                 {%else%}
-                sweep demon IS NOT running
+                sweep daemon IS NOT running
                 {%endif%}
                 """
                 ).render(
                     dict(
-                        is_demon_running=is_demon_running,
+                        is_daemon_running=is_daemon_running,
                         rest=rest,
                         datetime=datetime,
                         now=datetime.now(),
@@ -1119,7 +1119,7 @@ def sweep_remind(
     voice_template,
 ):
     logging.warning(slack_url)
-    dump_demon_pid(**ctx.obj)
+    dump_daemon_pid(**ctx.obj)
 
     if reminder_file is None:
         reminder_file = get_random_fn(".txt")
@@ -1196,7 +1196,7 @@ def sweep_remind(
             )
             time.sleep(sleep_sec)
 
-        dump_demon_pid(**ctx.obj)
+        dump_daemon_pid(**ctx.obj)
 
 
 @gstasks.command()
