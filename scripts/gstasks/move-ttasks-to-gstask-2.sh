@@ -2,7 +2,7 @@
 
 now=`date "+%Y-%m-%dT%H:%M:%S"`
 
-cat `random-fn.py -r .json` | jq "[.[]|{name:.content,label:{mongo_id:.[\"_id\"],date:.date,move_date:\"$now\"},when:\"EVENING\"}]"|./gstasks.py import-file -f-  -g $GSTASKS_MISC_TASKS_TAG -g ttask -g remind -s tomorrow #error here
+cat `random-fn.py -r .json` | jq "[.[]|{name:.content,label:{mongo_id:.[\"_id\"],date:.date,move_date:\"$now\"},when:\"EVENING\"}]"|./gstasks.py import-file -f-  -g $GSTASKS_MISC_TASKS_TAG -g ttask -g remind #error here
 
 echo $now
 
