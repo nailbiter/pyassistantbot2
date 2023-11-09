@@ -1625,11 +1625,24 @@ def rolling_log_add(ctx, url, comment, date_time, omit_url_check):
 
 
 @rolling_log.command(name="rm")
-@moption("-u", "--uuid", "uuid_", required=True)
+@moption("-u", "--uuid", "uuids", multiple=True)
+@moption("-f", "--uuid-file", type=click.Path(allow_dash=True))
 @click.pass_context
-def rolling_log_rm(ctx, uuid_):
-    res = ctx.obj["coll"].delete_one({"uuid": uuid_})
-    logging.warning(f"rm: {res}")
+def rolling_log_rm(ctx, uuids, uuid_file):
+    uuids = set(uuids)
+    if uuid_file is not None:
+        with click.open_file(uuid_file) as f:
+            uuids.update(
+                filter(
+                    lambda s: len(s) > 0,
+                    map(operator.methodcaller("strip"), f.readlines()),
+                )
+            )
+    assert len(uuids) > 0
+    logging.warning(uuids)
+    for uuid_ in tqdm.tqdm(sorted(uuids)):
+        res = ctx.obj["coll"].delete_one({"uuid": uuid_})
+        logging.warning(f"rm: {res}")
 
 
 @rolling_log.command(name="ls")
