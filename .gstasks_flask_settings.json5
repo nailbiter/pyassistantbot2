@@ -12,6 +12,7 @@
         tags: {
           mongo_url: "$PYASSISTANTBOT_MONGO_URL",
           tags: [
+            "nachberlin",
             "drag",
             "drag/weekly/sat",
             "drag/weekly/sun",
