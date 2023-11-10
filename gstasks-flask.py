@@ -125,7 +125,11 @@ def hello_world():
                         pd.DataFrame(
                             mongo_client["gstasks"]["tasks"].aggregate(
                                 [
-                                    {"$match": {"status": None}},
+                                    {
+                                        "$match": {
+                                            "status": widget_config.get("match_status")
+                                        }
+                                    },
                                     {"$unwind": "$tags"},
                                     {"$group": {"_id": "$tags", "count": {"$sum": 1}}},
                                 ]
