@@ -135,7 +135,7 @@ def hello_world():
                                         "$group": {
                                             "_id": "$tags",
                                             "count": {"$sum": 1},
-                                            "due": {"$min": "due"},
+                                            "due": {"$min": "$due"},
                                         }
                                     },
                                 ]
@@ -150,7 +150,7 @@ def hello_world():
                 tags_df.set_index("tag_name", inplace=True)
                 tag_names = widget_config.get("tags", [])
                 if len(tag_names) > 0:
-                    tags_df = tasks_df.loc[tag_names]
+                    tags_df = tags_df.loc[[x for x in tag_names if x in tags_df.index]]
                 else:
                     tags_df.sort_index(inplace=True)
                 jinja_env["widgets"]["tags_df"] = tags_df
