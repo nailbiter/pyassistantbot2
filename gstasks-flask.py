@@ -131,21 +131,28 @@ def hello_world():
                                         }
                                     },
                                     {"$unwind": "$tags"},
-                                    {"$group": {"_id": "$tags", "count": {"$sum": 1}}},
+                                    {
+                                        "$group": {
+                                            "_id": "$tags",
+                                            "count": {"$sum": 1},
+                                            "due": {"$min": "due"},
+                                        }
+                                    },
                                 ]
                             )
                         ),
                         how="inner",
                         left_on="uuid",
                         right_on="_id",
-                    )[["name", "count"]]
+                    )[["name", "count", "due"]]
                 )
                 tags_df.rename(columns={"name": "tag_name"}, inplace=True)
+                tags_df.set_index("tag_name", inplace=True)
                 tag_names = widget_config.get("tags", [])
                 if len(tag_names) > 0:
-                    tags_df = tags_df[tags_df["tag_name"].isin(tag_names)]
-                tags_df.set_index("tag_name", inplace=True)
-                tags_df.sort_index(inplace=True)
+                    tags_df = tasks_df.loc[tag_names]
+                else:
+                    tags_df.sort_index(inplace=True)
                 jinja_env["widgets"]["tags_df"] = tags_df
             else:
                 logging.error(dict(widget=widget))
