@@ -25,7 +25,7 @@ table.dataframe.habits_df{
     /* outline-offset: 0.5rem; */
 
     table-layout: fixed;
-    width: 40%;
+    width: 60%;
     float:left;
     overflow-y: scroll;
     height: 30vh;
@@ -34,7 +34,7 @@ table.dataframe.habits_df{
 table.dataframe.tags_df{
     border: 1px solid;
     table-layout: fixed;
-    width: 40%;
+    width: 30%;
     float:right;
     overflow-y: scroll;
     height: 30vh;
