@@ -32,6 +32,10 @@ import random
 import string
 import pandas as pd
 import functools
+from gstasks import setup_ctx_obj, real_add
+import collections
+
+MockClickContext = collections.named("MockClickContext", "obj", defaults=[{}])
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
@@ -57,26 +61,28 @@ def add_money(text, send_message_cb=None, mongo_client=None):
             elif len(x) == 6:
                 date = datetime.strptime(x, "%d%H%M")
                 now = datetime.now()
-                date = date.replace(**{k: getattr(now, k)
-                                    for k in spl("year,month,")})
+                date = date.replace(**{k: getattr(now, k) for k in spl("year,month,")})
         else:
             break
     i += 1
     comment = " ".join(other[i:])
     assert category is not None, "no category"
-    mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one({
-        "date": _common.to_utc_datetime(date),
-        "comment": comment,
-        "tags": sorted(list(tags)),
-        "category": category,
-        "amount": amount,
-    })
+    mongo_client[_common.MONGO_COLL_NAME]["alex.money"].insert_one(
+        {
+            "date": _common.to_utc_datetime(date),
+            "comment": comment,
+            "tags": sorted(list(tags)),
+            "category": category,
+            "amount": amount,
+        }
+    )
     send_message_cb(
-        f"added amount {amount} to category {category} on {date.strftime('%Y-%m-%d %H:%M')}")
+        f"added amount {amount} to category {category} on {date.strftime('%Y-%m-%d %H:%M')}"
+    )
 
 
 # https://dev-qa.com/320717/sending-large-messages-telegram-bot
-#_TELEGRAM_MESSAGE_LEN_LIM = 4096
+# _TELEGRAM_MESSAGE_LEN_LIM = 4096
 _TELEGRAM_MESSAGE_LEN_LIM = 4000
 
 
@@ -95,27 +101,32 @@ _SLEEP_CATS = ["sleeping", "social"]
 
 def sleepend(_, send_message_cb=None, mongo_client=None):
     mongo_coll = mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
-    last_record = mongo_coll.find_one(
-        sort=[("startsleep", pymongo.DESCENDING)])
+    last_record = mongo_coll.find_one(sort=[("startsleep", pymongo.DESCENDING)])
     cat = last_record["category"]
     if _common.get_sleeping_state(mongo_client) is None:
         send_message_cb("not sleeping")
         return
     _now = datetime.now()
     mongo_coll.update_one(
-        {"startsleep": last_record["startsleep"]}, {"$set": {"endsleep": _common.to_utc_datetime(_now)}})
+        {"startsleep": last_record["startsleep"]},
+        {"$set": {"endsleep": _common.to_utc_datetime(_now)}},
+    )
     heartbeat_time.SendKeyboard(
-        mongo_url=os.environ["MONGO_URL"], is_create_bot=False).sanitize_mongo(cat)
+        mongo_url=os.environ["MONGO_URL"], is_create_bot=False
+    ).sanitize_mongo(cat)
     send_message_cb(
-        f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})")
+        f"end sleeping \"{cat}\" (was sleeping {(_now-timedelta(hours=9))-last_record['startsleep']})"
+    )
 
 
 def ttask(content, send_message_cb=None, mongo_client=None):
-    mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
-        "content": content,
-        "date": _common.to_utc_datetime(),
-    })
-    send_message_cb(f"log \"{content}\"")
+    # mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
+    #     "content": content,
+    #     "date": _common.to_utc_datetime(),
+    # })
+    # send_message_cb(f"log \"{content}\"")
+    ctx = MockClickContext()
+    setup_ctx_obj(ctx.obj, mongo_url="", list_id="")
 
 
 # https://www.nhs.uk/common-health-questions/food-and-diet/what-should-my-daily-intake-of-calories-be/
@@ -132,20 +143,25 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
     if len(text) > 0:
         amount, *tail = re.split(r"\s+", text, 1)
         amount_kcal = _common.simple_math_eval.eval_expr(amount)
-        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].insert_one({
-            "amount_kcal": amount_kcal,
-            "tail": None if len(tail) == 0 else tail[0],
-            "date": _common.to_utc_datetime(),
-        })
-        msgs.append(f"nutrition \"{(amount_kcal,tail)}\"")
+        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].insert_one(
+            {
+                "amount_kcal": amount_kcal,
+                "tail": None if len(tail) == 0 else tail[0],
+                "date": _common.to_utc_datetime(),
+            }
+        )
+        msgs.append(f'nutrition "{(amount_kcal,tail)}"')
 
     # FIXME: filter on server-side
     nutrition_df = pd.DataFrame(
-        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].find())
+        mongo_client[_common.MONGO_COLL_NAME]["alex.nutrition"].find()
+    )
     nutrition_df.date = nutrition_df.date.apply(
-        functools.partial(_common.to_utc_datetime, inverse=True))
-    nutrition_df = nutrition_df[nutrition_df.date.apply(
-        lambda dt:dt.date()) == datetime.now().date()]
+        functools.partial(_common.to_utc_datetime, inverse=True)
+    )
+    nutrition_df = nutrition_df[
+        nutrition_df.date.apply(lambda dt: dt.date()) == datetime.now().date()
+    ]
     msgs.append(f"{_MAX_CAL_DAY-nutrition_df.amount_kcal.sum()} still remains")
 
     send_message_cb("; ".join(msgs))
@@ -153,28 +169,33 @@ def nutrition(text, send_message_cb=None, mongo_client=None):
 
 def sleepstart(cat, send_message_cb=None, mongo_client=None):
     if cat not in _SLEEP_CATS:
-        send_message_cb(
-            f"cat \"{cat}\" not in \"{','.join(_SLEEP_CATS)}\"")
+        send_message_cb(f"cat \"{cat}\" not in \"{','.join(_SLEEP_CATS)}\"")
         return
     elif _common.get_sleeping_state(mongo_client) is not None:
         send_message_cb(f"already sleeping!")
         return
-    elif mongo_client[_common.MONGO_COLL_NAME]["alex.time"].find_one(sort=[("date", pymongo.DESCENDING)]).get("category", None) is None:
+    elif (
+        mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
+        .find_one(sort=[("date", pymongo.DESCENDING)])
+        .get("category", None)
+        is None
+    ):
         send_message_cb(f"waiting for time reply!")
         return
 
     mongo_coll = mongo_client[_common.MONGO_COLL_NAME]["alex.sleepingtimes"]
-    mongo_coll.insert_one(
-        {"category": cat, "startsleep": _common.to_utc_datetime()})
-    send_message_cb(f"start sleeping \"{cat}\"")
+    mongo_coll.insert_one({"category": cat, "startsleep": _common.to_utc_datetime()})
+    send_message_cb(f'start sleeping "{cat}"')
 
 
 def note(content, send_message_cb=None, mongo_client=None):
-    mongo_client[_common.MONGO_COLL_NAME]["alex.notes"].insert_one({
-        "content": content,
-        "date": _common.to_utc_datetime(),
-    })
-    send_message_cb(f"note \"{content}\"")
+    mongo_client[_common.MONGO_COLL_NAME]["alex.notes"].insert_one(
+        {
+            "content": content,
+            "date": _common.to_utc_datetime(),
+        }
+    )
+    send_message_cb(f'note "{content}"')
 
 
 def _rand(length, code):

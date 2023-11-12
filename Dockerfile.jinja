@@ -30,6 +30,8 @@ COPY actor.py .
 COPY tr-task.py task.py
 COPY heartbeat_habits.py .
 COPY heartbeat_time.py .
+COPY gstasks.py .
+{{utils.copy_dir("_gstasks")}}
 
 COPY .env .env
 

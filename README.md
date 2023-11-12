@@ -5,6 +5,13 @@
 ### build process
 
 ```sh
+make
+docker-compose build
+```
+
+### run
+
+```sh
 ```
 
 ## gstasks

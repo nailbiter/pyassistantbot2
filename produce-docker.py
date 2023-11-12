@@ -26,6 +26,24 @@ import os
 from os import path
 import logging
 from jinja2 import Template
+from glob import glob
+import natsort
+
+
+def copy_dir(dir_: str) -> str:
+    files = {
+        *glob(f"{dir_}/*.py"),
+        *glob(f"{dir_}/**/*.py"),
+    }
+    files = natsort.natsorted(files)
+    logging.warning(files)
+    dirs = natsort.natsorted({path.dirname(fn) for fn in files})
+    return "\n".join(
+        [
+            *[f"RUN mkdir -p {dir_}" for dir_ in dirs],
+            *[f"COPY {fn} {fn}" for fn in files],
+        ]
+    )
 
 
 @click.command()
@@ -35,7 +53,7 @@ def produce_docker(input_file, output_file):
     with click.open_file(input_file) as f:
         tpl = Template(f.read())
     with open(output_file, "w") as f:
-        f.write(tpl.render())
+        f.write(tpl.render(dict(utils=dict(copy_dir=copy_dir))))
 
 
 if __name__ == "__main__":

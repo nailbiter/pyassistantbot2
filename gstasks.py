@@ -93,19 +93,21 @@ _SCOPES = [
 
 moption = functools.partial(click.option, show_envvar=True)
 
+_TEMPLATE_DIR_DEFAULT = path.join(path.dirname(__file__), "_gstasks/templates")
+_UUID_CACHE_DB_DEFAULT = path.abspath(
+    path.join(path.dirname(__file__), ".uuid_cache.db")
+)
+
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
 @moption("--list-id", required=True)
 @moption("--mongo-url", required=True)
-@moption(
-    "--uuid-cache-db",
-    default=path.abspath(path.join(path.dirname(__file__), ".uuid_cache.db")),
-)
+@moption("--uuid-cache-db", default=_UUID_CACHE_DB_DEFAULT)
 @moption("-d", "--debug")
 @moption(
     "--template-dir",
-    default=path.join(path.dirname(__file__), "_gstasks/templates"),
+    default=_TEMPLATE_DIR_DEFAULT,
     type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
 )
 @moption("--post-hook", type=click.Path())
@@ -136,8 +138,22 @@ def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
         logging.warning(f'loading "{LOADED_DOTENV}"')
 
     ctx.ensure_object(dict)
+    setup_ctx_obj(ctx, mongo_url=mongo_url, **kwargs)
+
+
+def setup_ctx_obj(
+    ctx,
+    mongo_url: str,
+    list_id: str,
+    uuid_cache_db: str = _UUID_CACHE_DB_DEFAULT,
+    template_dir: str = _TEMPLATE_DIR_DEFAULT,
+) -> None:
+    # (['task_list', 'list_id', 'uuid_cache_db', 'template_dir']
     ctx.obj["task_list"] = TaskList(
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
+    )
+    kwargs = dict(
+        list_id=list_id, uuid_cache_db=uuid_cache_db, template_dir=template_dir
     )
     for k, v in kwargs.items():
         ctx.obj[k] = v

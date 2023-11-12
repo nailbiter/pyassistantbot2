@@ -156,3 +156,4 @@ test.log.txt
 ttask_tasks.html
 birthdays.json5
 .gstasks_sweep_daemon.pid.json
+Dockerfile
