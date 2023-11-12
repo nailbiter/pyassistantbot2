@@ -2,12 +2,14 @@
 
 ## pyassistantbot2
 
-### build process
+### build 
 
 ```sh
 make
 docker-compose build
 ```
+
+### test
 
 ### run
 
