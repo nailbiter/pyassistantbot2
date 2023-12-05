@@ -1789,6 +1789,13 @@ def delete_relation(ctx, uuid_):
     logging.warning(f"del_res: {res}")
 
 
+@gstasks.group()
+@moption("--jira-label", type=str, default="GSTASKS_JIRA_LABEL")
+@moption("--jira-exec", type=str, default="jira-cli.py")
+def jira(jira_label):
+    pass
+
+
 if __name__ == "__main__":
     env_fns = [
         path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
