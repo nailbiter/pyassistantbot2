@@ -953,6 +953,7 @@ def real_mark(
                 "task_uuid": r["uuid"],
                 "mark": mark,
                 "uuid": str(uuid.uuid4()),
+                "task_snapshot": r,
             }
         )
 
