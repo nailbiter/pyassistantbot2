@@ -47,6 +47,7 @@ from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
+    make_mongo_friendly,
     CLI_DATETIME,
     CLI_TIME,
     TagProcessor,
@@ -953,7 +954,7 @@ def real_mark(
                 "task_uuid": r["uuid"],
                 "mark": mark,
                 "uuid": str(uuid.uuid4()),
-                "task_snapshot": r,
+                "task_snapshot": make_mongo_friendly(r),
             }
         )
 

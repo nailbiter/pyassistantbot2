@@ -77,6 +77,14 @@ def _format_url(url):
         return "U"
 
 
+def make_mongo_friendly(r: dict) -> dict:
+    # FIXME: why this happens?
+    for k in ["due", "scheduled_date"]:
+        if pd.isna(r[k]):
+            r[k] = None
+    return r
+
+
 _COLUMNS = "name,URL,scheduled_date,status,when,due,uuid".split(",")
 
 
@@ -175,10 +183,7 @@ class TaskList:
             r["_insertion_date"] = log_kwargs["previous_r"]["_insertion_date"]
         r["_last_modification_date"] = datetime.now()
 
-        # FIXME: why this happens?
-        for k in ["due", "scheduled_date"]:
-            if pd.isna(r[k]):
-                r[k] = None
+        r = make_mongo_friendly(r)
 
         self._log(action=action, r=r, action_comment=action_comment, **log_kwargs)
         if dry_run:
