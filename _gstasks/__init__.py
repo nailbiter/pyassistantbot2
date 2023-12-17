@@ -80,7 +80,7 @@ def _format_url(url):
 def make_mongo_friendly(r: dict) -> dict:
     # FIXME: why this happens?
     for k in ["due", "scheduled_date"]:
-        if pd.isna(r[k]):
+        if (k in r) and pd.isna(r[k]):
             r[k] = None
     return r
 
