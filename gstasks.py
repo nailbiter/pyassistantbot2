@@ -48,6 +48,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     make_mongo_friendly,
+    smart_processor,
     CLI_DATETIME,
     CLI_TIME,
     TagProcessor,
@@ -1259,6 +1260,7 @@ def sweep_remind(
 @moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
 @moption("--drop-hidden-fields/--no-drop-hidden-fields")
 @moption("-l", "--label", "labels", multiple=True, type=(str, str))
+@moption("-C", "--smart-column", "smart_columns", type=(str, str), multiple=True)
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -1267,6 +1269,7 @@ def ls(*args, **kwargs):
 def real_ls(
     ctx=None,
     when=CLICK_DEFAULT_VALUES["ls"]["when"],
+    smart_columns: list[(str, str)] = CLICK_DEFAULT_VALUES["ls"]["smart_columns"],
     text=None,
     labels=[],
     before_date=None,
@@ -1281,7 +1284,7 @@ def real_ls(
     out_format_config=None,
     scheduled_date_query=None,
     out_file=None,
-    columns=None,
+    columns=[],
     drop_hidden_fields: bool = None,
 ):
     logging.warning(f"dhf: {drop_hidden_fields}")
@@ -1390,8 +1393,18 @@ def real_ls(
                 else f"{s[:name_length_limit]}..."
             )
 
-        if columns:
-            pretty_df = pretty_df[list(columns)]
+        if (len(columns) > 0) or (len(smart_columns) > 0):
+            columns = list(columns)
+            # pretty_df = pretty_df[columns]
+            pretty_df = pd.DataFrame(
+                {
+                    **{cn: pretty_df[cn] for cn in columns},
+                    **{
+                        cn: smart_processor(pretty_df, proc)
+                        for cn, proc in smart_columns
+                    },
+                }
+            )
 
     with TimeItContext("format_df", report_dict=timings):
         # if out_format is None:

@@ -360,6 +360,7 @@ class StringContractor:
 CLICK_DEFAULT_VALUES = {
     "ls": {
         "name_length_limit": 50,
+        "smart_columns": [],
         "un_scheduled": False,
         "tags": tuple(),
         "when": tuple(),
@@ -468,3 +469,12 @@ class GstaskUuid(click.ParamType):
 
 
 GSTASK_UUID = GstaskUuid()
+
+
+def smart_processor(df: pd.DataFrame, processor: str) -> pd.Series:
+    if (m := re.match(r"(.*)\[:(\d+)\]$", processor)) is not None:
+        res = df[m.group(1)].str[: int(m.group(2))]
+        # logging.warning(res)
+        return res
+    else:
+        raise NotImplementedError((processor,))
