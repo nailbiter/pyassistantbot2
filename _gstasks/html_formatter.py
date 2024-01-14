@@ -189,7 +189,20 @@ def format_html(
         logging.info(sql)
         res_df = pandas_sql(sql, _df_env(df))
         res_df.set_index("uuid", inplace=True)
-        classes = res_df.loc[df.index, "class"].to_list()
+
+        # classes = res_df.loc[df.index, "class"].to_list()
+        class_fields = [cn for cn in res_df.columns if cn.startswith("class")]
+        logging.warning(class_fields)
+        assert len(class_fields) > 0
+        classes = (
+            res_df[class_fields]
+            .apply(
+                lambda row: " ".join([x.strip() for x in row if len(x.strip()) > 0]),
+                axis=1,
+            )
+            .loc[df.index]
+        )
+
         logging.warning(res_df)
     else:
         classes = None

@@ -15,4 +15,4 @@ from (
      group by uuid
 ) using (uuid)
 order by is_not_soon, sdin, scheduled_date asc, tagc desc, _last_modification_date desc 
-
+--limit 200 --debug
