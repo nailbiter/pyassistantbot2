@@ -656,6 +656,11 @@ def lso(ctx, uuids, object_type):
     """
     output in JSON(L) format
     """
+    return real_lso(ctx, uuids, object_type)
+
+
+def real_lso(ctx, uuids: list[str], object_type: str, is_loud: bool = True) -> str:
+    res = ""
     if object_type == "task":
         task_list = ctx.obj["task_list"]
         for uuid_text in uuids:
@@ -680,9 +685,12 @@ def lso(ctx, uuids, object_type):
             # r.pop("_id")
 
             logging.info(r)
-            click.echo(json.dumps(r, default=json_util.default))
+            s = json.dumps(r, default=json_util.default)
+            res += s
+            click.echo(s)
     else:
         raise NotImplementedError(dict(object_type=object_type))
+    return res
 
 
 @tags.command(name="edit")

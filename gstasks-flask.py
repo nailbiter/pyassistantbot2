@@ -33,7 +33,7 @@ from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
-from gstasks import real_ls
+from gstasks import real_ls, real_lso
 import pymongo
 import json5
 import typing
@@ -79,22 +79,39 @@ def _init_g(g, mongo_url: typing.Optional[str]):
         )
 
 
+@app.route("/lso/<uuid:task_id>", methods=["GET"])
+def lso(task_id: str):
+    logging.warning(f"task_id: {task_id}")
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    # return str(task_id)
+    res = real_lso(g.ctx, [str(task_id)], object_type="task", is_loud=False)
+    # return res
+    # return f"<code>{json.dumps(json.loads(res),sort_keys=True,indent=2)}</code>"
+    return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
+    # return json.dumps(json.loads(res), sort_keys=True, indent=2)
+
+
+def _init() -> (dict, str):
+    gstasks_settings_fn = os.environ.get(
+        "GSTASKS_FLASK_GSTASKS_SETTINGS", ".gstasks_flask_settings.json5"
+    )
+    with open(gstasks_settings_fn) as f:
+        gstasks_settings = json5.load(f)
+
+    mongo_url = str_or_envvar(gstasks_settings["mongo_url"])
+    return gstasks_settings, mongo_url
+
+
 @app.route("/ls", methods=["GET"])
 def hello_world():
     # logging.warning(f"g: {my_g}")
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
-        gstasks_settings_fn = os.environ.get(
-            "GSTASKS_FLASK_GSTASKS_SETTINGS", ".gstasks_flask_settings.json5"
-        )
-        with open(gstasks_settings_fn) as f:
-            gstasks_settings = json5.load(f)
-        gstasks_profiles = gstasks_settings["profiles"]
-
-        mongo_url = str_or_envvar(gstasks_settings["mongo_url"])
+        gstasks_settings, mongo_url = _init()
         _init_g(g, mongo_url=mongo_url)
-
+        gstasks_profiles = gstasks_settings["profiles"]
         gstasks_exe = gstasks_settings["gstasks_exe"]
 
     with TimeItContext("parse flask", report_dict=timings):
