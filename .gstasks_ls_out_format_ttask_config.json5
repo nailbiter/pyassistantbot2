@@ -14,7 +14,7 @@ from tasks\
 ",
   //template: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
   sql_udfs_file: "gstasks_sql_uds.py",
-  index_style: "{{x.split('-')[0]}}",
+    index_style: '<a href="http://127.0.0.1:5000/lso/{{x}}">{{x.split("-")[0]}}</a>',
   output_columns: [
     { column_name: "i", jinja_tpl: "{{i}}" },
     { column_name: "name" },
