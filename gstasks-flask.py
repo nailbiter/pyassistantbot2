@@ -99,7 +99,11 @@ def _init() -> (dict, str):
     with open(gstasks_settings_fn) as f:
         gstasks_settings = json5.load(f)
 
-    mongo_url = str_or_envvar(gstasks_settings["mongo_url"])
+    mongo_url = (
+        str_or_envvar(gstasks_settings["mongo_url"])
+        if "mongo_url" in gstasks_settings
+        else None
+    )
     return gstasks_settings, mongo_url
 
 
@@ -129,11 +133,15 @@ def hello_world():
             if widget == "habits":
                 jinja_env["widgets"]["habits_df"] = _get_habits(
                     str_or_envvar(widget_config["mongo_url"])
+                    if "mongo_url" in widget_config
+                    else None
                 )
             elif widget == "tags":
                 tags_df = pd.DataFrame(dict(tag_name=["tag"], cnt=[999]))
                 mongo_client = pymongo.MongoClient(
                     str_or_envvar(widget_config["mongo_url"])
+                    if "mongo_url" in widget_config
+                    else None
                 )
                 tags_df = (
                     pd.DataFrame(mongo_client["gstasks"]["tags"].find())

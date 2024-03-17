@@ -125,160 +125,171 @@ def _load_code_from_config_value(config_value):
 def format_html(
     df, html_out_config=None, task_list=None, print_callback=print, out_file=None
 ):
+    """
+    TODO: timeit
+    """
     #    logging.warning(html_out_config)
+
     assert task_list is not None
     assert html_out_config is not None
 
-    if html_out_config is None:
-        print_callback(df.to_html())
-        return
+    timings = {}
 
-    with open(html_out_config) as f:
-        config = json5.load(f)
-    logging.warning(f"config: {config}")
+    with TimeItContext("load html_out_config", report_dict=timings):
+        if html_out_config is None:
+            print_callback(df.to_html())
+            return
 
-    # index set
-    df = df.copy()
-    df.set_index("uuid", inplace=True)
-    assert df.index.is_unique
+        with open(html_out_config) as f:
+            config = json5.load(f)
+        logging.warning(f"config: {config}")
 
-    # filtering
-    df.drop(columns=["_id"], inplace=True)
-    env = {
-        "now": datetime.now(),
-        "last_engaged_task_uuid": get_last_engaged_task_uuid(task_list),
-        "utils": {
-            "pd": pd,
-            "json5": {"loads": json5.loads},
-            "custom": {
-                "ifnull": ifnull,
-                "get_task_by_uuid": _get_task_by_uuid(task_list),
+    with TimeItContext("index set", report_dict=timings):
+        # index set
+        df = df.copy()
+        df.set_index("uuid", inplace=True)
+        assert df.index.is_unique
+
+    with TimeItContext("drop and env", report_dict=timings):
+        # filtering
+        df.drop(columns=["_id"], inplace=True)
+
+        env = {
+            "now": datetime.now(),
+            "last_engaged_task_uuid": get_last_engaged_task_uuid(task_list),
+            "utils": {
+                "pd": pd,
+                "json5": {"loads": json5.loads},
+                "custom": {
+                    "ifnull": ifnull,
+                    "get_task_by_uuid": _get_task_by_uuid(task_list),
+                },
             },
-        },
-    }
+        }
 
-    ## load UDFs
-    udfs = []
-    if "sql_udfs_file" in config:
-        udfs_fn = path.abspath(config["sql_udfs_file"])
-        logging.warning(f"udfs_fn: `{udfs_fn}`")
-        ## adapted from https://stackoverflow.com/a/67692
-        spec = importlib.util.spec_from_file_location("gstasks_sql_udfs", udfs_fn)
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
-        # logging.info(dir(foo))
-        # logging.warning(foo.export_udfs)
-        udfs.extend(foo.export_udfs)
-    logging.warning(f"udfs: {udfs}")
+    with TimeItContext("load udfs", report_dict=timings):
+        ## load UDFs
+        udfs = []
+        if "sql_udfs_file" in config:
+            udfs_fn = path.abspath(config["sql_udfs_file"])
+            logging.warning(f"udfs_fn: `{udfs_fn}`")
+            ## adapted from https://stackoverflow.com/a/67692
+            spec = importlib.util.spec_from_file_location("gstasks_sql_udfs", udfs_fn)
+            foo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(foo)
+            # logging.info(dir(foo))
+            # logging.warning(foo.export_udfs)
+            udfs.extend(foo.export_udfs)
+        logging.warning(f"udfs: {udfs}")
 
-    # sorting/filtering
-    if "sorting_sql" in config:
-        tpl = _load_code_from_config_value(config["sorting_sql"])
-        logging.info(tpl)
-        sql = Template(tpl).render(env)
-        logging.info(sql)
-        res = pandas_sql(sql, _df_env(df), utils=udfs)
-        logging.info("\n" + res.to_csv(index=None))
-        df = df.loc[res["uuid"].to_list()]
+    with TimeItContext("sorting/filtering", report_dict=timings):
+        if "sorting_sql" in config:
+            tpl = _load_code_from_config_value(config["sorting_sql"])
+            logging.info(tpl)
+            sql = Template(tpl).render(env)
+            logging.info(sql)
+            res = pandas_sql(sql, _df_env(df), utils=udfs)
+            logging.info("\n" + res.to_csv(index=None))
+            df = df.loc[res["uuid"].to_list()]
 
-    # row styling
-    if "row_styling_sql" in config:
-        tpl = _load_code_from_config_value(config["row_styling_sql"])
-        logging.info(tpl)
-        sql = Template(tpl).render(env)
-        logging.info(sql)
-        res_df = pandas_sql(sql, _df_env(df))
-        res_df.set_index("uuid", inplace=True)
+    with TimeItContext("row styling", report_dict=timings):
+        if "row_styling_sql" in config:
+            tpl = _load_code_from_config_value(config["row_styling_sql"])
+            logging.info(tpl)
+            sql = Template(tpl).render(env)
+            logging.info(sql)
+            res_df = pandas_sql(sql, _df_env(df))
+            res_df.set_index("uuid", inplace=True)
 
-        # classes = res_df.loc[df.index, "class"].to_list()
-        class_fields = [cn for cn in res_df.columns if cn.startswith("class")]
-        logging.warning(class_fields)
-        assert len(class_fields) > 0
-        classes = (
-            res_df[class_fields]
-            .apply(
-                lambda row: " ".join([x.strip() for x in row if len(x.strip()) > 0]),
-                axis=1,
+            # classes = res_df.loc[df.index, "class"].to_list()
+            class_fields = [cn for cn in res_df.columns if cn.startswith("class")]
+            logging.warning(class_fields)
+            assert len(class_fields) > 0
+            classes = (
+                res_df[class_fields]
+                .apply(
+                    lambda row: " ".join(
+                        [x.strip() for x in row if len(x.strip()) > 0]
+                    ),
+                    axis=1,
+                )
+                .loc[df.index]
             )
-            .loc[df.index]
-        )
 
-        logging.warning(res_df)
-    else:
-        classes = None
+            logging.warning(res_df)
+        else:
+            classes = None
 
-    # _date_cols = ["_insertion_date", "_last_modification_date"]
-    # for cn in _date_cols:
-    #     df[cn] = df[cn].apply(
-    #         lambda dt: "" if pd.isna(dt) else dt.strftime("%Y-%m-%d %H:%M")
-    #     )
     logging.warning(df.dtypes)
 
-    # TODO: col order via `config`
-    if "output_columns" in config:
-        logging.warning(f'output_columns: {config["output_columns"]}')
-        rs = list(df.reset_index().to_dict(orient="records"))
-        # logging.warning(f"rs: {rs[:5]}")
-        df = pd.DataFrame(
-            {
-                output_column["column_name"]: _render_column(output_column, rs, env)
-                for output_column in config["output_columns"]
-            },
-            index=df.index,
-        )
-        # df = df[[r["column_name"] for r in config["output_columns"]]]
-        # for r in config["output_columns"]:
-        #     jinja_tpl = r.get("jinja_tpl")
-        #     if "jinja_tpl" in r:
-        #         df[r["column_name"]] = df[r["column_name"]].apply(
-        #             lambda x: Template(r["jinja_tpl"])
-        #             .render(
-        #                 {
-        #                     **env,
-        #                     "x": x,
-        #                 }
-        #             )
-        #             .strip()
-        #         )
+    with TimeItContext("columns styling", report_dict=timings):
+        # FIXME: takes a long time
+        # TODO: col order via `config`
+        if "output_columns" in config:
+            logging.warning(f'output_columns: {config["output_columns"]}')
+            rs = list(df.reset_index().to_dict(orient="records"))
+            # logging.warning(f"rs: {rs[:5]}")
+            df = pd.DataFrame(
+                {
+                    output_column["column_name"]: _render_column(output_column, rs, env)
+                    for output_column in config["output_columns"]
+                },
+                index=df.index,
+            )
 
-    out_file = config.get("out_file") if out_file is None else out_file
-    is_use_style = config.get("is_use_style", False)
-    df.index = [
-        Template(config.get("index_style", "{{x}}")).render(dict(x=x, i=i))
-        for i, x in enumerate(df.index)
-    ]
-    s = (
-        _style_to_buf(buf=out_file, config=config, df=df, classes=classes)
-        if is_use_style
-        else df.to_html(buf=out_file, render_links=True)
+    with TimeItContext("output", report_dict=timings):
+        out_file = config.get("out_file") if out_file is None else out_file
+        is_use_style = config.get("is_use_style", False)
+        df.index = [
+            Template(config.get("index_style", "{{x}}")).render(dict(x=x, i=i))
+            for i, x in enumerate(df.index)
+        ]
+        s = (
+            _style_to_buf(buf=out_file, config=config, df=df, classes=classes)
+            if is_use_style
+            else df.to_html(buf=out_file, render_links=True)
+        )
+        logging.warning(f'html saved to "{out_file}"')
+
+    with TimeItContext("print_callback", report_dict=timings):
+        if s is not None:
+            print_callback(s)
+
+    timings_df = pd.Series(timings).to_frame("duration_seconds")
+    timings_df["dur"] = timings_df["duration_seconds"].apply(
+        lambda s: timedelta(seconds=s)
     )
-    logging.warning(f'html saved to "{out_file}"')
-    if s is not None:
-        print_callback(s)
+    timings_df["perc"] = timings_df["dur"] / timings_df["dur"].sum() * 100
+    logging.warning(timings_df)
 
 
 def _render_column(output_column, rs, env):
     # logging.warning(f"_render_column in: {output_column, rs[:5]}")
-    res = []
-    for i, r in enumerate(rs):
-        try:
-            res.append(
-                Template(output_column.get("jinja_tpl", "{{r[column_name]}}"))
-                .render(
-                    {
-                        **env,
-                        "r": r,
-                        "i": i,
-                        "column_name": output_column["column_name"],
-                        "x": r.get(output_column["column_name"]),
-                    }
-                )
-                .strip()
-            )
-        except ValueError as ve:
-            logging.error((i, r, output_column))
-            raise ve
-    return res
+    if "jinja_tpl" in output_column:
+        tpl = Template(output_column["jinja_tpl"])
+        return [
+            tpl.render(
+                {
+                    **env,
+                    "r": r,
+                    "i": i,
+                    "column_name": output_column["column_name"],
+                    "x": r.get(output_column["column_name"]),
+                }
+            ).strip()
+            for i, r in enumerate(rs)
+        ]
+        # for i, r in enumerate(rs):
+        #     try:
+        #         res.append(
+        #         )
+        #     except ValueError as ve:
+        #         logging.error((i, r, output_column))
+        #         raise ve
+        # return res
+    else:
+        cn = output_column["column_name"]
+        return [r.get(cn) for r in rs]
 
 
 def _style_to_buf(
