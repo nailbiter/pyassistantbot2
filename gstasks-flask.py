@@ -124,6 +124,9 @@ def hello_world():
         profile = "standard"
         if "profile" in args:
             profile = args.pop("profile")
+        tag = None
+        if "tag" in args:
+            tag = args.pop("tag")
         logging.warning(dict(args=args, profile=profile))
 
     with TimeItContext("widgets", report_dict=timings):
@@ -195,13 +198,15 @@ def hello_world():
                 ec, out = subprocess.getstatusoutput(cmd)
                 assert ec == 0, (cmd, ec, out)
             else:
-                real_ls(
-                    **{
-                        **v["kwargs"],
-                        "out_file": out_fn,
-                        "ctx": g.ctx,
-                    }
-                )
+                kwargs = {
+                    **v["kwargs"],
+                    "out_file": out_fn,
+                    "ctx": g.ctx,
+                }
+                if tag is not None:
+                    kwargs["tags"] = [tag]
+                logging.warning(kwargs)
+                real_ls(**kwargs)
             out_fns[k] = out_fn
 
     with TimeItContext("read output", report_dict=timings):
