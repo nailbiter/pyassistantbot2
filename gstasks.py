@@ -1836,7 +1836,7 @@ def jira(jira_label):
 )
 @moption("-g", "--filter-tag", "filter_tags", type=str, multiple=True)
 @click.pass_context
-def intelli_tags(ctx, uuid_list_file, filter_tags):
+def auto_tag(ctx, uuid_list_file, filter_tags):
     with click.open_file(uuid_list_file) as f:
         tasks_df = pd.DataFrame(json.load(f))
     tasks_df["tags"] = (
