@@ -192,7 +192,12 @@ def hello_world():
             out_fn = f"/tmp/{uuid.uuid4()}.html"
             if gstasks_profile.get("is_use_shell", False):
                 cmd = Template(v["cmd"]).render(
-                    dict(gstasks_exe=gstasks_exe, keys=keys, out_fn=out_fn)
+                    dict(
+                        gstasks_exe=gstasks_exe,
+                        keys=keys,
+                        out_fn=out_fn,
+                        tag=tag,
+                    )
                 )
                 logging.warning(f"cmd: `{cmd}`")
                 ec, out = subprocess.getstatusoutput(cmd)
