@@ -649,13 +649,19 @@ def ls_tags(ctx, sort_order, raw, out_format):
 
 
 @gstasks.command(help="ls object")
-@moption("-u", "--uuid", "uuids", type=str, required=True, multiple=True)
+@moption("-u", "--uuid", "uuids", type=str, multiple=True)
+@moption("-f", "--uuid-file", type=click.Path(allow_dash=True))
 @moption("-t", "--object-type", type=click.Choice(["task", "tag"]), default="task")
 @click.pass_context
-def lso(ctx, uuids, object_type):
+def lso(ctx, uuids, object_type, uuid_file):
     """
     output in JSON(L) format
     """
+    uuids = list(uuids)
+    if uuid_file is not None:
+        with click.open_file(uuid_file) as f:
+            uuids.extend(f.read().strip().split())
+    assert len(uuids) > 0
     return real_lso(ctx, uuids, object_type)
 
 
@@ -1817,6 +1823,31 @@ def delete_relation(ctx, uuid_):
 @moption("--jira-exec", type=str, default="jira-cli.py")
 def jira(jira_label):
     pass
+
+
+@gstasks.command()
+@moption(
+    "-f",
+    "--uuid-list-file",
+    default="-",
+    # required=True,
+    type=click.Path(allow_dash=True),
+    help="json array {uuid,name}",
+)
+@moption("-g", "--filter-tag", "filter_tags", type=str, multiple=True)
+@click.pass_context
+def intelli_tags(ctx, uuid_list_file, filter_tags):
+    with click.open_file(uuid_list_file) as f:
+        tasks_df = pd.DataFrame(json.load(f))
+    tasks_df["tags"] = (
+        tasks_df["name"].apply(re.compile(r"#([a-z_0-9]+)").findall).apply(set)
+    )
+
+    tasks_df = tasks_df[tasks_df["tags"].apply(lambda s: s >= set(filter_tags))]
+
+    logging.warning(tasks_df)
+    tasks_df["tags"] = tasks_df["tags"].apply(sorted)
+    click.echo(json.dumps(tasks_df.to_dict(orient="records")))
 
 
 if __name__ == "__main__":
