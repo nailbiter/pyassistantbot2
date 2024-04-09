@@ -1818,8 +1818,11 @@ def delete_relation(ctx, uuid_):
     logging.warning(f"del_res: {res}")
 
 
+DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
+
+
 @gstasks.group()
-@moption("--jira-label", type=str, default="GSTASKS_JIRA_LABEL")
+@moption("--jira-label", type=str, default=DEFAULT_JIRA_LABEL)
 @moption("--jira-exec", type=str, default="jira-cli.py")
 def jira(jira_label):
     pass
