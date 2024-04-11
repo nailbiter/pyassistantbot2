@@ -181,6 +181,17 @@ def hello_world():
                     tags_df = tags_df.loc[[x for x in tag_names if x in tags_df.index]]
                 else:
                     tags_df.sort_index(inplace=True)
+                tpl = Template(
+                    widget_config.get(
+                        "tag_url_tpl",
+                        """<a href="ls?profile={{profile}}&tag={{name}}">{{name}}</a>""",
+                    )
+                )
+                tags_df.index = (
+                    tags_df.index.to_series()
+                    .apply(lambda name: tpl.render(dict(name=name, profile=profile)))
+                    .to_list()
+                )
                 jinja_env["widgets"]["tags_df"] = tags_df
             else:
                 logging.error(dict(widget=widget))
