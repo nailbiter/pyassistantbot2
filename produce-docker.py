@@ -33,7 +33,7 @@ import natsort
 def copy_dir(dir_: str) -> str:
     files = {
         *glob(f"{dir_}/*.py"),
-        *glob(f"{dir_}/**/*.py"),
+        *glob(f"{dir_}/**/*.py", recurrent=True),
     }
     files = natsort.natsorted(files)
     logging.warning(files)
