@@ -31,8 +31,8 @@ import logging
 import random
 import string
 import pandas as pd
-import functools
 from gstasks import setup_ctx_obj, real_add
+import functools
 import collections
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
@@ -120,13 +120,16 @@ def sleepend(_, send_message_cb=None, mongo_client=None):
 
 
 def ttask(content, send_message_cb=None, mongo_client=None):
-    # mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one({
-    #     "content": content,
-    #     "date": _common.to_utc_datetime(),
-    # })
-    # send_message_cb(f"log \"{content}\"")
-    ctx = MockClickContext()
-    setup_ctx_obj(ctx.obj, mongo_url="", list_id="")
+    mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one(
+        {
+            "content": content,
+            "date": _common.to_utc_datetime(),
+        }
+    )
+    send_message_cb(f'log "{content}"')
+
+    # ctx = MockClickContext()
+    # setup_ctx_obj(ctx.obj, mongo_url="", list_id="")
 
 
 # https://www.nhs.uk/common-health-questions/food-and-diet/what-should-my-daily-intake-of-calories-be/
