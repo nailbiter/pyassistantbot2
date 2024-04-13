@@ -35,7 +35,7 @@ import functools
 from gstasks import setup_ctx_obj, real_add
 import collections
 
-MockClickContext = collections.named("MockClickContext", "obj", defaults=[{}])
+MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 
 
 def add_money(text, send_message_cb=None, mongo_client=None):
