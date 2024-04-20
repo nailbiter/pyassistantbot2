@@ -22,6 +22,7 @@ ORGANIZATION:
 import hashlib
 import inspect
 import json
+from _gstasks.labels_types import LABELS_TYPES
 import logging
 import functools
 import numpy as np
@@ -86,6 +87,38 @@ def make_mongo_friendly(r: dict) -> dict:
 
 
 _COLUMNS = "name,URL,scheduled_date,status,when,due,uuid".split(",")
+
+TEMPLATE_DIR_DEFAULT = path.join(path.dirname(__file__), "templates")
+UUID_CACHE_DB_DEFAULT = path.abspath(
+    path.join(path.dirname(__file__), "../.uuid_cache.db")
+)
+
+
+def setup_ctx_obj(
+    ctx,
+    labels_types_json5: typing.Optional[str],
+    mongo_url: str,
+    list_id: str,
+    uuid_cache_db: str = UUID_CACHE_DB_DEFAULT,
+    template_dir: str = TEMPLATE_DIR_DEFAULT,
+) -> None:
+    # (['task_list', 'list_id', 'uuid_cache_db', 'template_dir']
+    ctx.obj["task_list"] = TaskList(
+        mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
+    )
+
+    labels_types = {}
+    if labels_types_json5 is not None:
+        with open(labels_types_json5) as f:
+            labels_types = json5.load(f)
+    labels_types = {k: LABELS_TYPES[v] for k, v in labels_types.items()}
+    ctx.obj["labels_types"] = labels_types
+
+    kwargs = dict(
+        list_id=list_id, uuid_cache_db=uuid_cache_db, template_dir=template_dir
+    )
+    for k, v in kwargs.items():
+        ctx.obj[k] = v
 
 
 class TaskList:

@@ -48,6 +48,9 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     make_mongo_friendly,
+    TEMPLATE_DIR_DEFAULT,
+    UUID_CACHE_DB_DEFAULT,
+    setup_ctx_obj,
     smart_processor,
     CLI_DATETIME,
     CLI_TIME,
@@ -95,26 +98,22 @@ _SCOPES = [
 
 moption = functools.partial(click.option, show_envvar=True)
 
-_TEMPLATE_DIR_DEFAULT = path.join(path.dirname(__file__), "_gstasks/templates")
-_UUID_CACHE_DB_DEFAULT = path.abspath(
-    path.join(path.dirname(__file__), ".uuid_cache.db")
-)
-
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
 @moption("--list-id", required=True)
 @moption("--mongo-url", required=True)
-@moption("--uuid-cache-db", default=_UUID_CACHE_DB_DEFAULT)
+@moption("--uuid-cache-db", default=UUID_CACHE_DB_DEFAULT)
 @moption("-d", "--debug")
 @moption(
     "--template-dir",
-    default=_TEMPLATE_DIR_DEFAULT,
+    default=TEMPLATE_DIR_DEFAULT,
     type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
 )
 @moption("--post-hook", type=click.Path())
+@moption("--labels-types-json5", type=click.Path())
 @click.pass_context
-def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
+def gstasks(ctx, mongo_url, post_hook, debug, labels_types_json5, **kwargs):
     total_level = logging.INFO
     basic_config_kwargs = {"handlers": [], "level": total_level}
     if debug is not None:
@@ -140,25 +139,9 @@ def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
         logging.warning(f'loading "{LOADED_DOTENV}"')
 
     ctx.ensure_object(dict)
-    setup_ctx_obj(ctx, mongo_url=mongo_url, **kwargs)
-
-
-def setup_ctx_obj(
-    ctx,
-    mongo_url: str,
-    list_id: str,
-    uuid_cache_db: str = _UUID_CACHE_DB_DEFAULT,
-    template_dir: str = _TEMPLATE_DIR_DEFAULT,
-) -> None:
-    # (['task_list', 'list_id', 'uuid_cache_db', 'template_dir']
-    ctx.obj["task_list"] = TaskList(
-        mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
+    setup_ctx_obj(
+        ctx, labels_types_json5=labels_types_json5, mongo_url=mongo_url, **kwargs
     )
-    kwargs = dict(
-        list_id=list_id, uuid_cache_db=uuid_cache_db, template_dir=template_dir
-    )
-    for k, v in kwargs.items():
-        ctx.obj[k] = v
 
 
 @gstasks.result_callback()
@@ -538,7 +521,14 @@ def real_add(
     )
 
     kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
-    kwargs["label"] = {k: v for k, v in kwargs["label"]}
+
+    labels_types = ctx.obj["labels_types"]
+    label = {k: v for k, v in kwargs["label"]}
+    for k, v in label.items():
+        for k in labels_types:
+            assert labels_types[k].is_validated(v), (k, labels_types[k], v)
+    kwargs["label"] = label
+
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
