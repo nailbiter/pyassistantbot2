@@ -23,6 +23,7 @@ import hashlib
 import inspect
 import json
 from _gstasks.labels_types import LABELS_TYPES
+import json5
 import logging
 import functools
 import numpy as np
