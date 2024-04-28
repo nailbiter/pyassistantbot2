@@ -1,0 +1,11 @@
+{
+  dotenv: "/Users/nailbiter/for/for-jira-playground/.envrc",
+  getters: {
+    // have to be able to consume
+    // lists from stdin, comma-separated
+    // and return newline-separated
+    name: {
+      cmd_tpl: "parallel -k /usr/local/anaconda3/envs/base-with-altp/bin/python ~/for/forpython/miscutils/jira-cli.py -d api issue ls -i {}|jq '.fields.summary' -r",
+    },
+  },
+}

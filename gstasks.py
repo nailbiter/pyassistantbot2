@@ -40,6 +40,7 @@ import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
 from _gstasks.timing import TimeItContext
+from _gstasks.jira_helper import JiraHelper, generate_symbols_between
 import click
 import pandas as pd
 import tqdm
@@ -1813,9 +1814,38 @@ DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
 
 @gstasks.group()
 @moption("--jira-label", type=str, default=DEFAULT_JIRA_LABEL)
-@moption("--jira-exec", type=str, default="jira-cli.py")
-def jira(jira_label):
-    pass
+@moption(
+    "--jira-config-json5",
+    type=click.Path(),
+    required=True,
+    default=".jira-config.json5",
+)
+@click.pass_context
+def jira(ctx, jira_label, jira_config_json5):
+    ctx.obj["jira"] = dict(label=jira_label)
+    with open(jira_config_json5) as f:
+        jh = JiraHelper(**json5.load(f))
+    logging.warning(f"jh: {jh}")
+    ctx.obj["jira"]["helper"] = jh
+
+
+@jira.command(name="import")
+@moption("-l", "--from-to", type=(str, str), multiple=True)
+@moption("-i", "--id", "ids", multiple=True)
+@moption("-s", "--scheduled-date", required=True, type=CLI_DATETIME)
+@click.pass_context
+def import_jira(ctx, from_to, ids, scheduled_date):
+    ids = [
+        *ids,
+        *itertools.chain.from_iterable(
+            map(lambda t: generate_symbols_between(*t), from_to)
+        ),
+    ]
+    assert len(ids) > 0, (from_to, ids)
+    logging.warning(ids)
+    jh = ctx.obj["jira"]["helper"]
+    names = jh.get("name", ids)
+    logging.warning(names)
 
 
 @gstasks.command()
