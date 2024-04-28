@@ -14,7 +14,7 @@ from tasks\
 ",
   //template: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
   sql_udfs_file: "gstasks_sql_uds.py",
-    index_style: '<a href="http://127.0.0.1:5000/lso/{{x}}">{{x.split("-")[0]}}</a>',
+  index_style: '<a href="http://127.0.0.1:5000/lso/{{x}}">{{x.split("-")[0]}}</a>',
   output_columns: [
     { column_name: "i", jinja_tpl: "{{i}}" },
     { column_name: "name" },
@@ -51,6 +51,11 @@ from tasks\
       jinja_tpl: "{{'E' if (r.uuid==last_engaged_task_uuid) else ''}}",
     },
     { column_name: "labels", jinja_tpl: "{{r.label}}" },
+    {
+      column_name: "jira_state",
+      column_type: "jira",
+      jinja_tpl: "{{r.label}}",
+    },
     /*{
       column_name: "test",
       jinja_tpl: "{{utils.custom.ifnull(utils.custom.get_task_by_uuid(utils.custom.ifnull(r.get('label'),{}).get('test')),{}).get('name')}}",

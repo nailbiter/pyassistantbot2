@@ -49,6 +49,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     make_mongo_friendly,
+    DEFAULT_JIRA_LABEL,
     TEMPLATE_DIR_DEFAULT,
     UUID_CACHE_DB_DEFAULT,
     setup_ctx_obj,
@@ -1809,9 +1810,6 @@ def delete_relation(ctx, uuid_):
     logging.warning(f"del_res: {res}")
 
 
-DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
-
-
 @gstasks.group()
 @moption("--jira-label", type=str, default=DEFAULT_JIRA_LABEL)
 @moption(
@@ -1822,6 +1820,7 @@ DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
 )
 @click.pass_context
 def jira(ctx, jira_label, jira_config_json5):
+    assert jira_label == DEFAULT_JIRA_LABEL, (jira_label, DEFAULT_JIRA_LABEL, "FIXME")
     ctx.obj["jira"] = dict(label=jira_label)
     with open(jira_config_json5) as f:
         jh = JiraHelper(**json5.load(f))

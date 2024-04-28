@@ -37,33 +37,27 @@ def _run_cmd(cmd: str, is_ensure_ok: bool = True) -> str:
 
 
 class JiraGetter:
-    def __init__(self, cmd_tpl: str, sep: str = "\n"):
+    def __init__(self, cmd_tpl: str, is_stdin: bool = True, sep: str = "\n"):
         self._cmd_tpl = Template(cmd_tpl)
         self._sep = sep
+        self._is_stdin = is_stdin
 
     def run(self, env: dict, l: list[str]) -> list[str]:
-        cmd = self._cmd_tpl.render()
+        cmd = self._cmd_tpl.render(dict(l=l))
         logging.warning(f"> {cmd}")
-        # out_stream, err_stream = io.StringIO(), io.StringIO()
-        # subprocess.Popen(
-        #     cmd,
-        #     stderr=err_stream,
-        #     stdout=out_stream,
-        #     shell=True,
-        #     ##capture_output=True
-        # )
         p1 = subprocess.Popen(
             cmd,
             env={**os.environ, **env},
             encoding="utf-8",
             shell=True,
-            # stdin=io.StringIO("\n".join(l)),
-            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            **(dict(stdin=subprocess.PIPE) if self._is_stdin else {}),
         )
         logging.warning(f"l: {l}")
-        out, err = p1.communicate(input="\n".join(l))
+        out, err = p1.communicate(
+            **(dict(input="\n".join(l)) if self._is_stdin else {})
+        )
         out = out.strip()
         logging.warning(f"out: {out}")
         logging.warning(f"err: {err}")
