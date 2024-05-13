@@ -108,7 +108,7 @@ def _init() -> (dict, str):
 
 
 @app.route("/ls", methods=["GET"])
-def hello_world():
+def ls():
     # logging.warning(f"g: {my_g}")
     timings = {}
 
@@ -121,13 +121,34 @@ def hello_world():
     with TimeItContext("parse flask", report_dict=timings):
         args = request.args
         args = request.args.to_dict()
-        profile = "standard"
+
         if "profile" in args:
             profile = args.pop("profile")
-        tag = None
+        else:
+            profile = "standard"
         if "tag" in args:
             tag = args.pop("tag")
-        logging.warning(dict(args=args, profile=profile))
+        else:
+            tag = None
+        ## http://127.0.0.1:5000/ls?profile=ttask&bd=tomorrow&ad=tomorrow
+        if "ad" in args:
+            after_date = args.pop("ad")
+        else:
+            after_date = None
+        if "bd" in args:
+            before_date = args.pop("bd")
+        else:
+            before_date = None
+
+        logging.warning(
+            dict(
+                args=args,
+                profile=profile,
+                tag=tag,
+                after_date=after_date,
+                before_date=before_date,
+            )
+        )
 
     with TimeItContext("widgets", report_dict=timings):
         gstasks_profile = gstasks_profiles[profile]
@@ -208,6 +229,8 @@ def hello_world():
                         keys=keys,
                         out_fn=out_fn,
                         tag=tag,
+                        after_date=after_date,
+                        before_date=before_date,
                     )
                 )
                 logging.warning(f"cmd: `{cmd}`")
@@ -221,6 +244,11 @@ def hello_world():
                 }
                 if tag is not None:
                     kwargs["tags"] = [tag]
+                for kk, vv in dict(
+                    before_date=before_date, after_date=after_date
+                ).items():
+                    if vv is not None:
+                        kwargs[kk] = vv
                 logging.warning(kwargs)
                 real_ls(**kwargs)
             out_fns[k] = out_fn

@@ -309,7 +309,7 @@ def _style_to_buf(
 
     style = df.style
 
-    if classes is not None:
+    if (classes is not None) and len(df) > 0:
         assert len(classes) == len(df), (len(classes), len(df))
         style = style.set_td_classes(
             pd.DataFrame(

@@ -1278,8 +1278,8 @@ def real_ls(
     smart_columns: list[(str, str)] = CLICK_DEFAULT_VALUES["ls"]["smart_columns"],
     text=None,
     labels=[],
-    before_date=None,
-    after_date=None,
+    before_date: typing.Optional[str] = None,
+    after_date: typing.Optional[str] = None,
     un_scheduled=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
     head=None,
     out_format=None,
@@ -1312,6 +1312,7 @@ def real_ls(
         logging.warning(f"fetched {len(df)}")
     with TimeItContext("weekend", report_dict=timings):
         before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
+        logging.warning((before_date, after_date))
         _when = set()
         for w in when:
             if w == "appropriate":
@@ -1432,6 +1433,7 @@ def real_ls(
         #     logging.warning(f"{len(pretty_df)} tasks matched")
         # else:
         #     raise NotImplementedError((out_format,))
+        logging.warning((len(pretty_df), out_format))
 
         click.echo(
             format_df(
