@@ -1861,6 +1861,10 @@ def import_jira(ctx, from_to, ids, scheduled_date):
 @moption("-g", "--filter-tag", "filter_tags", type=str, multiple=True)
 @click.pass_context
 def auto_tag(ctx, uuid_list_file, filter_tags):
+    """
+    examples:
+    $ ./gstasks.py ls -o plain -c name -c uuid -o json|./gstasks.py auto-tag -f- -g borg|jq '.[]|.uuid' -r|./gstasks.py edit -f- -g borg --create-new-tag
+    """
     with click.open_file(uuid_list_file) as f:
         tasks_df = pd.DataFrame(json.load(f))
     tasks_df["tags"] = (
