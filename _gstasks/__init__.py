@@ -278,7 +278,7 @@ class ConvenientCliTimeParamType(click.ParamType):
 def date_to_grid(dt: datetime, grid_hours: bool = False) -> datetime:
     kw = dict(second=0, microsecond=0)
     if grid_hours:
-        kw["hours"] = 0
+        kw["hour"] = 0
     return dt.replace(**kw)
 
 
