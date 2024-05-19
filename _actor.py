@@ -128,7 +128,9 @@ def ttask(
     if True:
         ctx = MockClickContext()
         setup_ctx_obj(ctx, mongo_url=os.environ["PYASSISTANTBOT_MONGO_URL"], list_id="")
-        debug_info = real_add(ctx, names=[content])
+        debug_info = real_add(
+            ctx, names=[content], scheduled_date=datetime.now() + timedelta(days=1)
+        )
         logging.warning(debug_info)
         send_message_cb(f'log "{content}"')
     else:
