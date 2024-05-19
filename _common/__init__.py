@@ -31,6 +31,7 @@ import logging
 import subprocess
 import os
 import logging
+import typing
 import time
 from bson.codec_options import CodecOptions
 import uuid
@@ -88,7 +89,7 @@ TIMEDELTA_ABBREVIATIONS = {
 }
 
 
-def parse_cmdline_datetime(s, fail_callback=None):
+def parse_cmdline_datetime(s, fail_callback=None) -> typing.Optional[datetime]:
     try:
         if s is None:
             return None

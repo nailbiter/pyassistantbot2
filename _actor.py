@@ -34,6 +34,7 @@ import pandas as pd
 from gstasks import setup_ctx_obj, real_add
 import functools
 import collections
+import typing
 
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 
@@ -119,17 +120,27 @@ def sleepend(_, send_message_cb=None, mongo_client=None):
     )
 
 
-def ttask(content, send_message_cb=None, mongo_client=None):
-    mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one(
-        {
-            "content": content,
-            "date": _common.to_utc_datetime(),
-        }
-    )
-    send_message_cb(f'log "{content}"')
-
-    # ctx = MockClickContext()
-    # setup_ctx_obj(ctx.obj, mongo_url="", list_id="")
+def ttask(
+    content: str,
+    send_message_cb: typing.Optional[typing.Callable] = None,
+    mongo_client=None,
+):
+    if True:
+        ctx = MockClickContext()
+        setup_ctx_obj(ctx, mongo_url=os.environ["PYASSISTANTBOT_MONGO_URL"], list_id="")
+        debug_info = real_add(
+            ctx, names=[content], scheduled_date=datetime.now() + timedelta(days=1)
+        )
+        logging.warning(debug_info)
+        send_message_cb(f'log "{content}"')
+    else:
+        mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one(
+            {
+                "content": content,
+                "date": _common.to_utc_datetime(),
+            }
+        )
+        send_message_cb(f'log "{content}"')
 
 
 # https://www.nhs.uk/common-health-questions/food-and-diet/what-should-my-daily-intake-of-calories-be/

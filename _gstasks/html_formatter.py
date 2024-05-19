@@ -44,7 +44,7 @@ import importlib.util
 # FIXME
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
-from _gstasks import get_last_engaged_task_uuid
+from _gstasks import get_last_engaged_task_uuid, DEFAULT_JIRA_LABEL
 from _gstasks.timing import TimeItContext
 
 
@@ -263,8 +263,18 @@ def format_html(
     logging.warning(timings_df)
 
 
-def _render_column(output_column, rs, env):
-    # logging.warning(f"_render_column in: {output_column, rs[:5]}")
+def _render_column(output_column: dict, rs: list[dict], env: dict) -> list[str]:
+    column_type = output_column.get("column_type", "usual")
+    if column_type == "usual":
+        xs = [r.get(output_column["column_name"]) for r in rs]
+    elif column_type == "jira":
+        # TODO
+        df = pd.DataFrame(rs)
+        df.loc[df["label"]]
+        raise NotImplementedError(dict(column_type=column_type))
+    else:
+        raise NotImplementedError(dict(column_type=column_type))
+
     if "jinja_tpl" in output_column:
         tpl = Template(output_column["jinja_tpl"])
         return [
@@ -274,22 +284,13 @@ def _render_column(output_column, rs, env):
                     "r": r,
                     "i": i,
                     "column_name": output_column["column_name"],
-                    "x": r.get(output_column["column_name"]),
+                    "x": x,
                 }
             ).strip()
-            for i, r in enumerate(rs)
+            for i, (r, x) in enumerate(zip(rs, xs))
         ]
-        # for i, r in enumerate(rs):
-        #     try:
-        #         res.append(
-        #         )
-        #     except ValueError as ve:
-        #         logging.error((i, r, output_column))
-        #         raise ve
-        # return res
     else:
-        cn = output_column["column_name"]
-        return [r.get(cn) for r in rs]
+        return xs
 
 
 def _style_to_buf(
@@ -308,7 +309,7 @@ def _style_to_buf(
 
     style = df.style
 
-    if classes is not None:
+    if (classes is not None) and len(df) > 0:
         assert len(classes) == len(df), (len(classes), len(df))
         style = style.set_td_classes(
             pd.DataFrame(

@@ -40,6 +40,7 @@ import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
 from _gstasks.timing import TimeItContext
+from _gstasks.jira_helper import JiraHelper, generate_symbols_between
 import click
 import pandas as pd
 import tqdm
@@ -48,6 +49,10 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     make_mongo_friendly,
+    DEFAULT_JIRA_LABEL,
+    TEMPLATE_DIR_DEFAULT,
+    UUID_CACHE_DB_DEFAULT,
+    setup_ctx_obj,
     smart_processor,
     CLI_DATETIME,
     CLI_TIME,
@@ -95,26 +100,22 @@ _SCOPES = [
 
 moption = functools.partial(click.option, show_envvar=True)
 
-_TEMPLATE_DIR_DEFAULT = path.join(path.dirname(__file__), "_gstasks/templates")
-_UUID_CACHE_DB_DEFAULT = path.abspath(
-    path.join(path.dirname(__file__), ".uuid_cache.db")
-)
-
 
 # @click.group(chain=True) #cannot do, because have subcommands
 @click.group()
 @moption("--list-id", required=True)
 @moption("--mongo-url", required=True)
-@moption("--uuid-cache-db", default=_UUID_CACHE_DB_DEFAULT)
+@moption("--uuid-cache-db", default=UUID_CACHE_DB_DEFAULT)
 @moption("-d", "--debug")
 @moption(
     "--template-dir",
-    default=_TEMPLATE_DIR_DEFAULT,
+    default=TEMPLATE_DIR_DEFAULT,
     type=click.Path(file_okay=False, dir_okay=True, exists=True, readable=True),
 )
 @moption("--post-hook", type=click.Path())
+@moption("--labels-types-json5", type=click.Path())
 @click.pass_context
-def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
+def gstasks(ctx, mongo_url, post_hook, debug, labels_types_json5, **kwargs):
     total_level = logging.INFO
     basic_config_kwargs = {"handlers": [], "level": total_level}
     if debug is not None:
@@ -140,25 +141,9 @@ def gstasks(ctx, mongo_url, post_hook, debug, **kwargs):
         logging.warning(f'loading "{LOADED_DOTENV}"')
 
     ctx.ensure_object(dict)
-    setup_ctx_obj(ctx, mongo_url=mongo_url, **kwargs)
-
-
-def setup_ctx_obj(
-    ctx,
-    mongo_url: str,
-    list_id: str,
-    uuid_cache_db: str = _UUID_CACHE_DB_DEFAULT,
-    template_dir: str = _TEMPLATE_DIR_DEFAULT,
-) -> None:
-    # (['task_list', 'list_id', 'uuid_cache_db', 'template_dir']
-    ctx.obj["task_list"] = TaskList(
-        mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
+    setup_ctx_obj(
+        ctx, labels_types_json5=labels_types_json5, mongo_url=mongo_url, **kwargs
     )
-    kwargs = dict(
-        list_id=list_id, uuid_cache_db=uuid_cache_db, template_dir=template_dir
-    )
-    for k, v in kwargs.items():
-        ctx.obj[k] = v
 
 
 @gstasks.result_callback()
@@ -519,8 +504,14 @@ def add(*args, **kwargs):
 
 
 def real_add(
-    ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwargs
-):
+    ctx,
+    names: list[str],
+    create_new_tag: bool = False,
+    names_batch_file: typing.Optional[str] = None,
+    post_hook: typing.Optional[str] = None,
+    dry_run: bool = False,
+    **kwargs,
+) -> dict:
     names = list(names)
     if names_batch_file is not None:
         with click.open_file(names_batch_file) as f:
@@ -537,20 +528,32 @@ def real_add(
         flag_name="--create-new-tag",
     )
 
-    kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
-    kwargs["label"] = {k: v for k, v in kwargs["label"]}
+    kwargs["tags"] = [_process_tag(tag) for tag in kwargs.get("tags", [])]
+
+    labels_types = ctx.obj["labels_types"]
+    label = {k: v for k, v in kwargs.get("label", [])}
+    for k, v in label.items():
+        for k in labels_types:
+            assert labels_types[k].is_validated(v), (k, labels_types[k], v)
+    kwargs["label"] = label
+
+    debug_info = dict(uuids=[])
+
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
         uuid = task_list.insert_or_replace_record(
             copy.deepcopy(kwargs), dry_run=dry_run
         )
+        debug_info["uuids"].append(uuid)
         if not dry_run:
             UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
     if (post_hook is not None) and (not dry_run):
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
+
+    return debug_info
 
 
 @gstasks.command()
@@ -1286,8 +1289,8 @@ def real_ls(
     smart_columns: list[(str, str)] = CLICK_DEFAULT_VALUES["ls"]["smart_columns"],
     text=None,
     labels=[],
-    before_date=None,
-    after_date=None,
+    before_date: typing.Optional[str] = None,
+    after_date: typing.Optional[str] = None,
     un_scheduled=CLICK_DEFAULT_VALUES["ls"]["un_scheduled"],
     head=None,
     out_format=None,
@@ -1320,6 +1323,7 @@ def real_ls(
         logging.warning(f"fetched {len(df)}")
     with TimeItContext("weekend", report_dict=timings):
         before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
+        logging.warning((before_date, after_date))
         _when = set()
         for w in when:
             if w == "appropriate":
@@ -1440,6 +1444,7 @@ def real_ls(
         #     logging.warning(f"{len(pretty_df)} tasks matched")
         # else:
         #     raise NotImplementedError((out_format,))
+        logging.warning((len(pretty_df), out_format))
 
         click.echo(
             format_df(
@@ -1818,14 +1823,41 @@ def delete_relation(ctx, uuid_):
     logging.warning(f"del_res: {res}")
 
 
-DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
-
-
 @gstasks.group()
 @moption("--jira-label", type=str, default=DEFAULT_JIRA_LABEL)
-@moption("--jira-exec", type=str, default="jira-cli.py")
-def jira(jira_label):
-    pass
+@moption(
+    "--jira-config-json5",
+    type=click.Path(),
+    required=True,
+    default=".jira-config.json5",
+)
+@click.pass_context
+def jira(ctx, jira_label, jira_config_json5):
+    assert jira_label == DEFAULT_JIRA_LABEL, (jira_label, DEFAULT_JIRA_LABEL, "FIXME")
+    ctx.obj["jira"] = dict(label=jira_label)
+    with open(jira_config_json5) as f:
+        jh = JiraHelper(**json5.load(f))
+    logging.warning(f"jh: {jh}")
+    ctx.obj["jira"]["helper"] = jh
+
+
+@jira.command(name="import")
+@moption("-l", "--from-to", type=(str, str), multiple=True)
+@moption("-i", "--id", "ids", multiple=True)
+@moption("-s", "--scheduled-date", required=True, type=CLI_DATETIME)
+@click.pass_context
+def import_jira(ctx, from_to, ids, scheduled_date):
+    ids = [
+        *ids,
+        *itertools.chain.from_iterable(
+            map(lambda t: generate_symbols_between(*t), from_to)
+        ),
+    ]
+    assert len(ids) > 0, (from_to, ids)
+    logging.warning(ids)
+    jh = ctx.obj["jira"]["helper"]
+    names = jh.get("name", ids)
+    logging.warning(names)
 
 
 @gstasks.command()
@@ -1840,6 +1872,10 @@ def jira(jira_label):
 @moption("-g", "--filter-tag", "filter_tags", type=str, multiple=True)
 @click.pass_context
 def auto_tag(ctx, uuid_list_file, filter_tags):
+    """
+    examples:
+    $ ./gstasks.py ls -o plain -c name -c uuid -o json|./gstasks.py auto-tag -f- -g borg|jq '.[]|.uuid' -r|./gstasks.py edit -f- -g borg --create-new-tag
+    """
     with click.open_file(uuid_list_file) as f:
         tasks_df = pd.DataFrame(json.load(f))
     tasks_df["tags"] = (
