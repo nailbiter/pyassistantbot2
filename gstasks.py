@@ -505,7 +505,7 @@ def add(*args, **kwargs):
 
 def real_add(
     ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwargs
-):
+) -> dict:
     names = list(names)
     if names_batch_file is not None:
         with click.open_file(names_batch_file) as f:
@@ -531,18 +531,23 @@ def real_add(
             assert labels_types[k].is_validated(v), (k, labels_types[k], v)
     kwargs["label"] = label
 
+    debug_info = dict(uuids=[])
+
     for name in tqdm.tqdm(names):
         assert name is not None
         kwargs["name"] = name
         uuid = task_list.insert_or_replace_record(
             copy.deepcopy(kwargs), dry_run=dry_run
         )
+        debug_info["uuids"].append(uuid)
         if not dry_run:
             UuidCacher(ctx.obj["uuid_cache_db"]).add(uuid, name)
 
     if (post_hook is not None) and (not dry_run):
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
+
+    return debug_info
 
 
 @gstasks.command()
