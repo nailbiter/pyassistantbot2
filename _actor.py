@@ -23,7 +23,8 @@ from datetime import datetime, timedelta
 import subprocess
 import pymongo
 import _common
-from _common import spl, date_to_grid
+from _common import spl
+from _gstasks import date_to_grid
 import _common.simple_math_eval
 import heartbeat_time
 import os
