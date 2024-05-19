@@ -504,7 +504,13 @@ def add(*args, **kwargs):
 
 
 def real_add(
-    ctx, create_new_tag, names_batch_file, post_hook, names, dry_run, **kwargs
+    ctx,
+    names: list[str],
+    create_new_tag: bool = False,
+    names_batch_file: typing.Optional[str] = None,
+    post_hook: typing.Optional[str] = None,
+    dry_run: bool = False,
+    **kwargs,
 ) -> dict:
     names = list(names)
     if names_batch_file is not None:
