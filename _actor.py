@@ -137,7 +137,7 @@ def ttask(
         )
         logging.warning(debug_info)
         (_uuid,) = debug_info["uuids"]
-        send_message_cb(f'log "{content}" (`{_uuid}`)')
+        send_message_cb(f'log "{content}" ( `{_uuid}` )')
     else:
         mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one(
             {
