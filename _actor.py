@@ -132,7 +132,9 @@ def ttask(
         debug_info = real_add(
             ctx,
             names=[content],
-            scheduled_date=date_to_grid(datetime.now() + timedelta(days=1)),
+            scheduled_date=date_to_grid(
+                datetime.now() + timedelta(days=1), grid_hours=True
+            ),
             URL=None,
         )
         logging.warning(debug_info)
