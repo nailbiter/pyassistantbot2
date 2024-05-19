@@ -71,8 +71,10 @@ def _parse_date(s):
         )
 
 
-def _format_url(url):
+def _format_url(url) -> str:
     if not url:
+        return ""
+    elif pd.isna(url):
         return ""
     elif url.startswith("https://trello.com/c/"):
         return "T"
