@@ -132,7 +132,7 @@ def ttask(
             ctx,
             names=[content],
             scheduled_date=datetime.now() + timedelta(days=1),
-            url=None,
+            URL=None,
         )
         logging.warning(debug_info)
         send_message_cb(f'log "{content}"')
