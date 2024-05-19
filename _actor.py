@@ -127,7 +127,7 @@ def ttask(
 ):
     if True:
         ctx = MockClickContext()
-        setup_ctx_obj(ctx.obj, mongo_url=environ["GSTASKS_MONGO_URL"], list_id="")
+        setup_ctx_obj(ctx.obj, mongo_url=os.environ["GSTASKS_MONGO_URL"], list_id="")
         debug_info = real_add(ctx, names=[content])
         logging.warning(debug_info)
         send_message_cb(f'log "{content}"')
