@@ -98,9 +98,9 @@ UUID_CACHE_DB_DEFAULT = path.abspath(
 
 def setup_ctx_obj(
     ctx,
-    labels_types_json5: typing.Optional[str],
     mongo_url: str,
     list_id: str,
+    labels_types_json5: typing.Optional[str] = None,
     uuid_cache_db: str = UUID_CACHE_DB_DEFAULT,
     template_dir: str = TEMPLATE_DIR_DEFAULT,
 ) -> None:
