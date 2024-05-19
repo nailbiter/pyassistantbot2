@@ -279,6 +279,7 @@ def date_to_grid(dt: datetime, grid_hours: bool = False) -> datetime:
     kw = dict(second=0, microsecond=0)
     if grid_hours:
         kw["hour"] = 0
+        kw["minute"] = 0
     return dt.replace(**kw)
 
 
