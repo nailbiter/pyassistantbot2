@@ -272,8 +272,11 @@ class ConvenientCliTimeParamType(click.ParamType):
             if pd.isna(res):
                 self.fail(f'cannot parse "{value}"', param, ctx)
 
-        res = res.replace(second=0, microsecond=0)
-        return res
+        return date_to_grid(res)
+
+
+def date_to_grid(dt: datetime) -> datetime:
+    return dt.replace(second=0, microsecond=0)
 
 
 CLI_TIME = ConvenientCliTimeParamType

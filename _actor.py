@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 import subprocess
 import pymongo
 import _common
-from _common import spl
+from _common import spl, date_to_grid
 import _common.simple_math_eval
 import heartbeat_time
 import os
@@ -131,7 +131,7 @@ def ttask(
         debug_info = real_add(
             ctx,
             names=[content],
-            scheduled_date=datetime.now() + timedelta(days=1),
+            scheduled_date=date_to_grid(datetime.now() + timedelta(days=1)),
             URL=None,
         )
         logging.warning(debug_info)
