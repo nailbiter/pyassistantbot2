@@ -275,8 +275,11 @@ class ConvenientCliTimeParamType(click.ParamType):
         return date_to_grid(res)
 
 
-def date_to_grid(dt: datetime) -> datetime:
-    return dt.replace(second=0, microsecond=0)
+def date_to_grid(dt: datetime, grid_hours: bool = False) -> datetime:
+    kw = dict(second=0, microsecond=0)
+    if grid_hours:
+        kw["hours"] = 0
+    return dt.replace(**kw)
 
 
 CLI_TIME = ConvenientCliTimeParamType

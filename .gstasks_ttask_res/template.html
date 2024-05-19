@@ -9,7 +9,7 @@
   <body>
     <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday">before yesterday</a>
     {% for k in ['yesterday','today','tomorrow'] %}
-    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad=today">{{k}}</a>
+    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad={{k}}">{{k}}</a>
     {% endfor %}
     {{table_htmls['ttask']|safe}}
     <div class='container'>
