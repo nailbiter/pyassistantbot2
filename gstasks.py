@@ -528,10 +528,10 @@ def real_add(
         flag_name="--create-new-tag",
     )
 
-    kwargs["tags"] = [_process_tag(tag) for tag in kwargs["tags"]]
+    kwargs["tags"] = [_process_tag(tag) for tag in kwargs.get("tags", [])]
 
     labels_types = ctx.obj["labels_types"]
-    label = {k: v for k, v in kwargs["label"]}
+    label = {k: v for k, v in kwargs.get("label", [])}
     for k, v in label.items():
         for k in labels_types:
             assert labels_types[k].is_validated(v), (k, labels_types[k], v)
