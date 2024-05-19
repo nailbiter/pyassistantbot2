@@ -10,6 +10,7 @@
     {% for k in ['yesterday','today','tomorrow'] %}
     <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad=today">{{k}}</a>
     {% endfor %}
+    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=today">before today</a>
     {{table_htmls['ttask']|safe}}
     <div class='container'>
       {{widgets.habits_df.to_html(classes=['habits_df'])|safe}}
