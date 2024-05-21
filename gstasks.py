@@ -1841,6 +1841,14 @@ def jira(ctx, jira_label, jira_config_json5):
     ctx.obj["jira"]["helper"] = jh
 
 
+@jira.command(name="link")
+@moption("-u", "--gstask-uuid", required=True)
+@moption("-i", "--jira-id", required=True)
+@click.pass_context
+def jira_link(ctx, gstask_uuid, jira_id):
+    pass
+
+
 @jira.command(name="import")
 @moption("-l", "--from-to", type=(str, str), multiple=True)
 @moption("-i", "--id", "ids", multiple=True)
