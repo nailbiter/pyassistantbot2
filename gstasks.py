@@ -1842,11 +1842,28 @@ def jira(ctx, jira_label, jira_config_json5):
 
 
 @jira.command(name="link")
-@moption("-u", "--gstask-uuid", required=True)
-@moption("-i", "--jira-id", required=True)
+@moption("-u", "--gstask-uuid")
+@moption("-i", "--jira-id")
 @click.pass_context
 def jira_link(ctx, gstask_uuid, jira_id):
-    pass
+    task_list = ctx.obj["task_list"]
+
+    g, j = gstask_uuid is not None, jira_id is not None
+    if (g, j) == (False, False):
+        raise NotImplementedError(
+            "at least one of `jira_id` or `gstask_uuid` has to be non-null!"
+        )
+    elif (g, j) == (False, True):
+        raise NotImplementedError("TODO")
+    elif (g, j) == (True, False):
+        r, _ = task_list.get_task(
+            uuid_text=gstask_uuid,
+            index=None,
+            # get_all_tasks_kwargs=dict(is_drop_hidden_fields=False),
+        )
+
+    elif (g, j) == (True, True):
+        raise NotImplementedError("TODO")
 
 
 @jira.command(name="import")
