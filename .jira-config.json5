@@ -1,14 +1,11 @@
 {
   dotenv: "/Users/nailbiter/for/for-jira-playground/.envrc",
-  operations: {
-    add_issue: 'jira-cli.py -d api issue add -p 10008 -s "{{ summary }}" -t 10020 -d "{{ description }}"',
-  },
   getters: {
     // have to be able to consume
     // lists from stdin, comma-separated
     // and return newline-separated
     name: {
-      cmd_tpl: "/usr/local/anaconda3/envs/base-with-altp/bin/python ~/for/forpython/miscutils/jira-cli.py -d api issue ls {%for x in l%} -i {{x}}{%endfor%}|jq '.fields.summary' -r",
+	cmd_tpl: "/usr/local/anaconda3/envs/base-with-altp/bin/python ~/for/forpython/miscutils/jira-cli.py -d api issue ls {%for x in l%} -i {{x}}{%endfor%}|jq '.fields.summary' -r",
       is_stdin: false,
     },
     state: {
