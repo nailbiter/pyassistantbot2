@@ -146,7 +146,7 @@ def ttask(
         setup_ctx_obj(ctx, mongo_url=os.environ["PYASSISTANTBOT_MONGO_URL"], list_id="")
         kwargs = dict(URL=None)
         for k, cb in _GSTASKS_TAGS.items():
-            if f"#{k}" <= content:
+            if content.find(f"#{k}") >= 0:
                 logging.warning((f"#{k}", content))
                 kwargs = {**kwargs, **cb(kwargs)}
         debug_info = real_add(
