@@ -1862,7 +1862,6 @@ def jira_link(ctx, gstask_uuid, jira_id):
         r, idx = task_list.get_task(
             uuid_text=gstask_uuid,
             index=None,
-            # get_all_tasks_kwargs=dict(is_drop_hidden_fields=False),
         )
         out = jh.run_operation(
             "add_issue",
@@ -1879,6 +1878,13 @@ def jira_link(ctx, gstask_uuid, jira_id):
         logging.warning(r)
         task_list.insert_or_replace_record(r, index=idx)
     elif (g, j) == (True, True):
+        r, idx = task_list.get_task(
+            uuid_text=gstask_uuid,
+            index=None,
+        )
+        # check jira ticket has no sigil
+        # edit description
+        # link
         raise NotImplementedError("TODO")
 
 
