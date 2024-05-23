@@ -156,6 +156,7 @@ def ttask(
             #     datetime.now() + timedelta(days=1), grid_hours=True
             # ),
             # URL=None,
+            **kwargs,
         )
         logging.warning(debug_info)
         (_uuid,) = debug_info["uuids"]
