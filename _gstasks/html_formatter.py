@@ -44,7 +44,8 @@ import importlib.util
 # FIXME
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
 from _gstasks._pandas_sql import pandas_sql
-from _gstasks import get_last_engaged_task_uuid, DEFAULT_JIRA_LABEL
+from _gstasks import get_last_engaged_task_uuid
+from _gstasks.jira_helper import DEFAULT_JIRA_LABEL
 from _gstasks.timing import TimeItContext
 
 

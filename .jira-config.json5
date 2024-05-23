@@ -1,7 +1,7 @@
 {
   dotenv: "/Users/nailbiter/for/for-jira-playground/.envrc",
   operations: {
-    add_issue: 'jira-cli.py -d api issue add -p 10008 -s "{{ summary }}" -t 10020 -d "{{ description }}"',
+    add_issue: 'jira-cli.py -d api issue add -p 10008 -s "{{ name }}" -t 10020 -d "{{ description }}"',
   },
   getters: {
     // have to be able to consume

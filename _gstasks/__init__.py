@@ -48,7 +48,6 @@ from dateutil.relativedelta import relativedelta
 import pytz
 import _common
 
-DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
 
 _LOCAL_TZ_NAME = "Asia/Tokyo"
 
