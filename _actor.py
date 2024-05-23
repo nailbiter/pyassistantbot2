@@ -121,6 +121,21 @@ def sleepend(_, send_message_cb=None, mongo_client=None):
     )
 
 
+_GSTASKS_TAGS = {
+    # (kwargs: dict, ) -> dict
+    "tomorrow": lambda _: dict(
+        scheduled_date=date_to_grid(datetime.now() + timedelta(days=1), grid_hours=True)
+    ),
+    "findout": lambda kwargs: dict(
+        tags=[*kwargs.get("tags", []), "findout"], create_new_tag=True
+    ),
+}
+
+
+# def _add_kwarg_tomorrow(kwargs: dict) -> None:
+#     pass
+
+
 def ttask(
     content: str,
     send_message_cb: typing.Optional[typing.Callable] = None,
@@ -129,17 +144,24 @@ def ttask(
     if True:
         ctx = MockClickContext()
         setup_ctx_obj(ctx, mongo_url=os.environ["PYASSISTANTBOT_MONGO_URL"], list_id="")
+        kwargs = dict(URL=None)
+        for k, cb in _GSTASKS_TAGS.items():
+            if f"#{k}" <= content:
+                logging.warning((f"#{k}", content))
+                kwargs = {**kwargs, **cb(kwargs)}
         debug_info = real_add(
             ctx,
             names=[content],
-            scheduled_date=date_to_grid(
-                datetime.now() + timedelta(days=1), grid_hours=True
-            ),
-            URL=None,
+            # scheduled_date=date_to_grid(
+            #     datetime.now() + timedelta(days=1), grid_hours=True
+            # ),
+            # URL=None,
         )
         logging.warning(debug_info)
         (_uuid,) = debug_info["uuids"]
-        send_message_cb(f'log "{content}" `{_uuid}`', parse_mode="Markdown")
+        send_message_cb(
+            f'log "{content}"\n```\n{kwargs}\n```\n `{_uuid}`', parse_mode="Markdown"
+        )
     else:
         mongo_client[_common.MONGO_COLL_NAME]["alex.ttask"].insert_one(
             {
