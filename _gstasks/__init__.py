@@ -20,6 +20,7 @@ ORGANIZATION:
 
 # pip3 install python-dateutil
 import hashlib
+import more_itertools
 import inspect
 import json
 from _gstasks.labels_types import LABELS_TYPES
@@ -27,10 +28,12 @@ import json5
 import logging
 import functools
 import numpy as np
+import operator
 import os
 from os import path
 import re
 import sqlite3
+import itertools
 import string
 import subprocess
 import sys
@@ -521,3 +524,54 @@ def smart_processor(df: pd.DataFrame, processor: str) -> pd.Series:
         return res
     else:
         raise NotImplementedError((processor,))
+
+
+def process_stopwatch_slice(df: pd.DataFrame) -> dict:
+    """
+    @return (is_running,elapsed)
+    """
+    # assert len(df)>0
+    assert set(df["action"]) <= {"stop", "start"}
+    now = datetime.now()
+    rs = df.sort_values(by="now").to_dict(orient="records")
+
+    rs = [
+        dict(
+            action=action,
+            now=min(map(operator.itemgetter("now"), group))
+            if action == "start"
+            else max(map(operator.itemgetter("now"), group)),
+        )
+        for action, group in itertools.groupby(rs, key=operator.itemgetter("action"))
+    ]
+
+    while (rs[0]["action"] == "stop") and (len(rs) > 0):
+        rs.pop(0)
+
+    if len(rs) == 0:
+        return dict(is_running=False, elapsed=timedelta(0))
+    elif len(rs) == 1:
+        (r,) = rs
+        logging.warning(r)
+        return dict(is_running=True, elapsed=now - r["now"])
+    elif len(rs) % 2 == 0:
+        return dict(
+            is_running=False,
+            elapsed=sum(
+                [b["now"] - a["now"] for a, b in more_itertools.batched(rs, 2)],
+                start=timedelta(0),
+            ),
+        )
+    elif len(rs) % 2 == 1:
+        *head, tail = rs
+        return dict(
+            is_running=True,
+            elapsed=sum(
+                [b["now"] - a["now"] for a, b in more_itertools.batched(head, 2)],
+                start=timedelta(0),
+            )
+            + (now - tail["now"]),
+        )
+        pass
+    else:
+        raise NotImplementedError(rs)

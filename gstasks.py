@@ -52,6 +52,7 @@ from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
+    process_stopwatch_slice,
     make_mongo_friendly,
     TEMPLATE_DIR_DEFAULT,
     UUID_CACHE_DB_DEFAULT,
@@ -982,6 +983,52 @@ def real_mark(
         if post_hook is not None:
             logging.warning(f'executing post_hook "{post_hook}"')
             os.system(post_hook)
+
+
+@gstasks.group()
+@click.pass_context
+def stopwatch(ctx):
+    ctx.obj["stopwatch"] = dict(coll=ctx.obj["task_list"].get_coll("stopwatch"))
+
+
+@stopwatch.command(name="start")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def start_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.insert_one(dict(name=name, action="start", now=datetime.now()))
+
+
+@stopwatch.command(name="remove")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def remove_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.delete_(dict(name=name))
+
+
+@stopwatch.command(name="stop")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def stop_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.insert_one(dict(name=name, action="stop", now=datetime.now()))
+
+
+@stopwatch.command(name="ls")
+@click.pass_context
+def ls_stopwatch(ctx):
+    coll = ctx.obj["stopwatch"]["coll"]
+    now = datetime.now()
+    df = pd.DataFrame(coll.find())
+    df = pd.DataFrame(
+        [
+            dict(process_stopwatch_slice(slice_), name=n)
+            for n, slice_ in df.groupby("name")
+        ]
+    )
+    df.set_index("name", inplace=True)
+    click.echo(df)
 
 
 @gstasks.group()
