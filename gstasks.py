@@ -1016,8 +1016,9 @@ def stop_stopwatch(ctx, name):
 
 
 @stopwatch.command(name="ls")
+@moption("-t", "--type", "type_", type=click.Choice(["running", "stopped"]))
 @click.pass_context
-def ls_stopwatch(ctx):
+def ls_stopwatch(ctx, type_):
     coll = ctx.obj["stopwatch"]["coll"]
     now = datetime.now()
     df = pd.DataFrame(coll.find())
@@ -1027,7 +1028,12 @@ def ls_stopwatch(ctx):
             for n, slice_ in df.groupby("name")
         ]
     )
+    if type_ == "running":
+        df = df[df["is_running"]]
+    elif type_ == "stopped":
+        df = df[~df["is_running"]]
     df.set_index("name", inplace=True)
+    df.sort_index(inplace=True)
     click.echo(df)
 
 
