@@ -96,6 +96,8 @@ from bson import json_util
 # FIXME: do without global env
 LOADED_DOTENV = None
 
+STANDARD_STATES = ["DONE", "FAILED", "REGULAR"]
+
 # If modifying these scopes, delete the file token.google_spreadsheet.pickle.
 _SCOPES = [
     #    'https://www.googleapis.com/auth/spreadsheets.readonly',
@@ -332,7 +334,7 @@ _NONE_CLICK_VALUE = "NONE"
 @moption(
     "-t",
     "--status",
-    type=click.Choice(["DONE", "FAILED", "REGULAR", *ADDITIONAL_STATES]),
+    type=click.Choice([*STANDARD_STATES, *ADDITIONAL_STATES]),
 )
 @moption(
     "-w",
@@ -444,9 +446,10 @@ def edit(
 @gstasks.command()
 @moption("-u", "--uuid-text", "uuid_texts", required=True, multiple=True)
 @moption("-s", "--scheduled-date", type=CLI_DATETIME)
+@moption("-t", "--status", type=click.Choice([*STANDARD_STATES, *ADDITIONAL_STATES]))
 @moption("--done/--no-done", "-d/ ", "is_done", default=False)
 @click.pass_context
-def cp(ctx, uuid_texts, scheduled_date, is_done):
+def cp(ctx, uuid_texts, scheduled_date, is_done, status):
     """
     FIXME:
     1(done). copy and fixup (same as in `edit`)
@@ -470,6 +473,8 @@ def cp(ctx, uuid_texts, scheduled_date, is_done):
         new_r = copy.deepcopy(r)
         _uuid = new_r.pop("uuid")
         new_r["label"] = {**ifnull(r.get("label", {}), {}), "cloned_from": _uuid}
+        if status is not None:
+            new_r["status"] = status
         if scheduled_date is not None:
             new_r["scheduled_date"] = scheduled_date
         logger.warning(f"r:\n{pd.Series(r)}")
@@ -494,7 +499,7 @@ def cp(ctx, uuid_texts, scheduled_date, is_done):
 )
 @moption("-u", "--url", "URL")
 @moption("-s", "--scheduled-date", type=CLI_DATETIME)
-@moption("-t", "--status", type=click.Choice(["REGULAR", "DONE", *ADDITIONAL_STATES]))
+@moption("-t", "--status", type=click.Choice([*STANDARD_STATES, *ADDITIONAL_STATES]))
 @moption("-g", "--tag", "tags", multiple=True)
 @moption("-d", "--due", type=CLI_DATETIME)
 @moption("-c", "--comment")
