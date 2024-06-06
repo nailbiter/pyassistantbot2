@@ -40,7 +40,11 @@ import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
 from _gstasks.timing import TimeItContext
-from _gstasks.jira_helper import JiraHelper, generate_symbols_between
+from _gstasks.jira_helper import (
+    JiraHelper,
+    generate_symbols_between,
+    DEFAULT_JIRA_LABEL,
+)
 import click
 import pandas as pd
 import tqdm
@@ -48,8 +52,8 @@ from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
+    process_stopwatch_slice,
     make_mongo_friendly,
-    DEFAULT_JIRA_LABEL,
     TEMPLATE_DIR_DEFAULT,
     UUID_CACHE_DB_DEFAULT,
     setup_ctx_obj,
@@ -982,6 +986,52 @@ def real_mark(
 
 
 @gstasks.group()
+@click.pass_context
+def stopwatch(ctx):
+    ctx.obj["stopwatch"] = dict(coll=ctx.obj["task_list"].get_coll("stopwatch"))
+
+
+@stopwatch.command(name="start")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def start_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.insert_one(dict(name=name, action="start", now=datetime.now()))
+
+
+@stopwatch.command(name="remove")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def remove_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.delete_(dict(name=name))
+
+
+@stopwatch.command(name="stop")
+@click.option("-n", "--name", type=str, required=True)
+@click.pass_context
+def stop_stopwatch(ctx, name):
+    coll = ctx.obj["stopwatch"]["coll"]
+    coll.insert_one(dict(name=name, action="stop", now=datetime.now()))
+
+
+@stopwatch.command(name="ls")
+@click.pass_context
+def ls_stopwatch(ctx):
+    coll = ctx.obj["stopwatch"]["coll"]
+    now = datetime.now()
+    df = pd.DataFrame(coll.find())
+    df = pd.DataFrame(
+        [
+            dict(process_stopwatch_slice(slice_), name=n)
+            for n, slice_ in df.groupby("name")
+        ]
+    )
+    df.set_index("name", inplace=True)
+    click.echo(df)
+
+
+@gstasks.group()
 @moption("--is-sweep-daemon-pid/--no-is-sweep-daemon-pid", default=False)
 @moption(
     "--sweep-daemon-pid-file",
@@ -1824,7 +1874,6 @@ def delete_relation(ctx, uuid_):
 
 
 @gstasks.group()
-@moption("--jira-label", type=str, default=DEFAULT_JIRA_LABEL)
 @moption(
     "--jira-config-json5",
     type=click.Path(),
@@ -1832,9 +1881,9 @@ def delete_relation(ctx, uuid_):
     default=".jira-config.json5",
 )
 @click.pass_context
-def jira(ctx, jira_label, jira_config_json5):
-    assert jira_label == DEFAULT_JIRA_LABEL, (jira_label, DEFAULT_JIRA_LABEL, "FIXME")
-    ctx.obj["jira"] = dict(label=jira_label)
+def jira(ctx, jira_config_json5):
+    # assert jira_label == DEFAULT_JIRA_LABEL, (jira_label, DEFAULT_JIRA_LABEL, "FIXME")
+    ctx.obj["jira"] = dict()
     with open(jira_config_json5) as f:
         jh = JiraHelper(**json5.load(f))
     logging.warning(f"jh: {jh}")
@@ -1842,11 +1891,53 @@ def jira(ctx, jira_label, jira_config_json5):
 
 
 @jira.command(name="link")
-@moption("-u", "--gstask-uuid", required=True)
-@moption("-i", "--jira-id", required=True)
+@moption("-u", "--gstask-uuid")
+@moption("-i", "--jira-id")
 @click.pass_context
 def jira_link(ctx, gstask_uuid, jira_id):
-    pass
+    task_list = ctx.obj["task_list"]
+    jh = ctx.obj["jira"]["helper"]
+
+    g, j = gstask_uuid is not None, jira_id is not None
+    if (g, j) == (False, False):
+        raise NotImplementedError(
+            "at least one of `jira_id` or `gstask_uuid` has to be non-null!"
+        )
+    elif (g, j) == (False, True):
+        raise NotImplementedError("TODO")
+    elif (g, j) == (True, False):
+        r, idx = task_list.get_task(
+            uuid_text=gstask_uuid,
+            index=None,
+        )
+        out = jh.run_operation(
+            "add_issue",
+            name=r["name"],
+            description=gstask_uuid_to_sigil(r["uuid"], prefix="master:"),
+        )
+        out = json.loads(out)
+        # https://nailbiter91.atlassian.net/browse/ML3-98
+        key = out["key"]
+        domain_name = out["self"].split("/")[2]
+        url = f"https://{domain_name}/browse/{key}"
+        label = r.get("label", {})
+        r["label"] = {**label, jh.jira_label: url}
+        logging.warning(r)
+        task_list.insert_or_replace_record(r, index=idx)
+    elif (g, j) == (True, True):
+        r, idx = task_list.get_task(
+            uuid_text=gstask_uuid,
+            index=None,
+        )
+        # check jira ticket has no sigil
+        # edit description
+        # link
+        raise NotImplementedError("TODO")
+
+
+def gstask_uuid_to_sigil(gstask_uuid: str, prefix: typing.Optional[str] = None) -> str:
+    res = f"gstask:{gstask_uuid}"
+    return res if prefix is None else prefix + res
 
 
 @jira.command(name="import")

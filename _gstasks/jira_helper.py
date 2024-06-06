@@ -27,6 +27,8 @@ import json
 import io
 from dotenv import dotenv_values
 
+DEFAULT_JIRA_LABEL = "GSTASKS_JIRA_LABEL"
+
 
 def _run_cmd(cmd: str, is_ensure_ok: bool = True) -> str:
     logging.warning(f"> {cmd}")
@@ -70,11 +72,34 @@ class JiraHelper:
         jira_exec: str = "",
         dotenv: typing.Optional[str] = None,
         getters: dict = {},
+        operations: dict = {},
+        jira_label: str = DEFAULT_JIRA_LABEL,
         **kwargs,
     ):
         self._jira_exec = jira_exec
         self._dotenv = {} if dotenv is None else dotenv_values(dotenv)
         self._getters = {k: JiraGetter(**v) for k, v in getters.items()}
+        self._operations = operations
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._jira_label = jira_label
+
+    @property
+    def jira_label(self) -> str:
+        return self._jira_label
+
+    def run_operation(self, operation_name: str, **kwargs) -> str:
+        cmd = Template(self._operations[operation_name]).render(kwargs)
+        self._logger.warning(f"> {cmd}")
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            env={**os.environ, **self._dotenv},
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        )
+        out, _ = p.communicate()
+        self._logger.warning(out)
+        return out
 
     @property
     def jira_exec(self) -> str:
