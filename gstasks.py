@@ -53,6 +53,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     process_stopwatch_slice,
+    preprocess_stopwatch_slice,
     make_mongo_friendly,
     TEMPLATE_DIR_DEFAULT,
     UUID_CACHE_DB_DEFAULT,
@@ -1022,23 +1023,38 @@ def stop_stopwatch(ctx, name):
 
 @stopwatch.command(name="ls")
 @moption("-t", "--type", "type_", type=click.Choice(["running", "stopped"]))
+@moption("-n", "--stopwatch-name", type=str)
 @click.pass_context
-def ls_stopwatch(ctx, type_):
+def ls_stopwatch(ctx, type_, stopwatch_name):
     coll = ctx.obj["stopwatch"]["coll"]
     now = datetime.now()
     df = pd.DataFrame(coll.find())
-    df = pd.DataFrame(
-        [
-            dict(process_stopwatch_slice(slice_), name=n)
-            for n, slice_ in df.groupby("name")
-        ]
-    )
-    if type_ == "running":
-        df = df[df["is_running"]]
-    elif type_ == "stopped":
-        df = df[~df["is_running"]]
-    df.set_index("name", inplace=True)
-    df.sort_index(inplace=True)
+
+    if stopwatch_name is not None:
+        df = df[df["name"].eq(stopwatch_name)]
+        rs = preprocess_stopwatch_slice(df)
+        df = pd.DataFrame(
+            [
+                {**r, "label": "start" if i % 2 == 0 else "stop", "i": i // 2}
+                for i, r in enumerate(rs)
+            ]
+        )
+        df = pd.pivot(df, index="i", columns=["label"])
+        df[("now", "dur")] = df["now", "stop"] - df["now", "start"]
+    else:
+        df = pd.DataFrame(
+            [
+                dict(process_stopwatch_slice(slice_), name=n)
+                for n, slice_ in df.groupby("name")
+            ]
+        )
+        if type_ == "running":
+            df = df[df["is_running"]]
+        elif type_ == "stopped":
+            df = df[~df["is_running"]]
+        df.set_index("name", inplace=True)
+        df.sort_index(inplace=True)
+
     click.echo(df)
 
 

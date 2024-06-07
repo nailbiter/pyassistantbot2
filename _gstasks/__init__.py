@@ -526,11 +526,7 @@ def smart_processor(df: pd.DataFrame, processor: str) -> pd.Series:
         raise NotImplementedError((processor,))
 
 
-def process_stopwatch_slice(df: pd.DataFrame) -> dict:
-    """
-    @return (is_running,elapsed)
-    """
-    # assert len(df)>0
+def preprocess_stopwatch_slice(df: pd.DataFrame) -> list[dict]:
     assert set(df["action"]) <= {"stop", "start"}
     now = datetime.now()
     rs = df.sort_values(by="now").to_dict(orient="records")
@@ -547,6 +543,15 @@ def process_stopwatch_slice(df: pd.DataFrame) -> dict:
 
     while (rs[0]["action"] == "stop") and (len(rs) > 0):
         rs.pop(0)
+    return rs
+
+
+def process_stopwatch_slice(df: pd.DataFrame) -> dict:
+    """
+    @return (is_running,elapsed)
+    """
+    # assert len(df)>0
+    rs = preprocess_stopwatch_slice(df)
 
     if len(rs) == 0:
         return dict(is_running=False, elapsed=timedelta(0))
