@@ -35,7 +35,8 @@ import logging
 @click.option("--dry-run/--no-dry-run", default=True)
 @click.option("--set-success/--no-set-success", default=True)
 @click.option("--debug/--no-debug", default=False)
-def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success, debug):
+@click.option("-d", "--date", type=click.DateTime())
+def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success, debug, date):
     if debug:
         logging.basicConfig(level=logging.INFO)
     assert mongo_pass is not None
@@ -49,17 +50,20 @@ def fix_habits(regex, mongo_pass, limit, index, dry_run, set_success, debug):
             filter_["name"] = {"$regex": regex}
 
         coll = get_coll(mongo_pass, "alex.habitspunch2")
-        df = pd.DataFrame(coll.find(
-            filter_, sort=[("date", -1)], limit=limit))
+        df = pd.DataFrame(coll.find(filter_, sort=[("date", -1)], limit=limit))
         print(df.drop(columns=["_id"]))
         o = df.to_dict(orient="records")[index_]
         status = "DONE" if set_success else "FAILED"
         print(o)
         print(f"{o['status']} => {status}")
         if not dry_run:
-            set_ = {"status": status, "_last_modification": to_utc_datetime()}
-            coll.update_one({"_id": o["_id"]}, {
-                            "$set": set_, })
+            set_ = {"status": status, "_last_modification": to_utc_datetime(date=date)}
+            coll.update_one(
+                {"_id": o["_id"]},
+                {
+                    "$set": set_,
+                },
+            )
             print("no dry run")
         else:
             print("dry run")

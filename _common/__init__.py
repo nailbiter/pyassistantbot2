@@ -69,7 +69,7 @@ def get_sleeping_state(mongo_client):
         return cat == "sleeping", cat
 
 
-def to_utc_datetime(date=None, inverse=False):
+def to_utc_datetime(date: typing.Optional[datetime] = None, inverse: bool = False):
     if date is None:
         date = datetime.now()
     td = timedelta(hours=_get_current_offset())

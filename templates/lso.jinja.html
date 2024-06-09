@@ -1,0 +1,13 @@
+{{ s_html|safe }}
+
+<form action="http://127.0.0.1:5000/edit/{{ res["uuid"] }}" method="POST">
+  <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
+  <label for="cars">Choose a car:</label>
+  <select id="cars" name="cars">
+    <option value="volvo">Volvo</option>
+    <option value="saab">Saab</option>
+    <option value="fiat">Fiat</option>
+    <option value="audi">Audi</option>
+  </select>
+  <input type="submit" value="Enter to Win" />
+</form>

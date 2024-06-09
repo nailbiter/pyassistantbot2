@@ -18,7 +18,7 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
-from flask import Flask, request, g
+from flask import Flask, request, g, render_template
 from dotenv import load_dotenv
 import os
 from os import path
@@ -86,10 +86,22 @@ def lso(task_id: str):
     _init_g(g, mongo_url=mongo_url)
     # return str(task_id)
     res = real_lso(g.ctx, [str(task_id)], object_type="task", is_loud=False)
+    logging.warning(f"res: {res}")
     # return res
     # return f"<code>{json.dumps(json.loads(res),sort_keys=True,indent=2)}</code>"
-    return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
+    # return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
     # return json.dumps(json.loads(res), sort_keys=True, indent=2)
+    s_html = pd.Series(json.loads(res)).to_frame().sort_index().to_html()
+    return render_template("lso.jinja.html", s_html=s_html, res=json.loads(res))
+
+
+@app.route("/edit/<uuid:task_id>", methods=["POST"])
+def edit(task_id):
+    logging.warning(f"ti: {task_id}")
+    logging.warning(f"form: {request.form}")
+    form = dict(request.form)
+    logging.warning(f"form: {form}")
+    return "hi"
 
 
 def _init() -> (dict, str):
