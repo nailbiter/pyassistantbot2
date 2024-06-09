@@ -33,7 +33,7 @@ from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
-from gstasks import real_ls, real_lso
+from gstasks import real_ls, real_lso, real_edit
 import pymongo
 import json5
 import typing
@@ -97,10 +97,22 @@ def lso(task_id: str):
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
 def edit(task_id):
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+
     logging.warning(f"ti: {task_id}")
     logging.warning(f"form: {request.form}")
     form = dict(request.form)
     logging.warning(f"form: {form}")
+
+    kwargs = dict(status=form["status"], scheduled_date=None, due=None, tags=[])
+
+    real_edit(
+        ctx=g.ctx,
+        uuid_text=[str(task_id)],
+        **kwargs,
+    )
+
     return "hi"
 
 

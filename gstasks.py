@@ -360,24 +360,29 @@ _NONE_CLICK_VALUE = "NONE"
 @moption("--string-set-mode", type=click.Choice(["set", "rappend"]), default="set")
 @moption("--post-hook")
 @click.pass_context
-def edit(
+def edit(**kwargs):
+    return real_edit(**kwargs)
+
+
+def real_edit(
     ctx,
-    uuid_text,
-    index,
-    action_comment,
-    uuid_list_file,
-    tag_operation,
-    create_new_tag,
-    string_set_mode,
-    post_hook,
+    uuid_text: typing.Tuple[str] = tuple(),
+    index: list[int] = [],
+    action_comment: typing.Optional[str] = None,
+    uuid_list_file=None,
+    tag_operation: str = "symmetric_difference",  # FIXME: sync with above
+    create_new_tag: bool = False,
+    string_set_mode: str = "set",  # FIXME: sync with above
+    post_hook=None,
     **kwargs,
-):
+) -> None:
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
+    logging.warning(uuid_text)
     uuid_text = list(
         map(
-            functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj["uuid_cache_db"]),
+            functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj.get("uuid_cache_db")),
             uuid_text,
         )
     )

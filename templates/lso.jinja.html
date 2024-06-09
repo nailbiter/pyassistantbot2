@@ -2,12 +2,13 @@
 
 <form action="http://127.0.0.1:5000/edit/{{ res["uuid"] }}" method="POST">
   <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
-  <label for="cars">Choose a car:</label>
-  <select id="cars" name="cars">
-    <option value="volvo">Volvo</option>
-    <option value="saab">Saab</option>
-    <option value="fiat">Fiat</option>
-    <option value="audi">Audi</option>
+  
+  <label for="status">status:</label>
+  <select id="status" name="status">
+    {% for k in ['DONE','FAILED'] %}
+    <option value="{{ k }}">{{ k }}</option>
+    {% endfor %}
   </select>
-  <input type="submit" value="Enter to Win" />
+  
+  <input type="submit" value="edit" />
 </form>
