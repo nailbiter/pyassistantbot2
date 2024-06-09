@@ -96,7 +96,7 @@ def lso(task_id: str):
 
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
-def edit(task_id):
+def edit(task_id) -> str:
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
 
@@ -105,15 +105,20 @@ def edit(task_id):
     form = dict(request.form)
     logging.warning(f"form: {form}")
 
-    kwargs = dict(status=form["status"], scheduled_date=None, due=None, tags=[])
+    kwargs = dict(
+        status=form["status"],
+        scheduled_date=None,
+        due=None,
+        tags=[],
+        uuid_text=[str(task_id)],
+    )
 
     real_edit(
         ctx=g.ctx,
-        uuid_text=[str(task_id)],
         **kwargs,
     )
 
-    return "hi"
+    return json.dumps(kwargs)
 
 
 def _init() -> (dict, str):
