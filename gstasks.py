@@ -2020,14 +2020,15 @@ def auto_tag(ctx, uuid_list_file, filter_tags):
 
 
 if __name__ == "__main__":
-    env_fns = [
-        path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
-        path.join(path.dirname(path.abspath(__file__)), ".gstasks.checked.env"),
-        ".env",
+    env_fnss = [
+        [path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"), ".env"],
+        [path.join(path.dirname(path.abspath(__file__)), ".gstasks.checked.env")],
     ]
-    for env_fn in env_fns:
-        if path.isfile(env_fn):
-            LOADED_DOTENVS.append(env_fn)
-            load_dotenv(dotenv_path=env_fn, override=True)
+    for env_fns in env_fnss:
+        for env_fn in env_fns:
+            if path.isfile(env_fn):
+                LOADED_DOTENVS.append(env_fn)
+                load_dotenv(dotenv_path=env_fn, override=True)
+                break
 
     gstasks(show_default=True, auto_envvar_prefix="GSTASKS")
