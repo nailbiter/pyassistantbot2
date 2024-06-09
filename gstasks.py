@@ -2023,6 +2023,7 @@ def auto_tag(ctx, uuid_list_file, filter_tags):
 if __name__ == "__main__":
     env_fns = [
         path.join(path.dirname(path.abspath(__file__)), ".gstasks.env"),
+        path.join(path.dirname(path.abspath(__file__)), ".gstasks.checked.env"),
         ".env",
     ]
     for env_fn in env_fns:
