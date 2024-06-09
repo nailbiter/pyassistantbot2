@@ -95,7 +95,7 @@ import copy
 from bson import json_util
 
 # FIXME: do without global env
-LOADED_DOTENV = None
+LOADED_DOTENVS = []
 
 STANDARD_STATES = ["DONE", "FAILED", "REGULAR"]
 
@@ -144,8 +144,7 @@ def gstasks(ctx, mongo_url, post_hook, debug, labels_types_json5, **kwargs):
         logging.warning(f'log saved to "{debug_fn}"')
 
     logging.warning(f"ADDITIONAL_STATES: {ADDITIONAL_STATES}")
-    if LOADED_DOTENV is not None:
-        logging.warning(f'loading "{LOADED_DOTENV}"')
+    logging.warning(f'loaded "{LOADED_DOTENVS}"')
 
     ctx.ensure_object(dict)
     setup_ctx_obj(
@@ -2028,8 +2027,7 @@ if __name__ == "__main__":
     ]
     for env_fn in env_fns:
         if path.isfile(env_fn):
-            LOADED_DOTENV = env_fn
-            load_dotenv(dotenv_path=env_fn)
-            break
+            LOADED_DOTENVS.append(env_fn)
+            load_dotenv(dotenv_path=env_fn, override=True)
 
     gstasks(show_default=True, auto_envvar_prefix="GSTASKS")
