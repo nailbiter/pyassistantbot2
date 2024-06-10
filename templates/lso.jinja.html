@@ -5,7 +5,7 @@
   
   <label for="status">status:</label>
   <select id="status" name="status">
-    {% for k in ['DONE','FAILED'] %}
+    {% for k in states %}
     <option value="{{ k }}">{{ k }}</option>
     {% endfor %}
   </select>

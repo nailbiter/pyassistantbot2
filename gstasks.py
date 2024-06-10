@@ -359,8 +359,8 @@ _NONE_CLICK_VALUE = "NONE"
 @moption("--string-set-mode", type=click.Choice(["set", "rappend"]), default="set")
 @moption("--post-hook")
 @click.pass_context
-def edit(**kwargs):
-    return real_edit(**kwargs)
+def edit(ctx, **kwargs):
+    return real_edit(ctx, **kwargs)
 
 
 def real_edit(

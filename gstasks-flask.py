@@ -29,6 +29,7 @@ import json
 from jinja2 import Template
 import tqdm
 from _gstasks.timing import TimeItContext
+from _gstasks.additional_states import ADDITIONAL_STATES
 from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
@@ -92,7 +93,12 @@ def lso(task_id: str):
     # return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
     # return json.dumps(json.loads(res), sort_keys=True, indent=2)
     s_html = pd.Series(json.loads(res)).to_frame().sort_index().to_html()
-    return render_template("lso.jinja.html", s_html=s_html, res=json.loads(res))
+    return render_template(
+        "lso.jinja.html",
+        s_html=s_html,
+        res=json.loads(res),
+        states=["DONE", "FAILED", *ADDITIONAL_STATES],
+    )
 
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
