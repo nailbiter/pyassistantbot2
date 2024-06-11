@@ -80,6 +80,9 @@ def _init_g(g, mongo_url: typing.Optional[str]):
         )
 
 
+_NOTHING_TEXT_FORM_VALUE = "**NOTHING**"
+
+
 @app.route("/lso/<uuid:task_id>", methods=["GET"])
 def lso(task_id: str):
     logging.warning(f"task_id: {task_id}")
@@ -97,7 +100,8 @@ def lso(task_id: str):
         "lso.jinja.html",
         s_html=s_html,
         res=json.loads(res),
-        states=["DONE", "FAILED", *ADDITIONAL_STATES],
+        states=["DONE", "FAILED", *ADDITIONAL_STATES, _NOTHING_TEXT_FORM_VALUE],
+        nothing_text_form_value=_NOTHING_TEXT_FORM_VALUE,
     )
 
 
@@ -111,18 +115,33 @@ def edit(task_id) -> str:
     form = dict(request.form)
     logging.warning(f"form: {form}")
 
-    kwargs = dict(
-        status=form["status"],
-        scheduled_date=None,
-        due=None,
-        tags=[],
-        uuid_text=[str(task_id)],
-    )
+    for k, v in list(form.items()):
+        if v == _NOTHING_TEXT_FORM_VALUE:
+            form.pop(k)
+    logging.warning(f"form: {form}")
 
-    real_edit(
-        ctx=g.ctx,
-        **kwargs,
-    )
+    if len(form) > 0:
+        kwargs = dict(
+            # status=form["status"],
+            scheduled_date=None,
+            due=None,
+            tags=[],
+            uuid_text=[str(task_id)],
+        )
+
+        if "status" in form:
+            kwargs["status"] = form["status"]
+        if "scheduled_date" in form:
+            kwargs["scheduled_date"] = form["scheduled_date"]
+
+        logging.warning(f"kwargs: {kwargs}")
+
+        real_edit(
+            ctx=g.ctx,
+            **kwargs,
+        )
+    else:
+        kwargs = {}
 
     return json.dumps(kwargs)
 

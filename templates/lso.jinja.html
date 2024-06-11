@@ -1,9 +1,12 @@
 {{ s_html|safe }}
 
+nothing: <code>{{ nothing_text_form_value }}</code>
+
 <form action="http://127.0.0.1:5000/edit/{{ res["uuid"] }}" method="POST">
   <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
   
   <label for="status">status:</label>
+  <input type="text" placeholder="Scheduled date" id="scheduled_date" name="scheduled_date"/>
   <select id="status" name="status">
     {% for k in states %}
     <option value="{{ k }}">{{ k }}</option>
