@@ -6,7 +6,7 @@ nothing: <code>{{ nothing_text_form_value }}</code>
   <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
   
   <label for="status">status:</label>
-  <input type="text" placeholder="Scheduled date" id="scheduled_date" name="scheduled_date"/>
+  <input type="text" placeholder="Scheduled date" id="scheduled_date" name="scheduled_date"value="{{ nothing_text_form_value }}"/>
   <select id="status" name="status">
     {% for k in states %}
     <option value="{{ k }}">{{ k }}</option>
