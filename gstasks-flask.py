@@ -136,6 +136,11 @@ def rolling_log(task_id: str) -> str:
         return md.convert(md_s)
 
 
+@app.route("/activity_list/<uuid:task_id>", methods=["GET"])
+def activity_list(task_id: str) -> str:
+    return "stub"
+
+
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
 def edit(task_id) -> str:
     _, mongo_url = _init()
