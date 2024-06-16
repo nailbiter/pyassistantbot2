@@ -108,6 +108,15 @@ def lso(task_id: str):
     )
 
 
+@app.route("/rolling_log/<uuid:task_id>", methods=["GET"])
+def rolling_log(task_id: str) -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    task_id = str(task_id)
+
+    return "stub"
+
+
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
 def edit(task_id) -> str:
     _, mongo_url = _init()

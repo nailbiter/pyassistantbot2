@@ -1791,8 +1791,8 @@ def rolling_log_ls(ctx, raw, **format_df_kwargs):
     if len(df) == 0:
         logging.warning("rolling log is empty")
         return
-
     df.sort_values(by="date_time", inplace=True, ignore_index=True)
+
     if raw:
         click.echo(apply_click_options(df, format_df_kwargs))
     else:
