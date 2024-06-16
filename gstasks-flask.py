@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 import os
 from os import path
 import subprocess
+import markdown
 import uuid
 import logging
 import json
@@ -34,12 +35,30 @@ from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
-from gstasks import real_ls, real_lso, real_edit, _NONE_CLICK_VALUE
+from gstasks import (
+    real_ls,
+    real_lso,
+    real_edit,
+    _NONE_CLICK_VALUE,
+    rolling_log_df_to_md_string,
+    get_rolling_log_df,
+)
 import pymongo
 import json5
 import typing
 
-MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
+
+# MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
+class MockClickContext:
+    def __init__(self, mongo_url: str):
+        self.obj = {}
+        self.obj["task_list"] = TaskList(
+            mongo_url=mongo_url,
+            database_name="gstasks",
+            collection_name="tasks",
+        )
+
+
 ## https://stackoverflow.com/a/42791810
 app = Flask(__name__, static_url_path="", static_folder="gstasks-flask-static")
 # my_g = {}
@@ -72,12 +91,7 @@ def _init_g(g, mongo_url: typing.Optional[str]):
         logging.warning(f"`g` has `ctx` (={g.ctx}) ==> do nothing")
     else:
         logging.warning(f"`g` has no `ctx` ==> init")
-        g.ctx = MockClickContext()
-        g.ctx.obj["task_list"] = TaskList(
-            mongo_url=mongo_url,
-            database_name="gstasks",
-            collection_name="tasks",
-        )
+        g.ctx = MockClickContext(mongo_url)
 
 
 _NOTHING_TEXT_FORM_VALUE = "**NOTHING**"
@@ -113,8 +127,13 @@ def rolling_log(task_id: str) -> str:
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
     task_id = str(task_id)
-
-    return "stub"
+    rolling_log_df = get_rolling_log_df(g.ctx, task_id)
+    if len(rolling_log_df) == 0:
+        return "no rolling log"
+    else:
+        md_s = rolling_log_df_to_md_string(rolling_log_df)
+        md = markdown.Markdown()
+        return md.convert(md_s)
 
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])

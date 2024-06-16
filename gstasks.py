@@ -1787,30 +1787,42 @@ def rolling_log_rm(ctx, uuids, uuid_file):
 @build_click_options
 @click.pass_context
 def rolling_log_ls(ctx, raw, **format_df_kwargs):
-    df = pd.DataFrame(ctx.obj["coll"].find({"task_uuid": ctx.obj["uuid"]}))
-    if len(df) == 0:
-        logging.warning("rolling log is empty")
-        return
-    df.sort_values(by="date_time", inplace=True, ignore_index=True)
+    df = get_rolling_log_df(ctx, obj["uuid"])
 
     if raw:
         click.echo(apply_click_options(df, format_df_kwargs))
     else:
-        df["dt"] = df["date_time"].apply(
-            operator.methodcaller("strftime", "%Y-%m-%d (%a)")
+        click.echo(rolling_log_df_to_md_string(df))
+
+
+def get_rolling_log_df(ctx, task_uuid: str) -> pd.DataFrame:
+    df = pd.DataFrame(
+        ctx.obj.get("coll", ctx.obj["task_list"].get_coll("rolling_log")).find(
+            {"task_uuid": task_uuid}
         )
-        is_first = True
-        for dt, slice_ in df.groupby("dt"):
-            if not is_first:
-                click.echo("\n")
-            click.echo(f"## `{dt}`")
-            for i, r in enumerate(slice_.to_dict(orient="records")):
-                click.echo(
-                    Template(
-                        "1. [{{r.url}}]({{r.url}}){%if r.comment%} ({{r.comment}}){%endif%}"
-                    ).render(dict(r=r))
-                )
-            is_first = False
+    )
+    if len(df) == 0:
+        logging.warning("rolling log is empty")
+        return df
+    df.sort_values(by="date_time", inplace=True, ignore_index=True)
+    return df
+
+
+def rolling_log_df_to_md_string(df: pd.DataFrame) -> str:
+    df = df.copy()
+    df["dt"] = df["date_time"].apply(operator.methodcaller("strftime", "%Y-%m-%d (%a)"))
+    is_first = True
+    res = ""
+    for dt, slice_ in df.groupby("dt"):
+        if not is_first:
+            res += "\n"
+        res += f"## `{dt}`\n"
+        for i, r in enumerate(slice_.to_dict(orient="records")):
+            res += Template(
+                "1. [{{r.url}}]({{r.url}}){%if r.comment%} ({{r.comment}}){%endif%}\n"
+            ).render(dict(r=r))
+        is_first = False
+    return res
 
 
 @gstasks.group(name="rel")
