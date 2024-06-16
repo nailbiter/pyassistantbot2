@@ -34,7 +34,7 @@ from _gstasks import TaskList, str_or_envvar
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
-from gstasks import real_ls, real_lso, real_edit
+from gstasks import real_ls, real_lso, real_edit, _NONE_CLICK_VALUE
 import pymongo
 import json5
 import typing
@@ -81,6 +81,7 @@ def _init_g(g, mongo_url: typing.Optional[str]):
 
 
 _NOTHING_TEXT_FORM_VALUE = "**NOTHING**"
+_NONE_TEXT_FORM_VALUE = "**NONE**"
 
 
 @app.route("/lso/<uuid:task_id>", methods=["GET"])
@@ -101,7 +102,9 @@ def lso(task_id: str):
         s_html=s_html,
         res=json.loads(res),
         states=["DONE", "FAILED", *ADDITIONAL_STATES, _NOTHING_TEXT_FORM_VALUE],
-        nothing_text_form_value=_NOTHING_TEXT_FORM_VALUE,
+        special_values=dict(
+            nothing=_NOTHING_TEXT_FORM_VALUE, none=_NONE_TEXT_FORM_VALUE
+        ),
     )
 
 
@@ -118,21 +121,23 @@ def edit(task_id) -> str:
     for k, v in list(form.items()):
         if v == _NOTHING_TEXT_FORM_VALUE:
             form.pop(k)
+        elif (k, v) == ("scheduled_date", _NONE_TEXT_FORM_VALUE):
+            form[k] = _NONE_CLICK_VALUE
     logging.warning(f"form: {form}")
 
     if len(form) > 0:
         kwargs = dict(
-            # status=form["status"],
             scheduled_date=None,
             due=None,
             tags=[],
             uuid_text=[str(task_id)],
         )
 
-        if "status" in form:
-            kwargs["status"] = form["status"]
-        if "scheduled_date" in form:
-            kwargs["scheduled_date"] = form["scheduled_date"]
+        # if "status" in kwargs:
+        #     form["status"] = form["status"]
+        # if "scheduled_date" in form:
+        #     kwargs["scheduled_date"] = form["scheduled_date"]
+        kwargs = {**kwargs, **form}
 
         logging.warning(f"kwargs: {kwargs}")
 
