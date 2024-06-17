@@ -14,7 +14,12 @@
   <label for="status">status:</label>
   <select id="status" name="status">
     {% for k in states %}
-    <option value="{{ k }}">{{ k }}</option>
+    <option
+      value="{{ k }}"
+      {% if k == special_values.nothing %} selected="selected" {% endif %}
+      >
+      {{ k }}
+    </option>
     {% endfor %}
   </select>
   
