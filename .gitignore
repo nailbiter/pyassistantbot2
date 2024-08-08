@@ -157,3 +157,4 @@ ttask_tasks.html
 birthdays.json5
 .gstasks_sweep_daemon.pid.json
 Dockerfile
+.habits.json5

@@ -48,7 +48,7 @@ from tasks\
     },
     {
       column_name: "E?",
-      jinja_tpl: "{{'E' if (r.uuid==last_engaged_task_uuid) else ''}}",
+      jinja_tpl: '{% if (r.uuid==last_engaged_task_uuid) %} E {% endif %}',
     },
     { column_name: "labels", jinja_tpl: "{{r.label}}" },
     // {

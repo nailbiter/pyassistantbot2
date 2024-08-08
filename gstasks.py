@@ -945,7 +945,7 @@ def real_mark(
     is_out: bool = False,
     mark: typing.Optional[str] = None,
     time_: typing.Optional[datetime] = None,
-):
+) -> dict:
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
@@ -983,7 +983,9 @@ def real_mark(
         if uuid_text == _MARK_UNSET_SYMBOL:
             r = {"uuid": None}
         else:
-            uuid_text = _fetch_uuid(uuid_text, uuid_cache_db=ctx.obj["uuid_cache_db"])
+            uuid_text = _fetch_uuid(
+                uuid_text, uuid_cache_db=ctx.obj.get("uuid_cache_db")
+            )
             r, _ = task_list.get_task(uuid_text=uuid_text)
 
         logger.warning(f"engaging {r}")
@@ -994,19 +996,20 @@ def real_mark(
         #     uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
         coll = task_list.get_coll("engage")
-        coll.insert_one(
-            {
-                "dt": time_,
-                "task_uuid": r["uuid"],
-                "mark": mark,
-                "uuid": str(uuid.uuid4()),
-                "task_snapshot": make_mongo_friendly(r),
-            }
-        )
+        r = {
+            "dt": time_,
+            "task_uuid": r["uuid"],
+            "mark": mark,
+            "uuid": str(uuid.uuid4()),
+            "task_snapshot": make_mongo_friendly(r),
+        }
+        coll.insert_one(r)
 
         if post_hook is not None:
             logging.warning(f'executing post_hook "{post_hook}"')
             os.system(post_hook)
+
+        return r
 
 
 @gstasks.group()
@@ -2043,6 +2046,41 @@ def auto_tag(ctx, uuid_list_file, filter_tags):
     logging.warning(tasks_df)
     tasks_df["tags"] = tasks_df["tags"].apply(sorted)
     click.echo(json.dumps(tasks_df.to_dict(orient="records")))
+
+
+@gstasks.group()
+@click.option(
+    "--habits-file",
+    type=click.Path(),
+    default=path.join(path.dirname(__file__), ".habits.json5"),
+)
+@click.pass_context
+def habits(ctx, habits_file):
+    if path.isfile(habits_file):
+        with open(habits_file) as f:
+            habits = json5.load(f)
+    else:
+        habits = {}
+
+    habits["config"] = habits.get("config", {})
+    habits["config"]["backfill_collection_name"] = habits["config"].get(
+        "backfill_collection_name", "habits_backfill"
+    )
+
+    ctx.obj["backfill_coll"] = ctx.obj["task_list"].get_coll(
+        habits["config"]["backfill_collection_name"]
+    )
+
+    ctx.obj["habits"] = habits["habits"]
+
+
+@habits.command()
+@click.option("--dry-run/--no-dry-run", default=False)
+@click.pass_context
+def backfill(ctx, dry_run):
+    backfill_coll = ctx.obj["backfill_coll"]
+    habits_df = pd.DataFrame(ctx.obj["habits"].values(), index=ctx.obj["habits"].keys())
+    logging.warning(habits_df)
 
 
 if __name__ == "__main__":

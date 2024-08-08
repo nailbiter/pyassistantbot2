@@ -37,15 +37,21 @@ from datetime import datetime, timedelta
 import collections
 from gstasks import (
     real_ls,
+    real_mark,
     real_lso,
     real_edit,
     _NONE_CLICK_VALUE,
     rolling_log_df_to_md_string,
     get_rolling_log_df,
+    CLICK_DEFAULT_VALUES,
 )
 import pymongo
 import json5
 import typing
+from bson import json_util
+import functools
+
+robust_json_dumps = functools.partial(json.dumps, default=json_util.default)
 
 
 # MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
@@ -133,12 +139,25 @@ def rolling_log(task_id: str) -> str:
     else:
         md_s = rolling_log_df_to_md_string(rolling_log_df)
         md = markdown.Markdown()
+        logging.warning(md)
         return md.convert(md_s)
 
 
 @app.route("/activity_list/<uuid:task_id>", methods=["GET"])
 def activity_list(task_id: str) -> str:
     return "stub"
+
+
+@app.route("/mark/<uuid:task_id>")
+def mark(task_id) -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    res = real_mark(
+        g.ctx, uuid_text=str(task_id), mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
+    )
+    txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
+    logging.warning(txt)
+    return f"<code>{txt}</code>"
 
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])
