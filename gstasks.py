@@ -90,6 +90,7 @@ from alex_leontiev_toolbox_python.utils.click_helpers.format_dataframe import (
 )
 import operator
 import copy
+from _gstasks.habits_backfill import generate_habits_series
 
 ## https://stackoverflow.com/a/11875813
 from bson import json_util
@@ -2076,11 +2077,58 @@ def habits(ctx, habits_file):
 
 @habits.command()
 @click.option("--dry-run/--no-dry-run", default=False)
+@click.option("--run-command/--no-run-command", default=True)
 @click.pass_context
-def backfill(ctx, dry_run):
+def backfill(ctx, dry_run, run_command):
     backfill_coll = ctx.obj["backfill_coll"]
     habits_df = pd.DataFrame(ctx.obj["habits"].values(), index=ctx.obj["habits"].keys())
     logging.warning(habits_df)
+
+    backfill_df = pd.DataFrame(backfill_coll.find(), columns=["name", "dt", "is_done"])
+    logging.warning(backfill_df)
+
+    punches_df = pd.concat(
+        {
+            habit_name: pd.DataFrame(
+                dict(
+                    dt=generate_habits_series(
+                        start=datetime.strptime(habit_d["start"], "%Y-%m-%d"),
+                        cronline=habit_d["cronline"],
+                    ),
+                    command_json=json.dumps(habit_d["command"]),
+                )
+            ).set_index("dt")
+            for habit_name, habit_d in tqdm.tqdm(
+                habits_df.to_dict(orient="index").items()
+            )
+        },
+        names=["name", "dt"],
+    )
+    punches_df.reset_index(inplace=True)
+
+    punches_df = punches_df.merge(
+        backfill_df, left_on=["name", "dt"], right_on=["name", "dt"], how="left"
+    )
+    punches_df["is_done"] = punches_df["is_done"].fillna(False)
+    logging.warning(punches_df)
+
+    punches_df = punches_df[~punches_df["is_done"]]
+    logging.warning(f"{len(punches_df)} items to backfill")
+
+    dr = "x" if dry_run else "o"
+    for r in tqdm.tqdm(punches_df.to_dict(orient="records")):
+        command = Template(r["command_json"]).render(dict(r))
+        logging.warning(f"{dr}> {command}")
+        if not dry_run:
+            cmd, *args, kwargs = json.loads(command)
+            if run_command:
+                dict(add=functools.partial(real_add, ctx))[cmd](*args, **kwargs)
+            r["is_done"] = True
+            backfill_coll.replace_one(
+                filter={k: r[k] for k in ["dt", "name"]},
+                replacement={k: r[k] for k in ["dt", "name", "is_done"]},
+                upsert=True,
+            )
 
 
 if __name__ == "__main__":
