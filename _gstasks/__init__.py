@@ -580,3 +580,17 @@ def process_stopwatch_slice(df: pd.DataFrame) -> dict:
         pass
     else:
         raise NotImplementedError(rs)
+
+
+@functools.cache
+def next_work_day(dt: datetime, inc: int = 1) -> datetime:
+    """
+    FIXME: current runtime O(n) is pathetic, make it O(1)
+    """
+    if inc < 0:
+        raise NotImplementedError("FIXME: enable negative increment")
+    while inc > 0:
+        dt += timedelta(days=1)
+        if dt.isoweekday() in list(range(1, 6)):
+            inc -= 1
+    return dt
