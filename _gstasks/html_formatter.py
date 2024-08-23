@@ -320,7 +320,7 @@ def _style_to_buf(
             )
         )
 
-    to_html_kwargs = {}
+    to_html_kwargs = config.get("to_html_kwargs", {})
     if html_template is not None:
         to_html_kwargs["doctype_html"] = True
 
