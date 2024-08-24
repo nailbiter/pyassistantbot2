@@ -37,6 +37,7 @@ from datetime import datetime, timedelta
 import collections
 from gstasks import (
     real_ls,
+    real_actions_ls,
     real_mark,
     real_lso,
     real_edit,
@@ -145,7 +146,10 @@ def rolling_log(task_id: str) -> str:
 
 @app.route("/activity_list/<uuid:task_id>", methods=["GET"])
 def activity_list(task_id: str) -> str:
-    return "stub"
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    df = real_actions_ls(g.ctx, str(task_id))
+    return df.to_html()
 
 
 @app.route("/mark/<uuid:task_id>")
