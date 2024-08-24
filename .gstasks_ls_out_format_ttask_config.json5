@@ -1,5 +1,6 @@
 {
   is_use_style: true,
+  to_html_kwargs: { table_uuid: "tasks_ttask_table" },
   out_file: "ttask_tasks.html",
   sorting_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/sorting.jinja.sql",
   row_styling_sql: "\
@@ -48,7 +49,7 @@ from tasks\
     },
     {
       column_name: "E?",
-      jinja_tpl: '{% if (r.uuid==last_engaged_task_uuid) %} E {% endif %}',
+      jinja_tpl: "{% if (r.uuid==last_engaged_task_uuid) %} E {% endif %}",
     },
     { column_name: "labels", jinja_tpl: "{{r.label}}" },
     // {
