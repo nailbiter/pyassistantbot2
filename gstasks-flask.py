@@ -45,6 +45,7 @@ from gstasks import (
     rolling_log_df_to_md_string,
     get_rolling_log_df,
     CLICK_DEFAULT_VALUES,
+    MARK_UNSET_SYMBOL,
 )
 import pymongo
 import json5
@@ -158,6 +159,18 @@ def mark(task_id) -> str:
     _init_g(g, mongo_url=mongo_url)
     res = real_mark(
         g.ctx, uuid_text=str(task_id), mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
+    )
+    txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
+    logging.warning(txt)
+    return f"<code>{txt}</code>"
+
+
+@app.route("/unmark")
+def unmark() -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    res = real_mark(
+        g.ctx, uuid_text=MARK_UNSET_SYMBOL, mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
     logging.warning(txt)

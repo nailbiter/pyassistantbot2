@@ -806,7 +806,7 @@ def grep(ctx, text, column_name, is_apply_lower, **format_df_kwargs):
     click.echo(apply_click_options(tasks_df, format_df_kwargs))
 
 
-_MARK_UNSET_SYMBOL = "D"
+MARK_UNSET_SYMBOL = "D"
 
 
 @gstasks.group(name="m")
@@ -910,7 +910,7 @@ def mark_ls(
 @moption(
     "-u",
     "--uuid-text",
-    help=f'`{_MARK_UNSET_SYMBOL}` means "unset"',
+    help=f'`{MARK_UNSET_SYMBOL}` means "unset"',
 )
 @moption("--post-hook")
 @moption("-m", "--mark", default=CLICK_DEFAULT_VALUES["mark"]["mark"])
@@ -981,7 +981,7 @@ def real_mark(
         if is_out:
             click.echo(None if task is None else task["uuid"])
     else:
-        if uuid_text == _MARK_UNSET_SYMBOL:
+        if uuid_text == MARK_UNSET_SYMBOL:
             r = {"uuid": None}
         else:
             uuid_text = _fetch_uuid(
