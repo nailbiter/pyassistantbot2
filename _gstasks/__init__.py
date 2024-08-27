@@ -24,6 +24,8 @@ import more_itertools
 import inspect
 import json
 from _gstasks.labels_types import LABELS_TYPES
+from _gstasks.task_list import TaskList
+from base import _format_url, make_mongo_friendly
 import json5
 import logging
 import functools
@@ -71,25 +73,6 @@ def _parse_date(s):
                 if m.group(k) is not None
             }
         )
-
-
-def _format_url(url) -> str:
-    if not url:
-        return ""
-    elif pd.isna(url):
-        return ""
-    elif url.startswith("https://trello.com/c/"):
-        return "T"
-    else:
-        return "U"
-
-
-def make_mongo_friendly(r: dict) -> dict:
-    # FIXME: why this happens?
-    for k in ["due", "scheduled_date"]:
-        if (k in r) and pd.isna(r[k]):
-            r[k] = None
-    return r
 
 
 _COLUMNS = "name,URL,scheduled_date,status,when,due,uuid".split(",")

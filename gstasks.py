@@ -1366,6 +1366,7 @@ def sweep_remind(
     default=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
 )
 @moption("-g", "--tag", "tags", multiple=True)
+@moption("-G", "--exclude-tag", "exclude_tags", multiple=True)
 @moption(
     "--out-format-config",
     type=click.Path(dir_okay=False, exists=True),
@@ -1396,6 +1397,7 @@ def real_ls(
     sample=None,
     name_length_limit=CLICK_DEFAULT_VALUES["ls"]["name_length_limit"],
     tags=CLICK_DEFAULT_VALUES["ls"]["tags"],
+    exclude_tags=CLICK_DEFAULT_VALUES["ls"]["tags"],
     sort_order=CLICK_DEFAULT_VALUES["ls"]["sort_order"],
     out_format_config=None,
     scheduled_date_query=None,
@@ -1409,7 +1411,9 @@ def real_ls(
     with TimeItContext("prep & tags", report_dict=timings):
         task_list = ctx.obj["task_list"]
         _process_tag = TagProcessor(task_list.get_coll("tags"))
-        tags = [_process_tag(tag) for tag in tags]
+        tags, exclude_tags = list(map(_process_tag, tags)), list(
+            map(_process_tag, exclude_tags)
+        )
 
     with TimeItContext("fetch", report_dict=timings):
         df = task_list.get_all_tasks(
