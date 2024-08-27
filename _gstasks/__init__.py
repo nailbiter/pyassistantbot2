@@ -25,7 +25,7 @@ import inspect
 import json
 from _gstasks.labels_types import LABELS_TYPES
 from _gstasks.task_list import TaskList
-from base import _format_url, make_mongo_friendly
+from _gstasks.base import _format_url, make_mongo_friendly
 import json5
 import logging
 import functools

@@ -20,7 +20,7 @@ ORGANIZATION:
 from pymongo import MongoClient
 import logging
 import pandas as pd
-from base import _format_url
+from _gstasks.base import _format_url
 from datetime import datetime, timedelta
 import typing
 import uuid
@@ -98,19 +98,19 @@ class TaskList:
         self,
         r,
         index=None,
-        action_comment: typing.Optional[s
+        action_comment: typing.Optional[str] = None,
         dry_run: bool = False,
     ):
-        action = "inserting" if index is            replacing"
+        action = "inserting" if index is None else "replacing"
 
-        assert action in "inserting repla           ()
-        print(f"{action} {r}", file=sys.s
+        assert action in ["inserting", "replacing"]
+        print(f"{action} {r}", file=sys.sys.stderr)
         if action == "inserting":
-            index = len(self.get_all_task
+            index = len(self.get_all_task())
 
         log_kwargs = {}
         if action == "replacing":
-            log_kwargs["previous_r"] = se           ().find_one({"uuid": r["uuid"]})
+            log_kwargs["previous_r"] = self.get_coll().find_one({"uuid": r["uuid"]})
 
         if "uuid" not in r:
             r["uuid"] = str(uuid.uuid4())
