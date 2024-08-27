@@ -250,23 +250,12 @@ def ls():
         args = request.args
         args = request.args.to_dict()
 
-        if "profile" in args:
-            profile = args.pop("profile")
-        else:
-            profile = "standard"
-        if "tag" in args:
-            tag = args.pop("tag")
-        else:
-            tag = None
+        profile = args.pop("profile") if "profile" in args else "standard"
+        tag = args.pop("tag") if "tag" in args else None
+        exclude_tag = args.pop("et") if "et" in args else None
         ## http://127.0.0.1:5000/ls?profile=ttask&bd=tomorrow&ad=tomorrow
-        if "ad" in args:
-            after_date = args.pop("ad")
-        else:
-            after_date = None
-        if "bd" in args:
-            before_date = args.pop("bd")
-        else:
-            before_date = None
+        after_date = args.pop("ad") if "ad" in args else None
+        before_date = args.pop("bd") if "bd" in args else None
 
         logging.warning(
             dict(
@@ -275,12 +264,15 @@ def ls():
                 tag=tag,
                 after_date=after_date,
                 before_date=before_date,
+                exclude_tag=exclude_tag,
             )
         )
 
     with TimeItContext("widgets", report_dict=timings):
         gstasks_profile = gstasks_profiles[profile]
         jinja_env = {"widgets": {}}
+        ## FIXME: reface: organise as classes with common superclass
+        ## move to separate package
         for widget, widget_config in gstasks_profile.get("widgets", {}).items():
             if widget == "habits":
                 jinja_env["widgets"]["habits_df"] = _get_habits(
@@ -359,6 +351,7 @@ def ls():
                         tag=tag,
                         after_date=after_date,
                         before_date=before_date,
+                        exclude_tag=exclude_tag,
                     )
                 )
                 logging.warning(f"cmd: `{cmd}`")
@@ -372,6 +365,8 @@ def ls():
                 }
                 if tag is not None:
                     kwargs["tags"] = [tag]
+                if exclude_tag is not None:
+                    kwargs["exclude_tags"] = [exclude_tag]
                 for kk, vv in dict(
                     before_date=before_date, after_date=after_date
                 ).items():

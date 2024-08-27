@@ -1,3 +1,4 @@
+
 <html>
   <!--https://flask.palletsprojects.com/en/2.3.x/tutorial/static/-->
   <head>
@@ -7,7 +8,7 @@
     </style>
   </head>
   <body>
-    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday">before yesterday</a>
+    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday&et=operation">before yesterday (no <code>operation</code> tag)</a>
     {% for k in ['yesterday','today','tomorrow'] %}
     <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad={{k}}">{{k}}</a>
     {% endfor %}

@@ -1422,6 +1422,7 @@ def real_ls(
             if drop_hidden_fields is None
             else drop_hidden_fields,
             tags=tags,
+            exclude_tags=exclude_tags,
         )
         logging.warning(f"fetched {len(df)}")
     with TimeItContext("weekend", report_dict=timings):

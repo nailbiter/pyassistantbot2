@@ -20,10 +20,11 @@ ORGANIZATION:
 from pymongo import MongoClient
 import logging
 import pandas as pd
-from _gstasks.base import _format_url
+from _gstasks.base import _format_url, make_mongo_friendly
 from datetime import datetime, timedelta
 import typing
 import uuid
+import sys
 
 
 class TaskList:
@@ -49,6 +50,12 @@ class TaskList:
         if tags:
             filter_["tags"] = {"$all": tags}
         df = pd.DataFrame(self.get_coll().find(filter=filter_))
+        self._logger.warning(exclude_tags)
+        self._logger.warning(df["tags"].to_list()[-5:])
+        for exclude_tag in exclude_tags:
+            df = df[
+                df["tags"].apply(lambda l: pd.isna(l).all() or (exclude_tag not in l))
+            ]
         #        df = df.sort_values(by=["_insertion_date", "_id"])
         if is_drop_hidden_fields:
             df.drop(columns=[x for x in list(df) if x.startswith("_")], inplace=True)
@@ -104,9 +111,9 @@ class TaskList:
         action = "inserting" if index is None else "replacing"
 
         assert action in ["inserting", "replacing"]
-        print(f"{action} {r}", file=sys.sys.stderr)
+        print(f"{action} {r}", file=sys.stderr)
         if action == "inserting":
-            index = len(self.get_all_task())
+            index = len(self.get_all_tasks())
 
         log_kwargs = {}
         if action == "replacing":
