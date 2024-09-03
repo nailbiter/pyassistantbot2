@@ -192,6 +192,9 @@ def edit(task_id) -> str:
             form.pop(k)
         elif (k, v) == ("scheduled_date", _NONE_TEXT_FORM_VALUE):
             form[k] = _NONE_CLICK_VALUE
+        elif (k, v) == ("due", _NONE_TEXT_FORM_VALUE):
+            form[k] = _NONE_CLICK_VALUE
+    form["tags"] = form.get("tags", "").split()
     logging.warning(f"form: {form}")
 
     if len(form) > 0:
