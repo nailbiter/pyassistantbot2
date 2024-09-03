@@ -22,6 +22,20 @@
     </option>
     {% endfor %}
   </select>
+
+  <br>
+
+  <label for="due">due date:</label>
+  <input type="text" placeholder="Scheduled date" id="due" name="due"value="{{ special_values.nothing }}"/>
+  
+  <br>
+  
+  <label for="comment">comment:</label>
+  <input type="text" placeholder="comment" id="comment" name="comment"value="{{ special_values.nothing }}"/>
+
+  
+  <label for="action_comment">action comment:</label>
+  <input type="text" placeholder="action_comment" id="action_comment" name="action_comment"value="{{ special_values.nothing }}"/>
   
   <input type="submit" value="edit" />
 </form>
