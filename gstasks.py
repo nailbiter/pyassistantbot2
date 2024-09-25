@@ -1868,6 +1868,13 @@ def relations(ctx, relations_config_file):
 @click.pass_context
 def list_relations(ctx, uuid_text, relation_name, direction_filter, **format_df_kwargs):
     """"""
+    df = real_list_relations(ctx, uuid_text, relation_name, direction_filter)
+    click.echo(apply_click_options(df, format_df_kwargs))
+
+
+def real_list_relations(
+    ctx, uuid_text, relation_name: typing.Optional[str] = None, direction_filter=None
+) -> pd.DataFrame:
     coll = ctx.obj["task_list"].get_coll("relations")
 
     filter_ = {}
@@ -1894,8 +1901,7 @@ def list_relations(ctx, uuid_text, relation_name, direction_filter, **format_df_
                 .apply(operator.itemgetter("name"))
             )
         df.drop(columns=["_id"], inplace=True)
-
-    click.echo(apply_click_options(df, format_df_kwargs))
+    return df
 
 
 # @relations.command(name="import")
