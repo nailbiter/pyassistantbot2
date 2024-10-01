@@ -1,5 +1,7 @@
 {{ s_html|safe }}
 
+{{ utils.real_list_relations().to_html()|safe }}
+
 <ul>
   <li> nothing: <code>{{ special_values.nothing }}</code> </li>
   <li> none: <code>{{ special_values.none }}</code> </li>

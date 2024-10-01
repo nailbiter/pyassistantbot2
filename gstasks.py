@@ -1893,6 +1893,8 @@ def real_list_relations(
         else:
             raise NotImplementedError(dict(direction_filter=direction_filter))
         df = pd.DataFrame(coll.find(filter_))
+        if len(df) == 0:
+            return df
         for k in ["inward", "outward"]:
             df[f"{k}_name"] = (
                 df[k]

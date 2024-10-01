@@ -120,15 +120,28 @@ def lso(task_id: str):
     # return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
     # return json.dumps(json.loads(res), sort_keys=True, indent=2)
     s_html = pd.Series(json.loads(res)).to_frame().sort_index().to_html()
-    return render_template(
-        "lso.jinja.html",
+    kwargs = dict(
         s_html=s_html,
         res=json.loads(res),
         states=["DONE", "FAILED", *ADDITIONAL_STATES, _NOTHING_TEXT_FORM_VALUE],
         special_values=dict(
             nothing=_NOTHING_TEXT_FORM_VALUE, none=_NONE_TEXT_FORM_VALUE
         ),
+        utils=dict(
+            real_list_relations=lambda: real_list_relations(
+                g.ctx, uuid_text=str(task_id)
+            )
+        ),
     )
+
+    jinja_template_fn = fn = os.environ.get("GSTASKS_FLASK_LSO_TEMPLATE")
+    logging.warning(f"jinja_template_fn: {jinja_template_fn}")
+    if jinja_template_fn is None:
+        return render_template("lso.jinja.html", **kwargs)
+    else:
+        with open(jinja_template_fn) as f:
+            tpl = Template(f.read())
+        return tpl.render(kwargs)
 
 
 @app.route("/rolling_log/<uuid:task_id>", methods=["GET"])
