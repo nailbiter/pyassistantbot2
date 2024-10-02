@@ -1,6 +1,6 @@
 {{ s_html|safe }}
 
-{{ utils.real_list_relations().to_html()|safe }}
+{{ utils.real_list_relations().to_html(escape=False)|safe }}
 
 {%- macro form_text_field(name, default_value=special_values.nothing, html_text='') %}
   <label for="{{ name }}">{{ (name+":") if html_text=='' else html_text }}</label>

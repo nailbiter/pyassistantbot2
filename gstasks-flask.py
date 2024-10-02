@@ -130,8 +130,8 @@ def lso(task_id: str):
             nothing=_NOTHING_TEXT_FORM_VALUE, none=_NONE_TEXT_FORM_VALUE
         ),
         utils=dict(
-            real_list_relations=lambda: real_list_relations(
-                g.ctx, uuid_text=str(task_id)
+            real_list_relations=functools.partial(
+                _postprocessed_real_list_relations, ctx=g.ctx, uuid_text=str(task_id)
             )
         ),
     )
@@ -144,6 +144,16 @@ def lso(task_id: str):
         with open(jinja_template_fn) as f:
             tpl = Template(f.read())
         return tpl.render(kwargs)
+
+
+def _postprocessed_real_list_relations(ctx=None, uuid_text=None) -> pd.DataFrame:
+    df = real_list_relations(ctx, uuid_text=uuid_text)
+    if len(df) > 0:
+        for cn in ["inward", "outward"]:
+            df[cn] = df[cn].apply(
+                lambda u: f'<a href="http://127.0.0.1:5000/lso/{u}">{u}</a>'
+            )
+    return df
 
 
 @app.route("/rolling_log/<uuid:task_id>", methods=["GET"])
