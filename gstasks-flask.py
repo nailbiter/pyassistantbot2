@@ -47,6 +47,8 @@ from gstasks import (
     get_rolling_log_df,
     CLICK_DEFAULT_VALUES,
     MARK_UNSET_SYMBOL,
+    real_worktime_add,
+    real_worktime_ls,
 )
 import pymongo
 import json5
@@ -179,24 +181,32 @@ def activity_list(task_id: str) -> str:
 def mark(task_id) -> str:
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
-    res = real_mark(
+    res, debug_info = real_mark(
         g.ctx, uuid_text=str(task_id), mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
     logging.warning(txt)
-    return f"<code>{txt}</code>"
+
+    return _engage_message(txt, debug_info)
+
+
+def _engage_message(txt: str, debug_info: dict) -> str:
+    last_two_df = debug_info["last_two_df"]
+    last_engage_dur = last_two_df["dt"].iloc[0] - last_two_df["dt"].iloc[1]
+    return f"<code>{txt}</code><br>{last_two_df.to_html()}<br>{last_engage_dur}"
 
 
 @app.route("/unmark")
 def unmark() -> str:
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
-    res = real_mark(
+    res, debug_info = real_mark(
         g.ctx, uuid_text=MARK_UNSET_SYMBOL, mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
     logging.warning(txt)
-    return f"<code>{txt}</code>"
+
+    return _engage_message(txt, debug_info)
 
 
 @app.route("/edit/<uuid:task_id>", methods=["POST"])

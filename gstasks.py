@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import pickle
+import more_itertools
 import random
 import re
 import string
@@ -938,7 +939,8 @@ def mark(*args, **kwargs):
       1. re-integrate via labels/tags/flabels(=fuzzy labels); or integrate into `edit`
       2. set up fixed set of marks with fixed arity (=1 by default)
     """
-    return real_mark(*args, **kwargs)
+    res, _ = real_mark(*args, **kwargs)
+    return res
 
 
 def real_mark(
@@ -948,7 +950,7 @@ def real_mark(
     is_out: bool = False,
     mark: typing.Optional[str] = None,
     time_: typing.Optional[datetime] = None,
-) -> dict:
+) -> (dict, dict):
     # taken from https://stackoverflow.com/a/13514318
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
@@ -1008,11 +1010,18 @@ def real_mark(
         }
         coll.insert_one(r)
 
+        last_two_df = pd.DataFrame(
+            more_itertools.padded(
+                coll.find({}, sort=[("dt", pymongo.DESCENDING)], limit=2), {}, 2
+            )
+        )
+        logger.warning("\n" + last_two_df.to_string())
+
         if post_hook is not None:
             logging.warning(f'executing post_hook "{post_hook}"')
             os.system(post_hook)
 
-        return r
+        return r, {"last_two_df": last_two_df}
 
 
 @gstasks.group()
