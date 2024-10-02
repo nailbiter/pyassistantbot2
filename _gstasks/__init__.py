@@ -48,6 +48,7 @@ import click
 import pandas as pd
 from jinja2 import Template
 from pymongo import MongoClient
+import pymongo.collection
 from bson.codec_options import CodecOptions
 from dateutil.relativedelta import relativedelta
 import pytz
@@ -469,3 +470,31 @@ def next_work_day(dt: datetime, inc: int = 1) -> datetime:
         if dt.isoweekday() in list(range(1, 6)):
             inc -= 1
     return dt
+
+
+def real_worktime_add(
+    coll: pymongo.collection.Collection,
+    task_uuid: str,
+    duration_sec: int,
+    now: typing.Optional[datetime] = None,
+):
+    return coll.insert_one(
+        {
+            "task_uuid": task_uuid,
+            "uuid": str(uuid.uuid4()),
+            "duration_sec": duration_sec,
+            "now": datetime.now() if now is None else now,
+            "version": "v1",
+        }
+    )
+
+
+def real_worktime_ls(
+    coll: pymongo.collection.Collection,
+    task_uuid: str,
+) -> pd.DataFrame:
+    df = pd.DataFrame(coll.find({"task_uuid": task_uuid}))
+    if len(df) > 0:
+        df.drop(columns=["task_uuid"], inplace=True)
+        df.set_index("uuid", inplace=True)
+    return df

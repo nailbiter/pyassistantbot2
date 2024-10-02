@@ -52,8 +52,10 @@ from jinja2 import Template, Environment, FileSystemLoader
 from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
+    real_worktime_add,
     process_stopwatch_slice,
     preprocess_stopwatch_slice,
+    real_worktime_ls,
     make_mongo_friendly,
     TEMPLATE_DIR_DEFAULT,
     UUID_CACHE_DB_DEFAULT,
@@ -2140,6 +2142,48 @@ def backfill(ctx, dry_run, run_command):
                 replacement={k: r[k] for k in ["dt", "name", "is_done"]},
                 upsert=True,
             )
+
+
+@gstasks.group()
+@moption("-u", "--uuid", "uuid_", type=GSTASK_UUID, required=True)
+@click.pass_context
+def worktime(ctx, uuid_):
+    ctx.obj["worktime_coll"] = ctx.obj["task_list"].get_coll("worktime")
+    ctx.obj["worktime_uuid"] = uuid_
+
+
+@worktime.command(name="rm")
+@moption("-u", "--uuid", "uuid_", type=str, required=True)
+@click.pass_context
+def worktime_rm(ctx, uuid_):
+    logging.warning(ctx.obj["worktime_coll"].delete_one({"uuid": uuid_}))
+
+
+@worktime.command(name="ls")
+@build_click_options
+@click.pass_context
+def worktime_ls(ctx, **format_df_kwargs):
+    logging.warning({k: v for k, v in ctx.obj.items() if k.startswith("worktime_")})
+    df = real_worktime_ls(
+        coll=ctx.obj["worktime_coll"], task_uuid=ctx.obj["worktime_uuid"]
+    )
+    click.echo(apply_click_options(df, format_df_kwargs))
+
+
+@worktime.command(name="add")
+@moption("-m", "--duration-min", type=int, required=True)
+@moption("-n", "--now", type=click.DateTime())
+@click.pass_context
+def worktime_add(ctx, duration_min, now):
+    logging.warning({k: v for k, v in ctx.obj.items() if k.startswith("worktime_")})
+    click.echo(
+        real_worktime_add(
+            coll=ctx.obj["worktime_coll"],
+            task_uuid=ctx.obj["worktime_uuid"],
+            now=now,
+            duration_sec=60 * duration_min,
+        )
+    )
 
 
 if __name__ == "__main__":
