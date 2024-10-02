@@ -2,6 +2,11 @@
 
 {{ utils.real_list_relations().to_html()|safe }}
 
+{%- macro form_text_field(name, default_value=special_values.nothing, html_text='') %}
+  <label for="{{ name }}">{{ (name+":") if html_text=='' else html_text }}</label>
+  <input type="text" placeholder="{{ name }}" id="{{ name }}" name="{{ name }}" value="{{ default_value }}"/>
+{%- endmacro %}
+
 <ul>
   <li> nothing: <code>{{ special_values.nothing }}</code> </li>
   <li> none: <code>{{ special_values.none }}</code> </li>
@@ -51,9 +56,16 @@
   <input type="submit" value="edit" />
 </form>
 
+<form action="http://127.0.0.1:5000/worktime_add/{{ res["uuid"] }}" method="POST">
+  {{ form_text_field('duration_min',default_value='0', html_text='duration min: ') }}
+  <input type="submit" value="add" />
+</form>
+
+
 <ul>
   <li> <a href="http://127.0.0.1:5000/rolling_log/{{ res["uuid"] }}">rolling log</a></li>
   <li> <a href="http://127.0.0.1:5000/activity_list/{{ res["uuid"] }}">activity list</a></li>
   <li> <a href="http://127.0.0.1:5000/relationships_list/{{ res["uuid"] }}">relationships list</a></li>
+  <li> <a href="http://127.0.0.1:5000/worktime_list/{{ res["uuid"] }}">worktime list</a></li>
   <li> <a href="http://127.0.0.1:5000/mark/{{ res["uuid"] }}"">engage</a> </li>
 </ul> 

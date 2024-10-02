@@ -177,6 +177,46 @@ def activity_list(task_id: str) -> str:
     return df.to_html()
 
 
+@app.route("/worktime_list/<uuid:task_id>", methods=["GET"])
+def worktime_list(task_id: str) -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    df = real_worktime_ls(
+        coll=g.ctx.obj["task_list"].get_coll("worktime"), task_uuid=str(task_id)
+    )
+    return (
+        f"{df.to_html()}<br>total: {timedelta(seconds=int(df['duration_sec'].sum()))}"
+    )
+
+
+@app.route("/worktime_add/<uuid:task_id>", methods=["POST"])
+def worktime_add(task_id) -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    task_id = str(task_id)
+
+    logging.warning(f"form: {request.form}")
+    form = dict(request.form)
+    duration_min = int(form["duration_min"])
+    assert duration_min != 0
+
+    res = real_worktime_add(
+        coll=g.ctx.obj["task_list"].get_coll("worktime"),
+        task_uuid=str(task_id),
+        duration_sec=60 * duration_min,
+    )
+
+    return f"<code>{res}</code>"
+
+
+# df = real_worktime_ls(
+#     coll=g.ctx.obj["task_list"].get_coll("worktime"), task_uuid=str(task_id)
+# )
+# return (
+#     f"{df.to_html()}<br>total: {timedelta(seconds=int(df['duration_sec'].sum()))}"
+# )
+
+
 @app.route("/mark/<uuid:task_id>")
 def mark(task_id) -> str:
     _, mongo_url = _init()
