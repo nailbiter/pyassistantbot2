@@ -36,6 +36,7 @@ import time
 from bson.codec_options import CodecOptions
 import uuid
 from os import path
+import pandas as pd
 
 TIME_CATS = [
     "sleeping",
@@ -275,3 +276,12 @@ def get_random_fn(
 ):
     assert ext.startswith("."), ext
     return path.join(tmp_dir, f"{uuid.uuid4()}{ext}")
+
+
+def urllize_df(
+    df: pd.DataFrame, cns: list[str], url_root: str = "http://127.0.0.1:5000"
+) -> pd.DataFrame:
+    if len(df) > 0:
+        for cn in cns:
+            df[cn] = df[cn].apply(lambda u: f'<a href="{url_root}/lso/{u}">{u}</a>')
+    return df

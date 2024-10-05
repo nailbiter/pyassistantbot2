@@ -498,3 +498,12 @@ def real_worktime_ls(
         df.drop(columns=["task_uuid"], inplace=True)
         df.set_index("uuid", inplace=True)
     return df
+
+
+def urllize_df(
+    df: pd.DataFrame, cns: list[str], url_root: str = "http://127.0.0.1:5000"
+) -> pd.DataFrame:
+    if len(df) > 0:
+        for cn in cns:
+            df[cn] = df[cn].apply(lambda u: f'<a href="{url_root}/lso/{u}">{u}</a>')
+    return df
