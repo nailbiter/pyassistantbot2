@@ -77,6 +77,13 @@
   <input type="submit" value="add" />
 </form>
 
+<form action="http://127.0.0.1:5000/rolling_log_add/{{ res["uuid"] }}" method="POST">
+  {{ form_text_field('url', default_value='', html_text='* URL: ') }}
+  {{ form_text_field('comment', default_value='') }}
+  {{ form_text_field('date_time', default_value='') }}
+  <input type="submit" value="add" />
+</form>
+
 
 <ul>
   <li> <a href="http://127.0.0.1:5000/rolling_log/{{ res["uuid"] }}">rolling log</a></li>

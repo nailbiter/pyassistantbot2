@@ -537,4 +537,5 @@ def real_rolling_log_add(
         comment=comment,
     )
     logging.warning(r)
-    coll.insert_one(r)
+    res = coll.insert_one(r)
+    return res

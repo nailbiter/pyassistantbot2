@@ -213,6 +213,29 @@ def worktime_list(task_id: str) -> str:
     )
 
 
+@app.route("/rolling_log_add/<uuid:task_id>", methods=["POST"])
+def rolling_log_add(task_id) -> str:
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    task_id = str(task_id)
+
+    logging.warning(f"form: {request.form}")
+    form = dict(request.form)
+    assert form["url"] != "", form
+
+    res = real_rolling_log_add(
+        coll=g.ctx.obj["task_list"].get_coll("rolling_log"),
+        task_uuid=str(task_id),
+        url=form["url"],
+        comment=None if form["comment"] == "" else form["comment"],
+        date_time=None
+        if form["date_time"] == ""
+        else pd.to_datetime(form["date_time"]),
+    )
+
+    return f"<code>{res}</code>"
+
+
 @app.route("/worktime_add/<uuid:task_id>", methods=["POST"])
 def worktime_add(task_id) -> str:
     _, mongo_url = _init()
@@ -231,14 +254,6 @@ def worktime_add(task_id) -> str:
     )
 
     return f"<code>{res}</code>"
-
-
-# df = real_worktime_ls(
-#     coll=g.ctx.obj["task_list"].get_coll("worktime"), task_uuid=str(task_id)
-# )
-# return (
-#     f"{df.to_html()}<br>total: {timedelta(seconds=int(df['duration_sec'].sum()))}"
-# )
 
 
 @app.route("/mark/<uuid:task_id>")
