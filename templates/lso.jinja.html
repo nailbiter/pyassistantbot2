@@ -2,6 +2,8 @@
   {{ utils.pd.Series(res).to_frame().sort_index().to_html()|safe }}
 </p>
 
+<h3> relations </h3>
+
 <p>
   {{ utils.real_list_relations(is_urllize=True).to_html(escape=False)|safe }}
 </p>
@@ -27,6 +29,8 @@
   <li> nothing: <code>{{ special_values.nothing }}</code> </li>
   <li> none: <code>{{ special_values.none }}</code> </li>
 </ul>
+
+<h3> edit the task </h3>
 
 <form action="http://127.0.0.1:5000/edit/{{ res["uuid"] }}" method="POST">
   <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
@@ -72,10 +76,14 @@
   <input type="submit" value="edit" />
 </form>
 
+<h3> add work time </h3>
+
 <form action="http://127.0.0.1:5000/worktime_add/{{ res["uuid"] }}" method="POST">
   {{ form_text_field('duration_min',default_value='0', html_text='duration min: ') }}
   <input type="submit" value="add" />
 </form>
+
+<h3> add rolling log </h3>
 
 <form action="http://127.0.0.1:5000/rolling_log_add/{{ res["uuid"] }}" method="POST">
   {{ form_text_field('url', default_value='', html_text='* URL: ') }}
@@ -84,6 +92,7 @@
   <input type="submit" value="add" />
 </form>
 
+<h3> additional info about the task </h3>
 
 <ul>
   <li> <a href="http://127.0.0.1:5000/rolling_log/{{ res["uuid"] }}">rolling log</a></li>
