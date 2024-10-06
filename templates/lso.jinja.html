@@ -25,12 +25,12 @@
   <input type="text" placeholder="{{ name }}" id="{{ name }}" name="{{ name }}" value="{{ default_value }}"/>
 {%- endmacro %}
 
+<h3> edit the task </h3>
+  
 <ul>
   <li> nothing: <code>{{ special_values.nothing }}</code> </li>
   <li> none: <code>{{ special_values.none }}</code> </li>
 </ul>
-
-<h3> edit the task </h3>
 
 <form action="http://127.0.0.1:5000/edit/{{ res["uuid"] }}" method="POST">
   <!--https://www.freecodecamp.org/news/html-form-input-type-and-submit-button-example/-->
