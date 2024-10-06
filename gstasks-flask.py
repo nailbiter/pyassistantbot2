@@ -38,6 +38,7 @@ from _gstasks import (
     CLICK_DEFAULT_VALUES,
     real_worktime_add,
     real_worktime_ls,
+    real_rolling_log_add,
 )
 import pandas as pd
 from datetime import datetime, timedelta
@@ -131,8 +132,6 @@ def lso(task_id: str):
         relations_config = json5.load(f)
     logging.warning(relations_config)
 
-    relations_df = real_list_relations(g.ctx, uuid_text=str(task_id))
-
     kwargs = dict(
         # s_html=s_html,
         res=json.loads(res),
@@ -143,11 +142,9 @@ def lso(task_id: str):
             nothing=_NOTHING_TEXT_FORM_VALUE, none=_NONE_TEXT_FORM_VALUE
         ),
         utils=dict(
-            real_list_relations=lambda is_urllize: urllize_df(
-                relations_df, cns=["inward", "outward"]
-            )
-            if is_urllize
-            else relations_df,
+            real_list_relations=functools.partial(
+                _real_list_relations, uuid_text=str(task_id), ctx=g.ctx
+            ),
             pd=pd,
         ),
     )
@@ -160,6 +157,17 @@ def lso(task_id: str):
         with open(jinja_template_fn) as f:
             tpl = Template(f.read())
         return tpl.render(kwargs)
+
+
+def _real_list_relations(
+    ctx=None, uuid_text=None, is_urllize: bool = False
+) -> pd.DataFrame:
+    relations_df = real_list_relations(ctx, uuid_text=uuid_text)
+    return (
+        urllize_df(relations_df, cns=["inward", "outward"])
+        if is_urllize
+        else relations_df
+    )
 
 
 @app.route("/rolling_log/<uuid:task_id>", methods=["GET"])

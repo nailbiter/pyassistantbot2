@@ -3,16 +3,16 @@
 </p>
 
 <p>
-  {{ utils.real_list_relations(True).to_html(escape=False)|safe }}
+  {{ utils.real_list_relations(is_urllize=True).to_html(escape=False)|safe }}
 </p>
 
 <p>
   <ul>
-  {% for r in utils.real_list_relations(False).to_dict(orient='records') %}
+  {% for r in utils.real_list_relations(is_urllize=False).to_dict(orient='records') %}
     <li>
       {% set stem = 'outward' if (r['inward'] == self_task_uuid) else 'inward' %}
       <b>{{ relations_config[r.relation_name][stem] }}</b>
-      <a href="lso/{{ r[stem] }}">{{ r[stem+'_name'] }}</href>  
+      <a href="{{ r[stem] }}">{{ r[stem+'_name'] }}</a>  
     </li>
   {% endfor %}
   </ul>

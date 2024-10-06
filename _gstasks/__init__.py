@@ -512,3 +512,29 @@ def urllize_df(
         for cn in cns:
             df[cn] = df[cn].apply(lambda u: f'<a href="{url_root}/lso/{u}">{u}</a>')
     return df
+
+
+def real_rolling_log_add(
+    task_uuid: str,
+    coll: pymongo.collection.Collection,
+    url: str,
+    omit_url_check: bool = False,
+    date_time: typing.Optional[datetime] = None,
+    comment: typing.Optional[str] = None,
+):
+    if not omit_url_check:
+        allowed_url_prefixes = ["http://", "https://"]
+        assert np.any([url.startswith(k) for k in allowed_url_prefixes]), (
+            allowed_url_prefixes,
+            url,
+        )
+
+    r = dict(
+        uuid=str(uuid.uuid4()),
+        task_uuid=task_uuid,
+        date_time=datetime.now() if date_time is None else date_time,
+        url=url,
+        comment=comment,
+    )
+    logging.warning(r)
+    coll.insert_one(r)

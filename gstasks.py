@@ -54,6 +54,7 @@ from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
 import time
 from _gstasks import (
     real_worktime_add,
+    real_rolling_log_add,
     process_stopwatch_slice,
     preprocess_stopwatch_slice,
     real_worktime_ls,
@@ -1775,22 +1776,14 @@ def rolling_log(ctx, uuid_text):
 )
 @click.pass_context
 def rolling_log_add(ctx, url, comment, date_time, omit_url_check):
-    if not omit_url_check:
-        allowed_url_prefixes = ["http://", "https://"]
-        assert np.any([url.startswith(k) for k in allowed_url_prefixes]), (
-            allowed_url_prefixes,
-            url,
-        )
-
-    r = dict(
-        uuid=str(uuid.uuid4()),
+    real_rolling_log_add(
         task_uuid=ctx.obj["uuid"],
-        date_time=datetime.now() if date_time is None else date_time,
+        coll=ctx.obj["coll"],
         url=url,
         comment=comment,
+        omit_url_check=omit_url_check,
+        date_time=date_time,
     )
-    logging.warning(r)
-    ctx.obj["coll"].insert_one(r)
 
 
 @rolling_log.command(name="rm")
