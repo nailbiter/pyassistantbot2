@@ -31,7 +31,14 @@ from jinja2 import Template
 import tqdm
 from _gstasks.timing import TimeItContext
 from _gstasks.additional_states import ADDITIONAL_STATES
-from _gstasks import TaskList, str_or_envvar, urllize_df
+from _gstasks import (
+    TaskList,
+    str_or_envvar,
+    urllize_df,
+    CLICK_DEFAULT_VALUES,
+    real_worktime_add,
+    real_worktime_ls,
+)
 import pandas as pd
 from datetime import datetime, timedelta
 import collections
@@ -45,10 +52,7 @@ from gstasks import (
     _NONE_CLICK_VALUE,
     rolling_log_df_to_md_string,
     get_rolling_log_df,
-    CLICK_DEFAULT_VALUES,
     MARK_UNSET_SYMBOL,
-    real_worktime_add,
-    real_worktime_ls,
 )
 import pymongo
 import json5
@@ -117,23 +121,34 @@ def lso(task_id: str):
     # return str(task_id)
     res = real_lso(g.ctx, [str(task_id)], object_type="task", is_loud=False)
     logging.warning(f"res: {res}")
-    # return res
-    # return f"<code>{json.dumps(json.loads(res),sort_keys=True,indent=2)}</code>"
-    # return pd.Series(json.loads(res)).to_frame().sort_index().to_html()
-    # return json.dumps(json.loads(res), sort_keys=True, indent=2)
-    s_html = pd.Series(json.loads(res)).to_frame().sort_index().to_html()
+
+    relations_config_file = os.environ.get(
+        "GSTASKS_REL_RELATIONS_CONFIG_FILE",
+        CLICK_DEFAULT_VALUES["relations"]["relations_config_file"],
+    )
+    logging.warning(relations_config_file)
+    with open(relations_config_file) as f:
+        relations_config = json5.load(f)
+    logging.warning(relations_config)
+
+    relations_df = real_list_relations(g.ctx, uuid_text=str(task_id))
+
     kwargs = dict(
-        s_html=s_html,
+        # s_html=s_html,
         res=json.loads(res),
         states=["DONE", "FAILED", *ADDITIONAL_STATES, _NOTHING_TEXT_FORM_VALUE],
+        relations_config=relations_config,
+        self_task_uuid=str(task_id),
         special_values=dict(
             nothing=_NOTHING_TEXT_FORM_VALUE, none=_NONE_TEXT_FORM_VALUE
         ),
         utils=dict(
-            real_list_relations=lambda: urllize_df(
-                real_list_relations(g.ctx, uuid_text=str(task_id)),
-                cns=["inward", "outward"],
+            real_list_relations=lambda is_urllize: urllize_df(
+                relations_df, cns=["inward", "outward"]
             )
+            if is_urllize
+            else relations_df,
+            pd=pd,
         ),
     )
 

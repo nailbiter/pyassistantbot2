@@ -289,6 +289,11 @@ CLICK_DEFAULT_VALUES = {
         "sort_order": tuple(),
     },
     "mark": {"mark": "engage"},
+    "relations": {
+        "relations_config_file": path.join(
+            path.dirname(__file__), "..", ".gstasks_relations.json5"
+        )
+    },
 }
 
 

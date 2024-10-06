@@ -1861,7 +1861,7 @@ def rolling_log_df_to_md_string(df: pd.DataFrame) -> str:
 @moption(
     "--relations-config-file",
     type=click.Path(),
-    default=path.join(path.dirname(__file__), ".gstasks_relations.json5"),
+    default=CLICK_DEFAULT_VALUES["relations"]["relations_config_file"],
 )
 @click.pass_context
 def relations(ctx, relations_config_file):

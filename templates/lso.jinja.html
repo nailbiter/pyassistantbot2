@@ -1,6 +1,22 @@
-{{ s_html|safe }}
+<p>
+  {{ utils.pd.Series(res).to_frame().sort_index().to_html()|safe }}
+</p>
 
-{{ utils.real_list_relations().to_html(escape=False)|safe }}
+<p>
+  {{ utils.real_list_relations(True).to_html(escape=False)|safe }}
+</p>
+
+<p>
+  <ul>
+  {% for r in utils.real_list_relations(False).to_dict(orient='records') %}
+    <li>
+      {% set stem = 'outward' if (r['inward'] == self_task_uuid) else 'inward' %}
+      <b>{{ relations_config[r.relation_name][stem] }}</b>
+      <a href="lso/{{ r[stem] }}">{{ r[stem+'_name'] }}</href>  
+    </li>
+  {% endfor %}
+  </ul>
+</p>
 
 {%- macro form_text_field(name, default_value=special_values.nothing, html_text='') %}
   <label for="{{ name }}">{{ (name+":") if html_text=='' else html_text }}</label>
