@@ -1480,7 +1480,7 @@ def real_ls(
         if len(when) > 0 and len(df) > 0:
             df = df[df["when"].isin(when)]
         if text is not None and len(df) > 0:
-            df = df[[text in n for n in df.name]]
+            df = df[df["name"].str.lower().apply(lambda s: text.lower() in s)]
         if before_date is not None and len(df) > 0:
             df = df[[sd <= before_date for sd in df["scheduled_date"]]]
         if after_date is not None and len(df) > 0:

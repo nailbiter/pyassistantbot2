@@ -363,7 +363,9 @@ def ls():
 
     with TimeItContext("parse flask", report_dict=timings):
         args = request.args
+        logging.warning(f"args: {args}")
         args = request.args.to_dict()
+        logging.warning(f"args: {args}")
 
         profile = args.pop("profile") if "profile" in args else "standard"
         tag = args.pop("tag") if "tag" in args else None
@@ -371,6 +373,7 @@ def ls():
         ## http://127.0.0.1:5000/ls?profile=ttask&bd=tomorrow&ad=tomorrow
         after_date = args.pop("ad") if "ad" in args else None
         before_date = args.pop("bd") if "bd" in args else None
+        text = args.pop("text") if "text" in args else None
 
         logging.warning(
             dict(
@@ -380,6 +383,7 @@ def ls():
                 after_date=after_date,
                 before_date=before_date,
                 exclude_tag=exclude_tag,
+                text=text,
             )
         )
 
@@ -467,6 +471,7 @@ def ls():
                         after_date=after_date,
                         before_date=before_date,
                         exclude_tag=exclude_tag,
+                        text=text,
                     )
                 )
                 logging.warning(f"cmd: `{cmd}`")
@@ -480,6 +485,8 @@ def ls():
                 }
                 if tag is not None:
                     kwargs["tags"] = [tag]
+                if text is not None:
+                    kwargs["text"] = text
                 if exclude_tag is not None:
                     kwargs["exclude_tags"] = [exclude_tag]
                 for kk, vv in dict(
