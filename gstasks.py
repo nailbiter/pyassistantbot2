@@ -1416,6 +1416,7 @@ def real_ls(
     out_file=None,
     columns=[],
     drop_hidden_fields: bool = None,
+    click_echo: typing.Callable = click.echo,
 ):
     logging.warning(f"dhf: {drop_hidden_fields}")
     timings = {}
@@ -1496,7 +1497,7 @@ def real_ls(
         if head is not None:
             df = df.head(head)
         if sample is not None:
-            click.echo(f"{len(df)} tasks initially")
+            click_echo(f"{len(df)} tasks initially")
             df = df.sample(n=sample)
 
         if len(df) > 0:
@@ -1541,28 +1542,9 @@ def real_ls(
             )
 
     with TimeItContext("format_df", report_dict=timings):
-        # if out_format is None:
-        #     click.echo(pretty_df)
-        # elif out_format == "str":
-        #     click.echo(pretty_df.to_string())
-        # elif out_format == "json":
-        #     click.echo(pretty_df.to_json(orient="records"))
-        # elif out_format == "csv":
-        #     click.echo(pretty_df.to_csv())
-        # elif out_format == "html":
-        #     format _html(
-        #         df,
-        #         out_format_config,
-        #         task_list,
-        #         print_callback=click.echo,
-        #         out_file=out_file,
-        #     )
-        #     logging.warning(f"{len(pretty_df)} tasks matched")
-        # else:
-        #     raise NotImplementedError((out_format,))
         logging.warning((len(pretty_df), out_format))
 
-        click.echo(
+        click_echo(
             format_df(
                 pretty_df,
                 "plain" if not out_format else out_format,
@@ -1571,7 +1553,7 @@ def real_ls(
                         df,
                         out_format_config,
                         task_list,
-                        print_callback=click.echo,
+                        print_callback=click_echo,
                         out_file=out_file,
                     )
                 ),
@@ -1582,7 +1564,7 @@ def real_ls(
         if out_format in ["html"]:
             logging.warning(s)
         if out_format not in ["json", "html", "csv", "csvfn"]:
-            click.echo(s)
+            click_echo(s)
 
     timings_df = pd.Series(timings).to_frame("duration_seconds")
     timings_df["dur"] = timings_df["duration_seconds"].apply(

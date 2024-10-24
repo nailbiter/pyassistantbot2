@@ -18,7 +18,7 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
-from flask import Flask, request, g, render_template
+from flask import Flask, request, g, render_template, send_file
 from dotenv import load_dotenv
 import os
 from os import path
@@ -57,6 +57,8 @@ from gstasks import (
 )
 import pymongo
 import json5
+import json
+import base64
 import typing
 from bson import json_util
 import functools
@@ -459,6 +461,7 @@ def ls():
     with TimeItContext("run", report_dict=timings):
         out_fns = {}
         keys = " ".join([f"-{k} {v}" for k, v in args.items()])
+        kwargss = {}
         for k, v in tqdm.tqdm(gstasks_profile["blocks"].items()):
             out_fn = f"/tmp/{uuid.uuid4()}.html"
             if gstasks_profile.get("is_use_shell", False):
@@ -494,8 +497,9 @@ def ls():
                 ).items():
                     if vv is not None:
                         kwargs[kk] = vv
-                logging.warning(kwargs)
+                logging.warning(f"kwargs: {kwargs}")
                 real_ls(**kwargs)
+                kwargss[k] = kwargs
             out_fns[k] = out_fn
 
     with TimeItContext("read output", report_dict=timings):
@@ -508,8 +512,22 @@ def ls():
         if "template" in gstasks_profile:
             with open(gstasks_profile["template"]) as f:
                 template = f.read()
-            jinja_env["table_htmls"] = outs
-            jinja_env["static_files"] = {}
+            jinja_env = {
+                **jinja_env,
+                **dict(
+                    table_htmls=outs,
+                    kwargss={
+                        k_: dict(filter(lambda t: t[0] not in ["ctx"], v_.items()))
+                        for k_, v_ in kwargss.items()
+                    },
+                    static_files={},
+                    utils={
+                        "safe_dump": lambda d: base64.urlsafe_b64encode(
+                            json.dumps(d).encode()
+                        ).decode()
+                    },
+                ),
+            }
             for k, fn in gstasks_profile.get("static_files", {}).items():
                 with open(fn) as f:
                     jinja_env["static_files"][k] = f.read()
@@ -523,6 +541,39 @@ def ls():
     logging.warning(timings_df)
 
     return out
+
+
+@app.route("/download_json/<string:b64d>")
+def download_json(b64d: str):
+    # base64.urlsafe_b64encode(
+    #                         json.dumps(d).encode()
+    #                     ).decode()
+    _, mongo_url = _init()
+    _init_g(g, mongo_url=mongo_url)
+    kwargs = json.loads(base64.urlsafe_b64decode(b64d.encode()).decode())
+    logging.warning(kwargs)
+    out_file = f"/tmp/{uuid.uuid4()}.json"
+    kwargs.pop("out_format_config")
+    with open(out_file, "w") as f:
+        kwargs = {**kwargs, "out_format": "json", "ctx": g.ctx, "click_echo": f.write}
+        logging.warning(kwargs)
+        real_ls(**kwargs)
+    return send_file(
+        out_file,
+        # attachment_filename=path.split(out_file)[1]
+    )
+
+
+class EchoToString:
+    def __init__(self):
+        self._s = ""
+
+    def __call__(self, s):
+        self._s = s
+
+    @property
+    def s(self):
+        return self._s
 
 
 if __name__ == "__main__":
