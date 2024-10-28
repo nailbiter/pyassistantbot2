@@ -2157,8 +2157,9 @@ def worktime_ls(ctx, **format_df_kwargs):
 @worktime.command(name="add")
 @moption("-m", "--duration-min", type=int, required=True)
 @moption("-n", "--now", type=click.DateTime())
+@moption("-c", "--comment", type=str)
 @click.pass_context
-def worktime_add(ctx, duration_min, now):
+def worktime_add(ctx, duration_min, now, comment):
     logging.warning({k: v for k, v in ctx.obj.items() if k.startswith("worktime_")})
     click.echo(
         real_worktime_add(
@@ -2166,6 +2167,7 @@ def worktime_add(ctx, duration_min, now):
             task_uuid=ctx.obj["worktime_uuid"],
             now=now,
             duration_sec=60 * duration_min,
+            comment=comment,
         )
     )
 

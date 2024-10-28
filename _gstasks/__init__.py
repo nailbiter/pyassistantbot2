@@ -482,6 +482,7 @@ def real_worktime_add(
     task_uuid: str,
     duration_sec: int,
     now: typing.Optional[datetime] = None,
+    comment: typing.Optional[str] = None,
 ):
     return coll.insert_one(
         {
@@ -489,7 +490,8 @@ def real_worktime_add(
             "uuid": str(uuid.uuid4()),
             "duration_sec": duration_sec,
             "now": datetime.now() if now is None else now,
-            "version": "v1",
+            "version": "v2",
+            "comment": comment,
         }
     )
 

@@ -80,6 +80,7 @@
 
 <form action="http://127.0.0.1:5000/worktime_add/{{ res["uuid"] }}" method="POST">
   {{ form_text_field('duration_min',default_value='0', html_text='duration min: ') }}
+  {{ form_text_field('comment',default_value='') }}
   <input type="submit" value="add" />
 </form>
 

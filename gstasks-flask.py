@@ -210,10 +210,12 @@ def worktime_list(task_id: str) -> str:
     df = real_worktime_ls(
         coll=g.ctx.obj["task_list"].get_coll("worktime"), task_uuid=str(task_id)
     )
+    if "comment" in df.columns:
+        df["comment"] = df["comment"].fillna("")
     df["duration"] = df.pop("duration_sec").apply(
         lambda seconds: timedelta(seconds=seconds)
     )
-    return f"{df.to_html()}<br>total: {df['duration_sec'].sum()}"
+    return f"{df.to_html()}<br>total: {df['duration'].sum()}"
 
 
 @app.route("/rolling_log_add/<uuid:task_id>", methods=["POST"])
@@ -254,6 +256,7 @@ def worktime_add(task_id) -> str:
         coll=g.ctx.obj["task_list"].get_coll("worktime"),
         task_uuid=str(task_id),
         duration_sec=60 * duration_min,
+        comment=form["comment"],
     )
 
     return f"<code>{res}</code>"
