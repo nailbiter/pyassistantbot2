@@ -644,9 +644,9 @@ _TAG_NONE = "NONE"
 @tags.command(name="ls")
 @moption("-t", "--sort-order", type=(str, click.Choice(["asc", "desc"])), multiple=True)
 @moption("--raw/--no-raw", "-r/ ", default=False)
-@moption("-o", "--out-format", type=click.Choice(AVAILABLE_OUT_FORMATS))
+@build_click_options
 @click.pass_context
-def ls_tags(ctx, sort_order, raw, out_format):
+def ls_tags(ctx, sort_order, raw, **format_df_kwargs):
     task_list = ctx.obj["task_list"]
     tasks_df = task_list.get_all_tasks()
     tasks_df = tasks_df.query("status!='DONE'")
@@ -681,7 +681,8 @@ def ls_tags(ctx, sort_order, raw, out_format):
         )
 
     ##FIXME: `json` does not work (ascii-related error)
-    click.echo(format_df(df, "plain" if not out_format else out_format))
+    # click.echo(format_df(df, "plain" if not out_format else out_format))
+    click.echo(apply_click_options(tasks_df, format_df_kwargs))
 
 
 @gstasks.command(help="ls object")
@@ -703,7 +704,18 @@ def lso(ctx, uuids, object_type, uuid_file):
 
 def real_lso(ctx, uuids: list[str], object_type: str, is_loud: bool = True) -> str:
     res = ""
-    if object_type == "task":
+    if object_type == "tag":
+        task_list = ctx.obj["task_list"]
+        tags_coll = task_list.get_coll("tags")
+        for uuid_text in uuids:
+            (r,) = list(
+                tags_coll.find({"uuid": {"$regex": re.compile("^" + uuid_text)}})
+            )
+            logging.warning(r)
+            s = json.dumps(r, default=json_util.default)
+            res += s
+            click.echo(s)
+    elif object_type == "task":
         task_list = ctx.obj["task_list"]
         for uuid_text in uuids:
             r, _ = task_list.get_task(
@@ -725,13 +737,13 @@ def real_lso(ctx, uuids: list[str], object_type: str, is_loud: bool = True) -> s
                     r[k] = r[k].to_pydatetime()
                 # logging.warning(r[k].tzinfo)
             # r.pop("_id")
-
             logging.info(r)
             s = json.dumps(r, default=json_util.default)
             res += s
             click.echo(s)
     else:
         raise NotImplementedError(dict(object_type=object_type))
+
     return res
 
 
