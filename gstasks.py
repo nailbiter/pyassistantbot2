@@ -682,7 +682,7 @@ def ls_tags(ctx, sort_order, raw, **format_df_kwargs):
 
     ##FIXME: `json` does not work (ascii-related error)
     # click.echo(format_df(df, "plain" if not out_format else out_format))
-    click.echo(apply_click_options(tasks_df, format_df_kwargs))
+    click.echo(apply_click_options(df, format_df_kwargs))
 
 
 @gstasks.command(help="ls object")
