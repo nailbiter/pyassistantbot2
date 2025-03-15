@@ -2087,10 +2087,17 @@ def habits(ctx, habits_file):
 @habits.command()
 @click.option("--dry-run/--no-dry-run", default=False)
 @click.option("--run-command/--no-run-command", default=True)
+@click.option("-F", "--habits-filter-regex")
 @click.pass_context
-def backfill(ctx, dry_run, run_command):
+def backfill(ctx, dry_run, run_command, habits_filter_regex):
     backfill_coll = ctx.obj["backfill_coll"]
     habits_df = pd.DataFrame(ctx.obj["habits"].values(), index=ctx.obj["habits"].keys())
+    if habits_filter_regex is not None:
+        habits_df = habits_df[
+            habits_df.index.to_series()
+            .apply(re.compile(habits_filter_regex).search)
+            .notna()
+        ]
     logging.warning(habits_df)
 
     backfill_df = pd.DataFrame(backfill_coll.find(), columns=["name", "dt", "is_done"])
