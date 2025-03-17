@@ -1495,9 +1495,10 @@ def real_ls(
         if text is not None and len(df) > 0:
             df = df[df["name"].str.lower().apply(lambda s: text.lower() in s)]
         if before_date is not None and len(df) > 0:
-            df = df[[sd <= before_date for sd in df["scheduled_date"]]]
+            logging.warning((before_date, after_date))
+            df = df[pd.to_datetime(df["scheduled_date"]).le(before_date)]
         if after_date is not None and len(df) > 0:
-            df = df[[sd >= after_date for sd in df["scheduled_date"]]]
+            df = df[pd.to_datetime(df["scheduled_date"]).ge(after_date)]
 
     with TimeItContext("filter (tags)", report_dict=timings):
         ## FIXME takes long time (26s)

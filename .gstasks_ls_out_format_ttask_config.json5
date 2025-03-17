@@ -25,7 +25,7 @@ from tasks\
     },
     {
       column_name: "scheduled_date",
-      jinja_tpl: "{{'' if utils.pd.isna(x) else x.strftime('%Y-%m-%d')}}",
+	jinja_tpl: "{{'' if utils.pd.isna(x) else utils.pd.to_datetime(x).strftime('%Y-%m-%d')}}",
     },
     { column_name: "status" },
     { column_name: "when", jinja_tpl: "{{x[0]}}" },
