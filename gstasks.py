@@ -734,7 +734,7 @@ def real_lso(ctx, uuids: list[str], object_type: str, is_loud: bool = True) -> s
                     r[k] = None
                 else:
                     # r[k] = r[k].tz_localize(pytz.UTC)
-                    r[k] = r[k].to_pydatetime()
+                    r[k] = pd.to_datetime(r[k]).to_pydatetime()
                 # logging.warning(r[k].tzinfo)
             # r.pop("_id")
             logging.info(r)
@@ -1895,12 +1895,13 @@ def real_list_relations(
         if len(df) == 0:
             return df
         for k in ["inward", "outward"]:
-            df[f"{k}_name"] = (
-                df[k]
-                .apply(lambda u: ctx.obj["task_list"].get_task(uuid_text=u))
-                .apply(operator.itemgetter(0))
-                .apply(operator.itemgetter("name"))
-            )
+            for kk in ["name", "status"]:
+                df[f"{k}_{kk}"] = (
+                    df[k]
+                    .apply(lambda u: ctx.obj["task_list"].get_task(uuid_text=u))
+                    .apply(operator.itemgetter(0))
+                    .apply(operator.itemgetter(kk))
+                )
         df.drop(columns=["_id"], inplace=True)
     return df
 

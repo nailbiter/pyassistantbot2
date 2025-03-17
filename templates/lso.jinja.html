@@ -14,7 +14,10 @@
     <li>
       {% set stem = 'outward' if (r['inward'] == self_task_uuid) else 'inward' %}
       <b>{{ relations_config[r.relation_name][stem] }}</b>
-      <a href="{{ r[stem] }}">{{ r[stem+'_name'] }}</a>  
+      {{ "<s>"|safe if r[stem+"_status"]=='DONE' }}
+	<a href="{{ r[stem] }}">{{ r[stem+'_name'] }}</a>
+      {{ "</s>"|safe if r[stem+"_status"]=='DONE' }}
+      </div>
     </li>
   {% endfor %}
   </ul>
