@@ -1402,6 +1402,11 @@ def sweep_remind(
 @moption("--drop-hidden-fields/--no-drop-hidden-fields")
 @moption("-l", "--label", "labels", multiple=True, type=(str, str))
 @moption("-C", "--smart-column", "smart_columns", type=(str, str), multiple=True)
+@moption(
+    "--filter-out-states",
+    type=str,
+    default=CLICK_DEFAULT_VALUES["ls"]["filter_out_states"],
+)
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -1409,6 +1414,7 @@ def ls(*args, **kwargs):
 
 def real_ls(
     ctx=None,
+    filter_out_states: str = CLICK_DEFAULT_VALUES["ls"]["filter_out_states"],
     when=CLICK_DEFAULT_VALUES["ls"]["when"],
     smart_columns: list[(str, str)] = CLICK_DEFAULT_VALUES["ls"]["smart_columns"],
     text=None,
@@ -1470,7 +1476,8 @@ def real_ls(
         when = _when
 
     with TimeItContext("filter (status, tags)", report_dict=timings):
-        df = df.query("status!='DONE' and status!='FAILED'")
+        # df = df.query("status!='DONE' and status!='FAILED'")
+        df = df[~df["status"].isin(json.loads(filter_out_states))]
         if len(tags) > 0:
             df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
         if len(labels) > 0:
