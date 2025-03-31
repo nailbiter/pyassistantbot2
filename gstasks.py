@@ -30,6 +30,7 @@ import pickle
 import more_itertools
 import random
 import re
+import graphviz
 import string
 import subprocess
 import types
@@ -1864,6 +1865,60 @@ def relations(ctx, relations_config_file):
         config = json5.load(f)
     logging.warning(f"config: {config}")
     ctx.obj["relations"] = dict(config=config)
+
+
+@relations.command(name="dot")
+@click.pass_context
+@moption("-f", "--uuid-file", type=click.Path(allow_dash=True), required=True)
+@moption("-o", "--output-file", type=click.Path())
+def dot_relations(ctx, uuid_file, output_file):
+    """
+    cat ~/Downloads/tag-tasks.uuid.txt|./gstasks.py rel dot -f-|dot -Tsvg  > /tmp/output.svg
+    """
+    task_list = ctx.obj["task_list"]
+    with click.open_file(uuid_file) as f:
+        uuids = sorted(set(f.read().strip().split()))
+    logging.warning(uuids)
+
+    coll = ctx.obj["task_list"].get_coll("relations")
+    df_rel = pd.DataFrame(coll.find())
+    df_rel = df_rel[df_rel["inward"].isin(uuids) | df_rel["outward"].isin(uuids)]
+    logging.warning(df_rel)
+
+    df_uuids = pd.DataFrame(
+        [
+            task_list.get_task(
+                uuid_text=u,
+                index=None,
+                get_all_tasks_kwargs=dict(is_drop_hidden_fields=False),
+            )[0]
+            for u in sorted({*uuids, *df_rel["outward"], *df_rel["inward"]})
+        ],
+        index=uuids,
+    )
+    df_uuids = df_uuids[["name"]]
+    df_uuids["is_core"] = df_uuids.index.to_series().isin(uuids)
+    logging.warning(df_uuids)
+
+    dot = graphviz.Digraph()
+    for uuid in df_uuids.index:
+        dot.node(uuid, df_uuids.loc[uuid, "name"])
+    graphviz_available_arrow_shapes = {
+        ## https://graphviz.org/doc/info/arrows.html
+        "normal",
+        "vee",
+        "diamond",
+    }
+    arrow_shapes = {}
+    for i, o, name in df_rel[["inward", "outward", "relation_name"]].values:
+        if name not in arrow_shapes:
+            arrow_shapes[name] = graphviz_available_arrow_shapes.pop()
+        dot.edge(i, o, label=name, arrowhead=arrow_shapes[name])
+
+    if output_file is not None:
+        dot.render(output_file)
+    else:
+        click.echo(dot.source)
 
 
 @relations.command(name="ls")
