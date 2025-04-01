@@ -1894,8 +1894,8 @@ def dot_relations(ctx, uuid_file, output_file):
             )[0]
             for u in sorted({*uuids, *df_rel["outward"], *df_rel["inward"]})
         ],
-        index=uuids,
     )
+    df_uuids.set_index("uuid", inplace=True)
     df_uuids = df_uuids[["name"]]
     df_uuids["is_core"] = df_uuids.index.to_series().isin(uuids)
     logging.warning(df_uuids)
@@ -1903,16 +1903,16 @@ def dot_relations(ctx, uuid_file, output_file):
     dot = graphviz.Digraph()
     for uuid in df_uuids.index:
         dot.node(uuid, df_uuids.loc[uuid, "name"])
-    graphviz_available_arrow_shapes = {
+    graphviz_available_arrow_shapes = [
         ## https://graphviz.org/doc/info/arrows.html
         "normal",
         "vee",
         "diamond",
-    }
+    ]
     arrow_shapes = {}
     for i, o, name in df_rel[["inward", "outward", "relation_name"]].values:
         if name not in arrow_shapes:
-            arrow_shapes[name] = graphviz_available_arrow_shapes.pop()
+            arrow_shapes[name] = graphviz_available_arrow_shapes.pop(0)
         dot.edge(i, o, label=name, arrowhead=arrow_shapes[name])
 
     if output_file is not None:
