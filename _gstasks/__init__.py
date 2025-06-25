@@ -282,6 +282,7 @@ class StringContractor:
 CLICK_DEFAULT_VALUES = {
     "ls": {
         "name_length_limit": 50,
+        "filter_out_states": json.dumps(["DONE", "FAILED"]),
         "smart_columns": [],
         "un_scheduled": False,
         "tags": tuple(),

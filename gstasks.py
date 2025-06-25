@@ -30,6 +30,7 @@ import pickle
 import more_itertools
 import random
 import re
+import graphviz
 import string
 import subprocess
 import types
@@ -682,7 +683,7 @@ def ls_tags(ctx, sort_order, raw, **format_df_kwargs):
 
     ##FIXME: `json` does not work (ascii-related error)
     # click.echo(format_df(df, "plain" if not out_format else out_format))
-    click.echo(apply_click_options(tasks_df, format_df_kwargs))
+    click.echo(apply_click_options(df, format_df_kwargs))
 
 
 @gstasks.command(help="ls object")
@@ -734,7 +735,7 @@ def real_lso(ctx, uuids: list[str], object_type: str, is_loud: bool = True) -> s
                     r[k] = None
                 else:
                     # r[k] = r[k].tz_localize(pytz.UTC)
-                    r[k] = r[k].to_pydatetime()
+                    r[k] = pd.to_datetime(r[k]).to_pydatetime()
                 # logging.warning(r[k].tzinfo)
             # r.pop("_id")
             logging.info(r)
@@ -1402,6 +1403,11 @@ def sweep_remind(
 @moption("--drop-hidden-fields/--no-drop-hidden-fields")
 @moption("-l", "--label", "labels", multiple=True, type=(str, str))
 @moption("-C", "--smart-column", "smart_columns", type=(str, str), multiple=True)
+@moption(
+    "--filter-out-states",
+    type=str,
+    default=CLICK_DEFAULT_VALUES["ls"]["filter_out_states"],
+)
 @click.pass_context
 def ls(*args, **kwargs):
     real_ls(*args, **kwargs)
@@ -1409,6 +1415,7 @@ def ls(*args, **kwargs):
 
 def real_ls(
     ctx=None,
+    filter_out_states: str = CLICK_DEFAULT_VALUES["ls"]["filter_out_states"],
     when=CLICK_DEFAULT_VALUES["ls"]["when"],
     smart_columns: list[(str, str)] = CLICK_DEFAULT_VALUES["ls"]["smart_columns"],
     text=None,
@@ -1470,7 +1477,8 @@ def real_ls(
         when = _when
 
     with TimeItContext("filter (status, tags)", report_dict=timings):
-        df = df.query("status!='DONE' and status!='FAILED'")
+        # df = df.query("status!='DONE' and status!='FAILED'")
+        df = df[~df["status"].isin(json.loads(filter_out_states))]
         if len(tags) > 0:
             df = df[[set(_tags) >= set(tags) for _tags in df.tags]]
         if len(labels) > 0:
@@ -1495,9 +1503,10 @@ def real_ls(
         if text is not None and len(df) > 0:
             df = df[df["name"].str.lower().apply(lambda s: text.lower() in s)]
         if before_date is not None and len(df) > 0:
-            df = df[[sd <= before_date for sd in df["scheduled_date"]]]
+            logging.warning((before_date, after_date))
+            df = df[pd.to_datetime(df["scheduled_date"]).le(before_date)]
         if after_date is not None and len(df) > 0:
-            df = df[[sd >= after_date for sd in df["scheduled_date"]]]
+            df = df[pd.to_datetime(df["scheduled_date"]).ge(after_date)]
 
     with TimeItContext("filter (tags)", report_dict=timings):
         ## FIXME takes long time (26s)
@@ -1858,6 +1867,60 @@ def relations(ctx, relations_config_file):
     ctx.obj["relations"] = dict(config=config)
 
 
+@relations.command(name="dot")
+@click.pass_context
+@moption("-f", "--uuid-file", type=click.Path(allow_dash=True), required=True)
+@moption("-o", "--output-file", type=click.Path())
+def dot_relations(ctx, uuid_file, output_file):
+    """
+    cat ~/Downloads/tag-tasks.uuid.txt|./gstasks.py rel dot -f-|dot -Tsvg  > /tmp/output.svg
+    """
+    task_list = ctx.obj["task_list"]
+    with click.open_file(uuid_file) as f:
+        uuids = sorted(set(f.read().strip().split()))
+    logging.warning(uuids)
+
+    coll = ctx.obj["task_list"].get_coll("relations")
+    df_rel = pd.DataFrame(coll.find())
+    df_rel = df_rel[df_rel["inward"].isin(uuids) | df_rel["outward"].isin(uuids)]
+    logging.warning(df_rel)
+
+    df_uuids = pd.DataFrame(
+        [
+            task_list.get_task(
+                uuid_text=u,
+                index=None,
+                get_all_tasks_kwargs=dict(is_drop_hidden_fields=False),
+            )[0]
+            for u in sorted({*uuids, *df_rel["outward"], *df_rel["inward"]})
+        ],
+    )
+    df_uuids.set_index("uuid", inplace=True)
+    df_uuids = df_uuids[["name"]]
+    df_uuids["is_core"] = df_uuids.index.to_series().isin(uuids)
+    logging.warning(df_uuids)
+
+    dot = graphviz.Digraph()
+    for uuid in df_uuids.index:
+        dot.node(uuid, df_uuids.loc[uuid, "name"])
+    graphviz_available_arrow_shapes = [
+        ## https://graphviz.org/doc/info/arrows.html
+        "normal",
+        "vee",
+        "diamond",
+    ]
+    arrow_shapes = {}
+    for i, o, name in df_rel[["inward", "outward", "relation_name"]].values:
+        if name not in arrow_shapes:
+            arrow_shapes[name] = graphviz_available_arrow_shapes.pop(0)
+        dot.edge(i, o, label=name, arrowhead=arrow_shapes[name])
+
+    if output_file is not None:
+        dot.render(output_file)
+    else:
+        click.echo(dot.source)
+
+
 @relations.command(name="ls")
 @build_click_options
 @moption("-u", "--uuid-text", type=GSTASK_UUID)
@@ -1894,12 +1957,13 @@ def real_list_relations(
         if len(df) == 0:
             return df
         for k in ["inward", "outward"]:
-            df[f"{k}_name"] = (
-                df[k]
-                .apply(lambda u: ctx.obj["task_list"].get_task(uuid_text=u))
-                .apply(operator.itemgetter(0))
-                .apply(operator.itemgetter("name"))
-            )
+            for kk in ["name", "status"]:
+                df[f"{k}_{kk}"] = (
+                    df[k]
+                    .apply(lambda u: ctx.obj["task_list"].get_task(uuid_text=u))
+                    .apply(operator.itemgetter(0))
+                    .apply(operator.itemgetter(kk))
+                )
         df.drop(columns=["_id"], inplace=True)
     return df
 
@@ -2087,10 +2151,17 @@ def habits(ctx, habits_file):
 @habits.command()
 @click.option("--dry-run/--no-dry-run", default=False)
 @click.option("--run-command/--no-run-command", default=True)
+@click.option("-F", "--habits-filter-regex")
 @click.pass_context
-def backfill(ctx, dry_run, run_command):
+def backfill(ctx, dry_run, run_command, habits_filter_regex):
     backfill_coll = ctx.obj["backfill_coll"]
     habits_df = pd.DataFrame(ctx.obj["habits"].values(), index=ctx.obj["habits"].keys())
+    if habits_filter_regex is not None:
+        habits_df = habits_df[
+            habits_df.index.to_series()
+            .apply(re.compile(habits_filter_regex).search)
+            .notna()
+        ]
     logging.warning(habits_df)
 
     backfill_df = pd.DataFrame(backfill_coll.find(), columns=["name", "dt", "is_done"])
