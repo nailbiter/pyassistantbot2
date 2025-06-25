@@ -34,7 +34,8 @@ from bson.codec_options import CodecOptions
 def _get_coll(mongo_url):
     client = pymongo.MongoClient(mongo_url)
     coll = client.logistics["alex.money"].with_options(
-        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone('Asia/Tokyo')))
+        codec_options=CodecOptions(tz_aware=True, tzinfo=timezone("Asia/Tokyo"))
+    )
     return coll
 
 
@@ -46,8 +47,7 @@ def money2(mongo_url, tags):
     money_df = pd.DataFrame(coll.find())
     if len(tags) > 0:
         money_df = money_df[~money_df.tags.isna()]
-        money_df = money_df[[(set(tags) <= set(_tags))
-                             for _tags in money_df.tags]]
+        money_df = money_df[[(set(tags) <= set(_tags)) for _tags in money_df.tags]]
 
     money_df = money_df.sort_values(by="date", ascending=False)
     click.echo(money_df)

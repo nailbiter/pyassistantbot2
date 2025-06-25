@@ -18,17 +18,37 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
-#from math import floor, trunc
+# from math import floor, trunc
 import logging
 import ast
 import operator as op
+import re
+from _common import get_configured_logger
+import typing
 
 
-def simple_math_eval(s, number_utils=(float, float), is_verbose=False):
+def simple_math_eval(
+    s: str,
+    number_utils: (typing.Callable, typing.Callable) = (float, float),
+    is_verbose: bool = False,
+) -> float:
+    s = re.findall(r"[0-9.\.]+|[+*/-]", s)
     s = list(s[::-1])
     string_to_num, float_to_num = number_utils
+    logger = get_configured_logger(
+        "simple_math_eval", level="DEBUG" if is_verbose else "WARNING"
+    )
+    logger.debug(s)
+
+    # FIXME: this is a hotfix, ideally, the logic below should do it
+    assert len(s) > 0
+    if len(s) == 1:
+        return string_to_num(s[0])
 
     def get_value():
+        _logger = get_configured_logger(
+            "get_value", level="DEBUG" if is_verbose else "WARNING"
+        )
         sign = 1
         if s and s[-1] == "-":
             s.pop()
@@ -37,10 +57,15 @@ def simple_math_eval(s, number_utils=(float, float), is_verbose=False):
         while s and s[-1].isdigit():
             value *= 10
             value += string_to_num(s.pop())
+        _logger.debug((sign, value))
         return sign * value
 
     def get_term():
+        _logger = get_configured_logger(
+            "get_term", level="DEBUG" if is_verbose else "WARNING"
+        )
         term = get_value()
+        _logger.debug(f"term: {term}")
         while s and s[-1] in "*/":
             op = s.pop()
             value = get_value()
@@ -51,10 +76,10 @@ def simple_math_eval(s, number_utils=(float, float), is_verbose=False):
         return term
 
     ans = get_term()
+    logger.debug(f"ans: {ans}")
     while s:
         op, term = s.pop(), get_term()
-        if is_verbose:
-            logging.warning((ans, op, term))
+        logger.debug((ans, op, term))
         if op == "+":
             ans += term
         else:
@@ -63,9 +88,15 @@ def simple_math_eval(s, number_utils=(float, float), is_verbose=False):
 
 
 # supported operators
-operators = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
-             ast.Div: op.truediv, ast.Pow: op.pow, ast.BitXor: op.xor,
-             ast.USub: op.neg}
+operators = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.Div: op.truediv,
+    ast.Pow: op.pow,
+    ast.BitXor: op.xor,
+    ast.USub: op.neg,
+}
 
 
 def eval_expr(expr):
@@ -77,7 +108,7 @@ def eval_expr(expr):
     >>> eval_expr('1 + 2*3**(4^5) / (6 + -7)')
     -5.0
     """
-    return eval_(ast.parse(expr, mode='eval').body)
+    return eval_(ast.parse(expr, mode="eval").body)
 
 
 def eval_(node):

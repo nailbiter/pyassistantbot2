@@ -40,7 +40,7 @@ import typing
 MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
 
 
-def add_money(text, send_message_cb=None, mongo_client=None):
+def add_money(text: str, send_message_cb: typing.Callable = None, mongo_client=None):
     assert send_message_cb is not None
     assert mongo_client is not None
     amount, *other = re.split(r" +", text)

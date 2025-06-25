@@ -37,6 +37,7 @@ from bson.codec_options import CodecOptions
 import uuid
 from os import path
 import pandas as pd
+import sys
 
 TIME_CATS = [
     "sleeping",
@@ -276,3 +277,32 @@ def get_random_fn(
 ):
     assert ext.startswith("."), ext
     return path.join(tmp_dir, f"{uuid.uuid4()}{ext}")
+
+
+def get_configured_logger(
+    name: str,
+    level="DEBUG",
+    format_string: typing.Optional[str] = " - ".join(
+        [
+            f"%({n})s"
+            for n in [
+                "name",
+                "asctime",
+                "levelname",
+                "message",
+            ]
+        ]
+    ),
+) -> logging.Logger:
+    "move to altp"
+    app_logger = logging.getLogger(name)
+    app_logger.setLevel(getattr(logging, level))
+    app_console_handler = logging.StreamHandler(sys.stderr)
+    if format_string is not None:
+        formatter = logging.Formatter(
+            # "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            format_string
+        )
+        app_console_handler.setFormatter(formatter)
+    app_logger.addHandler(app_console_handler)
+    return app_logger
