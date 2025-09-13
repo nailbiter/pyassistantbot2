@@ -268,6 +268,8 @@ class UuidCacher:
 
 
 class StringContractor:
+    "TODO: move to `alex_leontiev_toolbox_python`"
+
     def __init__(self, maxlen=20, ellipsis_symbol="..."):
         assert maxlen > len(ellipsis_symbol)
         self._maxlen = maxlen

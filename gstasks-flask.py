@@ -62,6 +62,7 @@ import base64
 import typing
 from bson import json_util
 import functools
+from _gstasks.flask.widgets import WidgetTags
 
 robust_json_dumps = functools.partial(json.dumps, default=json_util.default)
 
@@ -406,59 +407,9 @@ def ls():
                     else None
                 )
             elif widget == "tags":
-                tags_df = pd.DataFrame(dict(tag_name=["tag"], cnt=[999]))
-                mongo_client = pymongo.MongoClient(
-                    str_or_envvar(widget_config["mongo_url"])
-                    if "mongo_url" in widget_config
-                    else None
+                jinja_env["widgets"]["tags_df"] = WidgetTags(**widget_config)(
+                    profile=profile
                 )
-                tags_df = (
-                    pd.DataFrame(mongo_client["gstasks"]["tags"].find())
-                    .drop(columns=["_id"])
-                    .merge(
-                        pd.DataFrame(
-                            mongo_client["gstasks"]["tasks"].aggregate(
-                                [
-                                    {
-                                        "$match": {
-                                            "status": widget_config.get("match_status")
-                                        }
-                                    },
-                                    {"$unwind": "$tags"},
-                                    {
-                                        "$group": {
-                                            "_id": "$tags",
-                                            "count": {"$sum": 1},
-                                            "due": {"$min": "$due"},
-                                        }
-                                    },
-                                ]
-                            )
-                        ),
-                        how="inner",
-                        left_on="uuid",
-                        right_on="_id",
-                    )[["name", "count", "due"]]
-                )
-                tags_df.rename(columns={"name": "tag_name"}, inplace=True)
-                tags_df.set_index("tag_name", inplace=True)
-                tag_names = widget_config.get("tags", [])
-                if len(tag_names) > 0:
-                    tags_df = tags_df.loc[[x for x in tag_names if x in tags_df.index]]
-                else:
-                    tags_df.sort_index(inplace=True)
-                tpl = Template(
-                    widget_config.get(
-                        "tag_url_tpl",
-                        """<a href="ls?profile={{profile}}&tag={{name}}">{{name}}</a>""",
-                    )
-                )
-                tags_df.index = (
-                    tags_df.index.to_series()
-                    .apply(lambda name: tpl.render(dict(name=name, profile=profile)))
-                    .to_list()
-                )
-                jinja_env["widgets"]["tags_df"] = tags_df
             else:
                 logging.error(dict(widget=widget))
 

@@ -10,7 +10,9 @@
       widgets: {
         habits: { mongo_url: "$MONGO_URL" },
         tags: {
+          log_level: "DEBUG",
           mongo_url: "$PYASSISTANTBOT_MONGO_URL", // local = 28s, remote=28s
+          maxlen: 20,
           tags: [
             //"nachberlin",
             "drag",
