@@ -63,8 +63,13 @@ import typing
 from bson import json_util
 import functools
 from _gstasks.flask.widgets import WidgetTags
+from _gstasks.logging import get_configured_logger
 
 robust_json_dumps = functools.partial(json.dumps, default=json_util.default)
+logger = get_configured_logger(
+    "gstasks-flask",
+    level="DEBUG" if os.environ.get("GSTASKS_FLASK_DEBUG", "0") == "1" else "INFO",
+)
 
 
 # MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
@@ -84,7 +89,7 @@ app = Flask(__name__, static_url_path="", static_folder="gstasks-flask-static")
 
 
 def _get_habits(mongo_url: str) -> pd.DataFrame:
-    logging.warning(f"mongo_url: {mongo_url}")
+    logger.info(f"mongo_url: {mongo_url}")
     mongo_client = pymongo.MongoClient(mongo_url)
     _now = datetime.now()
     filter_ = {
@@ -107,9 +112,9 @@ def _get_habits(mongo_url: str) -> pd.DataFrame:
 #     g.test = 1
 def _init_g(g, mongo_url: typing.Optional[str]):
     if hasattr(g, "ctx"):
-        logging.warning(f"`g` has `ctx` (={g.ctx}) ==> do nothing")
+        logger.info(f"`g` has `ctx` (={g.ctx}) ==> do nothing")
     else:
-        logging.warning(f"`g` has no `ctx` ==> init")
+        logger.info(f"`g` has no `ctx` ==> init")
         g.ctx = MockClickContext(mongo_url)
 
 
@@ -117,23 +122,56 @@ _NOTHING_TEXT_FORM_VALUE = "**NOTHING**"
 _NONE_TEXT_FORM_VALUE = "**NONE**"
 
 
+@app.route("/run_script", methods=["GET"])
+def run_script():
+    gstasks_settings, _ = _init()
+    scripts: dict = gstasks_settings.get("scripts", {})
+    logging.info(f"scripts: {scripts}")
+
+    args = request.args
+    logger.info(f"args: {args}")
+    args = request.args.to_dict()
+    logger.info(f"args: {args}")
+
+    script = scripts[args["name"]]
+    ec, out = subprocess.getstatusoutput(script)
+    return f"<pre>{out}</pre>"
+
+
+@app.route("/list_scripts", methods=["GET"])
+def list_scripts():
+    gstasks_settings, _ = _init()
+    scripts: dict = gstasks_settings.get("scripts", {})
+    logging.info(f"scripts: {scripts}")
+
+    return Template(
+        """
+    <ul>
+    {% for k in scripts.keys() -%}
+        <li><a href="/run_script?name={{k}}">{{k}}</a></li>
+    {% endfor -%}
+    </ul>
+    """
+    ).render(scripts=scripts)
+
+
 @app.route("/lso/<uuid:task_id>", methods=["GET"])
 def lso(task_id: str):
-    logging.warning(f"task_id: {task_id}")
+    logger.info(f"task_id: {task_id}")
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
     # return str(task_id)
     res = real_lso(g.ctx, [str(task_id)], object_type="task", is_loud=False)
-    logging.warning(f"res: {res}")
+    logger.info(f"res: {res}")
 
     relations_config_file = os.environ.get(
         "GSTASKS_REL_RELATIONS_CONFIG_FILE",
         CLICK_DEFAULT_VALUES["relations"]["relations_config_file"],
     )
-    logging.warning(relations_config_file)
+    logger.info(relations_config_file)
     with open(relations_config_file) as f:
         relations_config = json5.load(f)
-    logging.warning(relations_config)
+    logger.info(relations_config)
 
     kwargs = dict(
         # s_html=s_html,
@@ -153,7 +191,7 @@ def lso(task_id: str):
     )
 
     jinja_template_fn = fn = os.environ.get("GSTASKS_FLASK_LSO_TEMPLATE")
-    logging.warning(f"jinja_template_fn: {jinja_template_fn}")
+    logger.info(f"jinja_template_fn: {jinja_template_fn}")
     if jinja_template_fn is None:
         return render_template("lso.jinja.html", **kwargs)
     else:
@@ -184,7 +222,7 @@ def rolling_log(task_id: str) -> str:
     else:
         md_s = rolling_log_df_to_md_string(rolling_log_df)
         md = markdown.Markdown()
-        logging.warning(md)
+        logger.info(md)
         return md.convert(md_s)
 
 
@@ -225,7 +263,7 @@ def rolling_log_add(task_id) -> str:
     _init_g(g, mongo_url=mongo_url)
     task_id = str(task_id)
 
-    logging.warning(f"form: {request.form}")
+    logger.info(f"form: {request.form}")
     form = dict(request.form)
     assert form["url"] != "", form
 
@@ -248,7 +286,7 @@ def worktime_add(task_id) -> str:
     _init_g(g, mongo_url=mongo_url)
     task_id = str(task_id)
 
-    logging.warning(f"form: {request.form}")
+    logger.info(f"form: {request.form}")
     form = dict(request.form)
     duration_min = int(form["duration_min"])
     assert duration_min != 0
@@ -271,7 +309,7 @@ def mark(task_id) -> str:
         g.ctx, uuid_text=str(task_id), mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
-    logging.warning(txt)
+    logger.info(txt)
 
     return _engage_message(txt, debug_info)
 
@@ -291,7 +329,7 @@ def unmark() -> str:
         g.ctx, uuid_text=MARK_UNSET_SYMBOL, mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
-    logging.warning(txt)
+    logger.info(txt)
 
     return _engage_message(txt, debug_info)
 
@@ -301,10 +339,10 @@ def edit(task_id) -> str:
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
 
-    logging.warning(f"ti: {task_id}")
-    logging.warning(f"form: {request.form}")
+    logger.info(f"ti: {task_id}")
+    logger.info(f"form: {request.form}")
     form = dict(request.form)
-    logging.warning(f"form: {form}")
+    logger.info(f"form: {form}")
 
     for k, v in list(form.items()):
         if v == _NOTHING_TEXT_FORM_VALUE:
@@ -314,7 +352,7 @@ def edit(task_id) -> str:
         elif (k, v) == ("due", _NONE_TEXT_FORM_VALUE):
             form[k] = _NONE_CLICK_VALUE
     form["tags"] = form.get("tags", "").split()
-    logging.warning(f"form: {form}")
+    logger.info(f"form: {form}")
 
     if len(form) > 0:
         kwargs = dict(
@@ -330,7 +368,7 @@ def edit(task_id) -> str:
         #     kwargs["scheduled_date"] = form["scheduled_date"]
         kwargs = {**kwargs, **form}
 
-        logging.warning(f"kwargs: {kwargs}")
+        logger.info(f"kwargs: {kwargs}")
 
         real_edit(
             ctx=g.ctx,
@@ -359,7 +397,7 @@ def _init() -> (dict, str):
 
 @app.route("/ls", methods=["GET"])
 def ls():
-    # logging.warning(f"g: {my_g}")
+    # logger.info(f"g: {my_g}")
     timings = {}
 
     with TimeItContext("init", report_dict=timings):
@@ -370,9 +408,9 @@ def ls():
 
     with TimeItContext("parse flask", report_dict=timings):
         args = request.args
-        logging.warning(f"args: {args}")
+        logger.info(f"args: {args}")
         args = request.args.to_dict()
-        logging.warning(f"args: {args}")
+        logger.info(f"args: {args}")
 
         profile = args.pop("profile") if "profile" in args else "standard"
         tag = args.pop("tag") if "tag" in args else None
@@ -382,7 +420,7 @@ def ls():
         before_date = args.pop("bd") if "bd" in args else None
         text = args.pop("text") if "text" in args else None
 
-        logging.warning(
+        logger.info(
             dict(
                 args=args,
                 profile=profile,
@@ -411,7 +449,7 @@ def ls():
                     profile=profile
                 )
             else:
-                logging.error(dict(widget=widget))
+                logger.error(dict(widget=widget))
 
     with TimeItContext("run", report_dict=timings):
         out_fns = {}
@@ -432,7 +470,7 @@ def ls():
                         text=text,
                     )
                 )
-                logging.warning(f"cmd: `{cmd}`")
+                logger.info(f"cmd: `{cmd}`")
                 ec, out = subprocess.getstatusoutput(cmd)
                 assert ec == 0, (cmd, ec, out)
             else:
@@ -452,7 +490,7 @@ def ls():
                 ).items():
                     if vv is not None:
                         kwargs[kk] = vv
-                logging.warning(f"kwargs: {kwargs}")
+                logger.info(f"kwargs: {kwargs}")
                 real_ls(**kwargs)
                 kwargss[k] = kwargs
             out_fns[k] = out_fn
@@ -460,7 +498,7 @@ def ls():
     with TimeItContext("read output", report_dict=timings):
         outs = {}
         for k, out_fn in out_fns.items():
-            logging.warning(out_fn)
+            logger.info(out_fn)
             with open(out_fn) as f:
                 out = f.read()
             outs[k] = out
@@ -493,7 +531,7 @@ def ls():
         lambda s: timedelta(seconds=s)
     )
     timings_df["perc"] = timings_df["dur"] / timings_df["dur"].sum() * 100
-    logging.warning(timings_df)
+    logger.info(timings_df)
 
     return out
 
@@ -506,12 +544,12 @@ def download_json(b64d: str):
     _, mongo_url = _init()
     _init_g(g, mongo_url=mongo_url)
     kwargs = json.loads(base64.urlsafe_b64decode(b64d.encode()).decode())
-    logging.warning(kwargs)
+    logger.info(kwargs)
     out_file = f"/tmp/{uuid.uuid4()}.json"
     kwargs.pop("out_format_config")
     with open(out_file, "w") as f:
         kwargs = {**kwargs, "out_format": "json", "ctx": g.ctx, "click_echo": f.write}
-        logging.warning(kwargs)
+        logger.info(kwargs)
         real_ls(**kwargs)
     return send_file(
         out_file,

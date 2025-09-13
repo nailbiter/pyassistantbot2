@@ -25,6 +25,7 @@ import pymongo
 from jinja2 import Template
 
 from _gstasks import str_or_envvar, StringContractor
+from _gstasks.logging import get_configured_logger
 
 
 class WidgetTags:
@@ -54,8 +55,7 @@ class WidgetTags:
             )
         )
 
-        self._logger = logging.getLogger(self.__class__.__name__)
-        self._logger.setLevel(logging.DEBUG)
+        self._logger = get_configured_logger(self.__class__.__name__, level="DEBUG")
 
         self._logger.info(f"log_level: {log_level}")
 
