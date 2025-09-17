@@ -63,7 +63,7 @@ import typing
 from bson import json_util
 import functools
 from _gstasks.flask.widgets import WidgetTags
-from _gstasks.logging import get_configured_logger
+from _gstasks.my_logging import get_configured_logger
 
 robust_json_dumps = functools.partial(json.dumps, default=json_util.default)
 logger = get_configured_logger(
