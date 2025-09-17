@@ -25,7 +25,7 @@ import pymongo
 from jinja2 import Template
 
 from _gstasks import str_or_envvar, StringContractor
-from _gstasks.logging import get_configured_logger
+from _gstasks.my_logging import get_configured_logger
 
 
 class WidgetTags:
