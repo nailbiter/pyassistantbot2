@@ -1,6 +1,7 @@
 {
   gstasks_exe: "/usr/local/anaconda3/envs/base-with-altp/bin/python3 ./gstasks.py",
   mongo_url: "$PYASSISTANTBOT_MONGO_URL", // local = 28s, remote=40s
+  scripts: { ls: "ls", jq_test: 'echo "[1,2,3]"|jq' },
   profiles: {
     standard: {
       cmd: "{{gstasks_exe}} ls -o html -b today {{keys}} --out-file {{out_fn}}",
@@ -10,7 +11,9 @@
       widgets: {
         habits: { mongo_url: "$MONGO_URL" },
         tags: {
+          log_level: "DEBUG",
           mongo_url: "$PYASSISTANTBOT_MONGO_URL", // local = 28s, remote=28s
+          maxlen: 20,
           tags: [
             //"nachberlin",
             "drag",
