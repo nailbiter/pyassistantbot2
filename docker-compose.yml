@@ -1,12 +1,12 @@
 version: '3.3'
 
 services:
-    heartbeat_habits:
-        restart: on-failure    
-        build:
-            context: .
-            dockerfile: Dockerfile
-        command: python3 heartbeat_habits.py heartbeat
+    # heartbeat_habits:
+    #     restart: on-failure    
+    #     build:
+    #         context: .
+    #         dockerfile: Dockerfile
+    #     command: python3 heartbeat_habits.py heartbeat
     # heartbeat_time:
     #     restart: on-failure    
     #     build:
