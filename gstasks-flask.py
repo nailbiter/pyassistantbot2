@@ -55,6 +55,7 @@ from gstasks import (
     get_rolling_log_df,
     MARK_UNSET_SYMBOL,
 )
+from _gstasks.typer import typeme
 import pymongo
 import json5
 import json
@@ -122,37 +123,206 @@ _NOTHING_TEXT_FORM_VALUE = "**NOTHING**"
 _NONE_TEXT_FORM_VALUE = "**NONE**"
 
 
-@app.route("/run_script", methods=["GET"])
+@app.route("/run_script", methods=["GET", "POST"])
 def run_script():
     gstasks_settings, _ = _init()
-    scripts: dict = gstasks_settings.get("scripts", {})
+    scripts: dict = wrap_scripts(gstasks_settings.get("scripts", {}))
     logging.info(f"scripts: {scripts}")
+
+    if hasattr(request, "form") and request.form is not None:
+        form = request.form.to_dict()
+    else:
+        form = {}
 
     args = request.args
     logger.info(f"args: {args}")
-    args = request.args.to_dict()
+    args = {**form, **request.args.to_dict()}
     logger.info(f"args: {args}")
 
     script = scripts[args["name"]]
-    ec, out = subprocess.getstatusoutput(script)
+
+    cmd = (
+        Template(script["template"]).render(args)
+        if script["has_args"]
+        else script["template"]
+    )
+    logging.info(f"cmd: {cmd}")
+
+    ec, out = subprocess.getstatusoutput(cmd)
     return f"<pre>{out}</pre>"
+
+
+# @app.route("/get_script_args", methods=["GET"])
+# def get_script_args():
+#     gstasks_settings, _ = _init()
+#     scripts: dict = wrap_scripts(gstasks_settings.get("scripts", {}))
+#     logging.info(f"scripts: {scripts}")
+
+#     args = request.args
+#     logger.info(f"args: {args}")
+#     args = request.args.to_dict()
+#     logger.info(f"args: {args}")
+
+#     script = scripts[args["name"]]
+#     args: list[str] = script["args"]
+
+
+# --- Completed Flask Route ---
+@app.route("/get_script_args", methods=["GET"])
+def get_script_args():
+    """
+    Generates and returns an HTML form based on the arguments
+    of a script specified in the URL query parameters.
+    Example: /get_script_args?name=deploy_server
+    """
+    gstasks_settings, _ = _init()
+    scripts: dict = wrap_scripts(gstasks_settings.get("scripts", {}))
+    logger.info(f"Available scripts: {list(scripts.keys())}")
+
+    # Get the script name from the URL query string (e.g., ?name=...)
+    request_args = request.args
+    script_name = request_args.get("name")
+    logger.info(f"Request arguments: {request_args}")
+
+    if not script_name or script_name not in scripts:
+        return "Error: A valid 'name' parameter must be provided.", 400
+
+    # Retrieve the specific script and its arguments
+    script = scripts[script_name]
+    script_args_list: list[str] = script["args"]
+
+    # --- HTML Form Generation ---
+    # Start building the HTML response string
+    html_response = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Arguments for {script_name}</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #f4f7f9;
+                color: #333;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }}
+            .form-container {{
+                background: white;
+                padding: 2rem 3rem;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+                width: 100%;
+                max-width: 400px;
+            }}
+            h1 {{
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+                text-align: center;
+            }}
+            .form-group {{
+                margin-bottom: 1.25rem;
+            }}
+            label {{
+                display: block;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+            }}
+            input[type="text"] {{
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #dcdcdc;
+                border-radius: 8px;
+                box-sizing: border-box; /* Important for padding */
+                transition: border-color 0.2s;
+            }}
+            input[type="text"]:focus {{
+                outline: none;
+                border-color: #007bff;
+            }}
+            input[type="submit"] {{
+                width: 100%;
+                padding: 0.85rem;
+                border: none;
+                border-radius: 8px;
+                background-color: #007bff;
+                color: white;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }}
+            input[type="submit"]:hover {{
+                background-color: #0056b3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="form-container">
+            <h1>Run Script: {script_name}</h1>
+            <form action="/run_script" method="POST">
+                <!-- Hidden input to pass the script name to the next endpoint -->
+                <input type="hidden" name="name" value="{script_name}">
+    """
+
+    # Dynamically generate a labeled text field for each argument
+    assert "name" not in script_args_list
+    script_args_list.append("name")
+    for arg in script_args_list:
+        # Create a more readable label (e.g., 'version_tag' -> 'Version tag')
+        label_text = arg.replace("_", " ").capitalize()
+        html_response += Template(
+            """
+                <div class="form-group">
+                    <label for="{{arg}}">{{label_text}}</label>
+                    <input type="text" id="{{arg}}" name="{{arg}}" {% if arg=='name' %}value="{{ script_name }}"}{% endif %} required>
+                </div>
+        """
+        ).render(arg=arg, label_text=label_text, script_name=script_name)
+
+    # Add the submit button and close the HTML tags
+    html_response += """
+                <input type="submit" value="Run Script">
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+
+    return html_response, 200
 
 
 @app.route("/list_scripts", methods=["GET"])
 def list_scripts():
     gstasks_settings, _ = _init()
-    scripts: dict = gstasks_settings.get("scripts", {})
+    scripts: dict = wrap_scripts(gstasks_settings.get("scripts", {}))
     logging.info(f"scripts: {scripts}")
 
     return Template(
         """
     <ul>
-    {% for k in scripts.keys() -%}
-        <li><a href="/run_script?name={{k}}">{{k}}</a></li>
+    {% for k,v in scripts.items() -%}
+        <li><a href="/{{ 'get_script_args' if v.has_args else 'run_script' }}?name={{k}}">{{k}}</a></li>
     {% endfor -%}
     </ul>
     """
     ).render(scripts=scripts)
+
+
+def wrap_scripts(scripts: dict) -> dict:
+    res = {
+        k: (v if typeme(v) == "dict" else dict(template=v)) for k, v in scripts.items()
+    }
+    for k in res:
+        if res[k].get("args") is None:
+            res[k]["has_args"] = False
+        else:
+            res[k]["has_args"] = True
+    return res
 
 
 @app.route("/lso/<uuid:task_id>", methods=["GET"])
