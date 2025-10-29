@@ -17,27 +17,28 @@ ORGANIZATION:
     REVISION: ---
 
 ==============================================================================="""
-import pymongo
-from datetime import datetime, timedelta
-from pytz import timezone
-from bson.codec_options import CodecOptions
-from pytz import timezone
-import re
-import types
-from typing import cast
+import functools
 import inspect
-from jinja2 import Template
 import logging
-import subprocess
 import os
-import logging
-import typing
-import time
-from bson.codec_options import CodecOptions
-import uuid
-from os import path
-import pandas as pd
+import re
+import subprocess
 import sys
+import time
+import types
+import typing
+import uuid
+from datetime import datetime, timedelta, date
+from os import path
+from typing import cast
+from zoneinfo import ZoneInfo  # zoneinfo is standard library in Python 3.9+
+
+import pandas as pd
+import pymongo
+from bson.codec_options import CodecOptions
+from jinja2 import Template
+from pytz import timezone
+from tzlocal import get_localzone, reload_localzone
 
 TIME_CATS = [
     "sleeping",
@@ -91,43 +92,56 @@ TIMEDELTA_ABBREVIATIONS = {
 }
 
 
-def parse_cmdline_datetime(s, fail_callback=None) -> typing.Optional[datetime]:
+def parse_cmdline_datetime(
+    s, fail_callback=None, now: typing.Optional[datetime] = None
+) -> typing.Optional[datetime]:
+    now = datetime.now() if now is None else now
     try:
         if s is None:
             return None
         elif s == "tomorrow":
-            res = datetime.now().date() + timedelta(days=1)
+            res = now.date() + timedelta(days=1)
             res = datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
             return res
         elif s == "yesterday":
-            res = datetime.now().date() - timedelta(days=1)
+            res = now.date() - timedelta(days=1)
             res = datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
             return res
         elif s == "today":
-            res = datetime.now().date()
+            res = now.date()
             res = datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
             return res
         elif (m := re.match(r"next (mon|tue|wed|thu|fri|sat|sun)", s)) is not None:
             weekday = "mon|tue|wed|thu|fri|sat|sun".split("|").index(m.group(1))
-            res = datetime.now().date() + timedelta(days=1)
+            res = now.date() + timedelta(days=1)
             while res.weekday() != weekday:
                 res += timedelta(days=1)
             return datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
         elif (m := re.match(r"([\+-])(\d+)d", s)) is not None:
-            res = datetime.now().date()
+            res = now.date()
             res += (1 if m.group(1) == "+" else -1) * timedelta(days=int(m.group(2)))
-            res = datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
+            res = _date_to_datetime(res)
             return res
         elif (m := re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", s)) is not None:
             return datetime.strptime(s, "%Y-%m-%d %H:%M")
         elif (m := re.match(r"\d{4}-\d{2}-\d{2}", s)) is not None:
             return datetime.strptime(s, "%Y-%m-%d")
+        elif s == "next workday":
+            return _date_to_datetime(next_work_day(now.date()))
+        elif s == "next workday skip fri":
+            return _date_to_datetime(
+                next_work_day(now.date(), weekdays=tuple(range(1, 5)))
+            )
         else:
             raise NotImplementedError(f'cannot parse parse_cmdline_datetime "{s}"')
     except Exception:
         if fail_callback is not None:
             fail_callback(f"cannot parse {s}")
         raise
+
+
+def _date_to_datetime(res: date) -> datetime:
+    return datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
 
 
 _DEFAULT_TRELLO_PACKAGE_PATH = "/Users/nailbiter/for/forpython/trello"
@@ -306,3 +320,41 @@ def get_configured_logger(
         app_console_handler.setFormatter(formatter)
     app_logger.addHandler(app_console_handler)
     return app_logger
+
+
+def get_local_timezone() -> ZoneInfo:
+    """
+    Gets the local timezone as a zoneinfo.ZoneInfo object
+    using the 'tzlocal' library.
+
+    Returns:
+        zoneinfo.ZoneInfo: The local timezone object.
+    """
+    # reload_localzone() ensures it picks up any recent system changes
+    reload_localzone()
+
+    try:
+        # get_localzone() returns the IANA timezone name (e.g., "America/New_York")
+        tz_name = get_localzone().key
+        return ZoneInfo(tz_name)
+    except Exception as e:
+        print(f"Error getting local timezone: {e}")
+        # Fallback or error handling
+        return ZoneDetails(f"Error: {e}")
+
+
+@functools.cache
+def next_work_day(
+    dt: datetime, inc: int = 1, weekdays: set[int] = tuple(range(1, 6))
+) -> datetime:
+    """
+    FIXME: current runtime O(n) is pathetic, make it O(1)
+    note: remember that .isoweekday()==1 <=> mon
+    """
+    if inc < 0:
+        raise NotImplementedError("FIXME: enable negative increment")
+    while inc > 0:
+        dt += timedelta(days=1)
+        if dt.isoweekday() in weekdays:
+            inc -= 1
+    return dt

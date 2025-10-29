@@ -19,7 +19,7 @@ ORGANIZATION:
 ==============================================================================="""
 import logging
 import unittest
-from _gstasks import next_work_day
+from _common import next_work_day, parse_cmdline_datetime
 from datetime import datetime
 
 
@@ -34,7 +34,26 @@ from datetime import datetime
 #         self.assertNotEqual(1, 2)
 
 
-def test_next_work_day():
+def test__next_work_day():
     assert next_work_day(datetime(2024, 8, 23)) == datetime(2024, 8, 26)
     assert next_work_day(datetime(2024, 8, 22)) == datetime(2024, 8, 23)
     assert next_work_day(datetime(2024, 8, 24)) == datetime(2024, 8, 26)
+
+
+def test__parse_cmdline_datetime():
+    assert parse_cmdline_datetime(
+        "next workday", now=datetime(2025, 10, 29, 19, 29)
+    ) == datetime(2025, 10, 30)
+    assert parse_cmdline_datetime(
+        "next workday", now=datetime(2025, 10, 30)
+    ) == datetime(2025, 10, 31)
+    assert parse_cmdline_datetime(
+        "next workday", now=datetime(2025, 10, 31)
+    ) == datetime(2025, 11, 3)
+
+    assert parse_cmdline_datetime(
+        "next workday skip fri", now=datetime(2025, 10, 30)
+    ) == datetime(2025, 11, 3)
+    # assert parse_cmdline_datetime(
+    #     "next workday skip fri", now=datetime(2025, 10, 30)
+    # ) == datetime(2025, 11, 3)

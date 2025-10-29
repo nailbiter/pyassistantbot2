@@ -107,9 +107,12 @@ def show(ctx, remote_filter, local_filter, grep, grep_size, impute):
         )
     )
     df = df[["_id", "date", "category"]]
+
     # server write date in JST <-- maybe, better to be changed to UTC?
-    df.date = df.date - timedelta(hours=9)
-    df.date = df.date.apply(functools.partial(_common.to_utc_datetime, inverse=True))
+    # df["date"] = df["date"] - timedelta(hours=9)
+    df["date"] = df["date"].apply(
+        functools.partial(_common.to_utc_datetime, inverse=True)
+    )
 
     #    click.echo(df)
     to_impute = _common.fill_gaps(df.date, _TD)
