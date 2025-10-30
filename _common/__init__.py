@@ -91,6 +91,10 @@ TIMEDELTA_ABBREVIATIONS = {
     **{s[0].lower(): f"{s}s" for s in ["day", "month"]},
 }
 
+weekday_to_offset: typing.Callable[[str], int] = "mon|tue|wed|thu|fri|sat|sun".split(
+    "|"
+).index
+
 
 def parse_cmdline_datetime(
     s, fail_callback=None, now: typing.Optional[datetime] = None
@@ -112,7 +116,7 @@ def parse_cmdline_datetime(
             res = datetime(**{k: getattr(res, k) for k in "year,month,day".split(",")})
             return res
         elif (m := re.match(r"next (mon|tue|wed|thu|fri|sat|sun)", s)) is not None:
-            weekday = "mon|tue|wed|thu|fri|sat|sun".split("|").index(m.group(1))
+            weekday = weekday_to_offset(m.group(1))
             res = now.date() + timedelta(days=1)
             while res.weekday() != weekday:
                 res += timedelta(days=1)
