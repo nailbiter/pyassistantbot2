@@ -28,11 +28,11 @@ import logging
 
 
 @click.command()
-@click.option("-r", "--regex")
+@click.option("-R", "--regex")
 @click.option("--mongo_pass", envvar="MONGO_PASS", required=True)
 @click.option("-l", "--limit", type=int, default=10)
 @click.option("-i", "--index", multiple=True, type=int)
-@click.option("--dry-run/--no-dry-run", default=True)
+@click.option("--dry-run/--no-dry-run", " /-F", default=True)
 @click.option("--set-success/--no-set-success", default=True)
 @click.option("--debug/--no-debug", default=False)
 @click.option("-d", "--date", type=click.DateTime())
