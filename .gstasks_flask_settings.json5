@@ -5,6 +5,10 @@
     ls: "ls",
     ls_what: { template: "ls {{dir}}", args: ["dir"] },
     jq_test: 'echo "[1,2,3]"|jq',
+    pma_tree: {
+      template: "/usr/local/anaconda3/envs/base-with-altp/bin/python /Users/nailbiter/for/forpython/miscutils/poor-mans-airflow.py analyze-runs tree -o html",
+      is_wrap_in_raw: false,
+    },
   },
   profiles: {
     standard: {

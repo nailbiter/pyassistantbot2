@@ -149,7 +149,8 @@ def run_script():
     logging.info(f"cmd: {cmd}")
 
     ec, out = subprocess.getstatusoutput(cmd)
-    return f"<pre>{out}</pre>"
+    is_wrap_in_raw = script.get("is_wrap_in_raw", True)
+    return f"<pre>{out}</pre>" if is_wrap_in_raw else out
 
 
 # @app.route("/get_script_args", methods=["GET"])
