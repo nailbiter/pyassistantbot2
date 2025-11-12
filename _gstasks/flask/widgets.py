@@ -72,6 +72,9 @@ class WidgetTags:
         match_ = {}
         if "match_status" in widget_config:
             match_["status"] = widget_config["match_status"]
+        elif "match_statuses" in widget_config:
+            statuses = widget_config["match_statuses"]
+            match_["status"] = {"$in": statuses}
 
         _df = pd.DataFrame(
             mongo_client["gstasks"]["tasks"].aggregate(
