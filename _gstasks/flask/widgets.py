@@ -68,10 +68,15 @@ class WidgetTags:
             if "mongo_url" in widget_config
             else None
         )
+
+        match_ = {}
+        if "match_status" in widget_config:
+            match_["status"] = widget_config["match_status"]
+
         _df = pd.DataFrame(
             mongo_client["gstasks"]["tasks"].aggregate(
                 [
-                    {"$match": {"status": widget_config.get("match_status")}},
+                    {"$match": match_},
                     {"$unwind": "$tags"},
                     {
                         "$group": {
