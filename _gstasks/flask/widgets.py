@@ -75,6 +75,7 @@ class WidgetTags:
         elif "match_statuses" in widget_config:
             statuses = widget_config["match_statuses"]
             match_["status"] = {"$in": statuses}
+        self._logger.info(f"match_: {match_}")
 
         _df = pd.DataFrame(
             mongo_client["gstasks"]["tasks"].aggregate(
