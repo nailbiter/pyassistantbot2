@@ -47,6 +47,7 @@ _TIME_CATEGORIES = [
     "coding",
     "rest",
     "reading",
+    "work",
 ]
 
 _TD = timedelta(minutes=30)
