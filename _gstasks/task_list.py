@@ -26,6 +26,8 @@ import typing
 import uuid
 import sys
 
+from alex_leontiev_toolbox_python.utils import typify
+
 
 class TaskList:
     def __init__(self, mongo_url, database_name, collection_name):
@@ -54,7 +56,14 @@ class TaskList:
         self._logger.warning(df["tags"].to_list()[-5:])
         for exclude_tag in exclude_tags:
             df = df[
-                df["tags"].apply(lambda l: pd.isna(l).all() or (exclude_tag not in l))
+                df["tags"].apply(
+                    lambda l: (
+                        pd.isna(l)
+                        if typify(pd.isna(l), is_break=False) == "bool"
+                        else pd.isna(l).all()
+                    )
+                    or (exclude_tag not in l)
+                )
             ]
         #        df = df.sort_values(by=["_insertion_date", "_id"])
         if is_drop_hidden_fields:
