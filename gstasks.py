@@ -41,11 +41,15 @@ from typing import cast
 import functools
 from dotenv import load_dotenv
 from _gstasks.parsers.dates_parser import DatesQueryEvaluator
-from _gstasks.timing import TimeItContext
+from alex_leontiev_toolbox_python.utils import TimeItContext as __TimeItContext__
 from _gstasks.jira_helper import (
     JiraHelper,
     generate_symbols_between,
     DEFAULT_JIRA_LABEL,
+)
+from alex_leontiev_toolbox_python.utils.logging_helpers import (
+    get_configured_logger,
+    make_log_format,
 )
 import click
 import pandas as pd
@@ -1432,22 +1436,37 @@ def real_ls(
     sort_order=CLICK_DEFAULT_VALUES["ls"]["sort_order"],
     out_format_config=None,
     scheduled_date_query=None,
+    relations: typing.Optional[typing.Tuple] = None,
     out_file=None,
     columns=[],
     drop_hidden_fields: bool = None,
     click_echo: typing.Callable = click.echo,
 ):
-    logging.warning(f"dhf: {drop_hidden_fields}")
+    logger = get_configured_logger(
+        "real_ls",
+        log_format=make_log_format(
+            [
+                "name",
+                "levelname",
+                "asctime",
+                "message",
+            ]
+        ),
+    )
+    logger.debug(f"dhf: {drop_hidden_fields}")
     timings = {}
+    TimeItContext = functools.partial(
+        __TimeItContext__, report_dict=timings, print_callback=logger.debug
+    )
 
-    with TimeItContext("prep & tags", report_dict=timings):
+    with TimeItContext("prep & tags"):
         task_list = ctx.obj["task_list"]
         _process_tag = TagProcessor(task_list.get_coll("tags"))
         tags, exclude_tags = list(map(_process_tag, tags)), list(
             map(_process_tag, exclude_tags)
         )
 
-    with TimeItContext("fetch", report_dict=timings):
+    with TimeItContext("fetch"):
         df = task_list.get_all_tasks(
             is_post_processing=out_format not in ["html"],
             is_drop_hidden_fields=(out_format not in ["html"])
@@ -1456,10 +1475,10 @@ def real_ls(
             tags=tags,
             exclude_tags=exclude_tags,
         )
-        logging.warning(f"fetched {len(df)}")
-    with TimeItContext("weekend", report_dict=timings):
+        logger.debug(f"fetched {len(df)}")
+    with TimeItContext("weekend"):
         before_date, after_date = map(parse_cmdline_datetime, [before_date, after_date])
-        logging.warning((before_date, after_date))
+        logger.debug((before_date, after_date))
         _when = set()
         for w in when:
             if w == "appropriate":
@@ -1476,7 +1495,7 @@ def real_ls(
                 _when.add(w)
         when = _when
 
-    with TimeItContext("filter (status, tags)", report_dict=timings):
+    with TimeItContext("filter (status, tags)"):
         # df = df.query("status!='DONE' and status!='FAILED'")
         df = df[~df["status"].isin(json.loads(filter_out_states))]
         if len(tags) > 0:
@@ -1490,12 +1509,12 @@ def real_ls(
                     == v
                 ]
 
-    with TimeItContext("filter (DatesQueryEvaluator)", report_dict=timings):
+    with TimeItContext("filter (DatesQueryEvaluator)"):
         if scheduled_date_query is not None:
             df = df[
                 df["scheduled_date"].apply(DatesQueryEvaluator(scheduled_date_query))
             ]
-    with TimeItContext("filter (dates misc)", report_dict=timings):
+    with TimeItContext("filter (dates misc)"):
         if un_scheduled and len(df) > 0:
             df = df[[pd.isna(sd) for sd in df["scheduled_date"]]]
         if len(when) > 0 and len(df) > 0:
@@ -1503,18 +1522,49 @@ def real_ls(
         if text is not None and len(df) > 0:
             df = df[df["name"].str.lower().apply(lambda s: text.lower() in s)]
         if before_date is not None and len(df) > 0:
-            logging.warning((before_date, after_date))
+            logger.debug((before_date, after_date))
             df = df[pd.to_datetime(df["scheduled_date"]).le(before_date)]
         if after_date is not None and len(df) > 0:
             df = df[pd.to_datetime(df["scheduled_date"]).ge(after_date)]
 
-    with TimeItContext("filter (tags)", report_dict=timings):
+    with TimeItContext("filter (tags)"):
         ## FIXME takes long time (26s)
         df["tags"] = df["tags"].apply(
             lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags))
         )
 
-    with TimeItContext("cut & sort", report_dict=timings):
+    with TimeItContext("filter (rels)"):
+        # FIXME: this is slow (10 sec)
+        ## example: http://127.0.0.1:5000/ls?profile=ttask&bd=today&ad=today&rels=c5312c12-63f8-4ced-944d-2329cd272496,Contains,outward
+        logger.debug(f"r: {relations}")
+        if relations is not None:
+            (
+                rel_task_uuid,
+                rel_name,
+                rel_dir,
+                # relations_config,
+                _,
+            ) = relations
+            df_relations = real_list_relations(
+                ctx, rel_task_uuid, rel_name, direction_filter=rel_dir
+            )
+            logger.debug(
+                (
+                    "df_relations",
+                    len(df_relations),
+                    df_relations.to_dict(orient="index"),
+                )
+            )
+            if len(df_relations) == 0:
+                l = []
+            else:
+                l = df_relations[
+                    "inward" if rel_dir == "outward" else "outward"
+                ].to_list()
+            logger.debug(f"l: {l}")
+            df = df[df["uuid"].isin(l)]
+
+    with TimeItContext("cut & sort"):
         if head is not None:
             df = df.head(head)
         if sample is not None:
@@ -1524,7 +1574,7 @@ def real_ls(
         if len(df) > 0:
             if sort_order:
                 kwargs = cmdline_keys_to_sort_kwargs(sort_order)
-                logging.warning(f"sort {kwargs}")
+                logger.debug(f"sort {kwargs}")
                 df.sort_values(
                     **kwargs,
                     inplace=True,
@@ -1537,7 +1587,7 @@ def real_ls(
                     kind="stable",
                 )
 
-    with TimeItContext("pretty_df", report_dict=timings):
+    with TimeItContext("pretty_df"):
         pretty_df = df.copy()
         pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
         pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
@@ -1562,8 +1612,8 @@ def real_ls(
                 }
             )
 
-    with TimeItContext("format_df", report_dict=timings):
-        logging.warning((len(pretty_df), out_format))
+    with TimeItContext("format_df"):
+        logger.debug((len(pretty_df), out_format))
 
         click_echo(
             format_df(
@@ -1583,7 +1633,7 @@ def real_ls(
 
         s = f"{len(pretty_df)} tasks matched"
         if out_format in ["html"]:
-            logging.warning(s)
+            logger.debug(s)
         if out_format not in ["json", "html", "csv", "csvfn"]:
             click_echo(s)
 
@@ -1592,7 +1642,7 @@ def real_ls(
         lambda s: timedelta(seconds=s)
     )
     timings_df["perc"] = timings_df["dur"] / timings_df["dur"].sum() * 100
-    logging.warning(timings_df)
+    logger.debug(timings_df)
 
 
 @gstasks.command()

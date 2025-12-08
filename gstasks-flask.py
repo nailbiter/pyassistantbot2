@@ -64,12 +64,19 @@ import typing
 from bson import json_util
 import functools
 from _gstasks.flask.widgets import WidgetTags
-from _gstasks.my_logging import get_configured_logger
+
+# from _gstasks.my_logging import get_configured_logger
+from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
 
 robust_json_dumps = functools.partial(json.dumps, default=json_util.default)
 logger = get_configured_logger(
     "gstasks-flask",
     level="DEBUG" if os.environ.get("GSTASKS_FLASK_DEBUG", "0") == "1" else "INFO",
+    log_to_file=os.environ.get(
+        "GSTASKS_FLASK_LOGFILE",
+        f""".logs/gstasks-flask/log-{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.log.txt""",
+    ),
+    file_mode=os.environ.get("GSTASKS_FLASK_LOGFILE_MODE", "w"),
 )
 
 
@@ -590,6 +597,7 @@ def ls():
         after_date = args.pop("ad") if "ad" in args else None
         before_date = args.pop("bd") if "bd" in args else None
         text = args.pop("text") if "text" in args else None
+        rels = args.pop("rels") if "rels" in args else None
 
         logger.info(
             dict(
@@ -600,6 +608,7 @@ def ls():
                 before_date=before_date,
                 exclude_tag=exclude_tag,
                 text=text,
+                rels=rels,
             )
         )
 
@@ -661,7 +670,25 @@ def ls():
                 ).items():
                     if vv is not None:
                         kwargs[kk] = vv
-                logger.info(f"kwargs: {kwargs}")
+                if rels is not None:
+                    logger.debug(f"rels: {rels}")
+                    rel_task_uuid, rel_name, rel_dir = rels.split(",")
+                    relations_config_file = os.environ.get(
+                        "GSTASKS_REL_RELATIONS_CONFIG_FILE",
+                        CLICK_DEFAULT_VALUES["relations"]["relations_config_file"],
+                    )
+                    logger.debug(relations_config_file)
+                    with open(relations_config_file) as f:
+                        relations_config = json5.load(f)
+                    logger.debug(relations_config)
+                    kwargs["relations"] = (
+                        rel_task_uuid,
+                        rel_name,
+                        rel_dir,
+                        relations_config,
+                    )
+
+                logger.debug(f"kwargs: {kwargs}")
                 real_ls(**kwargs)
                 kwargss[k] = kwargs
             out_fns[k] = out_fn
