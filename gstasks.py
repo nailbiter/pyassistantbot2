@@ -2045,7 +2045,11 @@ def add_relation(ctx, froms, tos, relation_name):
         )
         logging.warning(f"rel: {r}")
 
-        coll.insert_one(r)
+        coll.insert_one(
+            filter={k: v for k, v in r.items() if k != "uuid"},
+            new_values={"uuid": r["uuid"]},
+            usert=True,
+        )
 
 
 @relations.command(name="rm")
