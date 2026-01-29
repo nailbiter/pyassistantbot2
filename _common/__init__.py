@@ -204,6 +204,7 @@ class TimerContextManager:
         )
 
 
+@functools.cache
 def _get_current_offset():
     # code below is adapted from https://stackoverflow.com/a/10854983
     offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
