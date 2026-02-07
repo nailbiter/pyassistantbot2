@@ -34,6 +34,7 @@ from typing import cast
 from zoneinfo import ZoneInfo  # zoneinfo is standard library in Python 3.9+
 
 import pandas as pd
+import numpy as np
 import pymongo
 from bson.codec_options import CodecOptions
 from jinja2 import Template
@@ -371,3 +372,8 @@ def next_work_day(
         if dt.isoweekday() in weekdays:
             inc -= 1
     return dt
+
+
+def is_missing(x) -> bool:
+    "suggested by Gemini"
+    return np.ndim(x) == 0 and pd.isna(x)

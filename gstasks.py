@@ -55,7 +55,12 @@ import click
 import pandas as pd
 import tqdm
 from jinja2 import Template, Environment, FileSystemLoader
-from _common import parse_cmdline_datetime, run_trello_cmd, get_random_fn
+from _common import (
+    parse_cmdline_datetime,
+    run_trello_cmd,
+    get_random_fn,
+    is_missing,
+)
 import time
 from _gstasks import (
     real_worktime_add,
@@ -432,7 +437,10 @@ def real_edit(
             if v is not None:
                 if k == "tags":
                     r["tags"] = sorted(
-                        getattr(set, tag_operation)(set(r["tags"]), kwargs["tags"])
+                        getattr(set, tag_operation)(
+                            set([] if is_missing(r["tags"]) else r["tags"]),
+                            kwargs["tags"],
+                        )
                     )
                 elif k in ["name", "comment"]:
                     if v == _UNSET:
