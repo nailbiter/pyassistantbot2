@@ -40,6 +40,8 @@ from jinja2 import Template
 from pytz import timezone
 from tzlocal import get_localzone, reload_localzone
 
+from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
+
 TIME_CATS = [
     "sleeping",
     "logistics",
@@ -72,11 +74,17 @@ def get_sleeping_state(mongo_client):
         return cat == "sleeping", cat
 
 
+@functools.cache
 def to_utc_datetime(date: typing.Optional[datetime] = None, inverse: bool = False):
+    logger = get_configured_logger("to_utc_datetime")
     if date is None:
         date = datetime.now()
-    td = timedelta(hours=_get_current_offset())
-    return date - td if not inverse else date + td
+    try:
+        td = timedelta(hours=_get_current_offset())
+        return date - td if not inverse else date + td
+    except Exception as e:
+        logger.error(dict(e=e, date=date, td=td))
+        raise e
 
 
 def get_remote_mongo_client(mongo_pass):

@@ -28,6 +28,8 @@ import sys
 
 from alex_leontiev_toolbox_python.utils import typify
 
+from _common import to_utc_datetime
+
 
 class TaskList:
     def __init__(self, mongo_url, database_name, collection_name):
@@ -52,6 +54,11 @@ class TaskList:
         if tags:
             filter_["tags"] = {"$all": tags}
         df = pd.DataFrame(self.get_coll().find(filter=filter_))
+        # df["scheduled_date"] = (
+        #     pd.to_datetime(df["scheduled_date"])
+        #     .dropna()
+        #     .apply(to_utc_datetime, inverse=True)
+        # )
         self._logger.warning(exclude_tags)
         self._logger.warning(df["tags"].to_list()[-5:])
         for exclude_tag in exclude_tags:

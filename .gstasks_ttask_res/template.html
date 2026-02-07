@@ -4,10 +4,18 @@
   <head>
     <link rel='icon' type='image/x-icon' href='/T-favicon.jpg'>
     <style>
-      {{static_files['style']}}
+      {{ static_files['style'] }}
     </style>
   </head>
   <body>
+    <p>task streams</p>
+    <ol>
+      <li>[ELIM!] telegram tags: #todo, #done</li>
+      <li>[ELIM!]private pad</li>
+      <li>yellow pad</li>
+      <li>jira</li>
+      <li>gstasks</li>
+    </ol>
     <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday&et=operation">before yesterday (no <code>operation</code> tag)</a>
     {% for k in ['yesterday','today','tomorrow'] %}
     <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad={{k}}">{{k}}</a>
