@@ -1529,8 +1529,10 @@ def real_ls(
 
     with TimeItContext("filter (tags)"):
         ## FIXME takes long time (26s)
-        df["tags"] = df["tags"].apply(
-            lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags))
+        df["tags"] = (
+            df["tags"]
+            .dropna()
+            .apply(lambda tags: sorted(map(_process_tag.tag_uuid_to_tag_name, tags)))
         )
 
     with TimeItContext("filter (rels)"):
@@ -1589,7 +1591,7 @@ def real_ls(
 
     with TimeItContext("pretty_df"):
         pretty_df = df.copy()
-        pretty_df["tags"] = pretty_df["tags"].apply(", ".join)
+        pretty_df["tags"] = pretty_df["tags"].dropna().apply(", ".join)
         pretty_df["tags"] = pretty_df["tags"].apply(lambda s: f'"{s}"')
 
         if name_length_limit > 0:

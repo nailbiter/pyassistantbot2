@@ -40,6 +40,7 @@ import typing
 import functools
 import hashlib
 import importlib.util
+import numpy as np
 
 # FIXME
 # copycat to omit dependency on `alex_leontiev_toolbox_python`
@@ -83,6 +84,11 @@ class _get_task_by_uuid:
         return res
 
 
+def is_missing(x) -> bool:
+    "suggested by Gemini"
+    return np.ndim(x) == 0 and pd.isna(x)
+
+
 def _df_env(df):
     df = df.copy()
     df.reset_index(inplace=True)
@@ -93,6 +99,7 @@ def _df_env(df):
             *[
                 [{"uuid": uuid, "tag": tag} for tag in tags_]
                 for uuid, tags_ in zip(df["uuid"], tags)
+                if not is_missing(tags_)
             ]
         ),
         columns=["uuid", "tag"],
