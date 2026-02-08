@@ -24,8 +24,19 @@ from dotenv import load_dotenv
 import os
 from os import path
 import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    Filters,
+)
 import pymongo
 from datetime import datetime, timedelta
 import _common
@@ -52,30 +63,38 @@ class Callback:
         data = int(update.callback_query.data)
 
         mongo_coll = self._mongo_client[_common.MONGO_COLL_NAME]["alex.time"]
-        msg = mongo_coll.find_one(
-            {"telegram_message_id": message_id})
+        msg = mongo_coll.find_one({"telegram_message_id": message_id})
         if msg is None:
             logging.error(
-                f"could not find keyboard for message_id={message_id} ==> ignore")
+                f"could not find keyboard for message_id={message_id} ==> ignore"
+            )
             return
         elif msg["category"] is not None:
             logging.warning(
-                f"already have saved state \"{msg['category']}\" for message_id={message_id} ==> ignore")
+                f"already have saved state \"{msg['category']}\" for message_id={message_id} ==> ignore"
+            )
             return
         time_category = _common.TIME_CATS[data]
         print(time_category)
         # FIXME: use `sanitize_mongo` of `heartbeat_time`
         mongo_coll.update_one(
-            {"telegram_message_id": message_id}, {"$set": {"category": time_category, "_last_modification_date": _common.to_utc_datetime()}})
-
-        self._bot.delete_message(
-            chat_id,
-            message_id
+            {"telegram_message_id": message_id},
+            {
+                "$set": {
+                    "category": time_category,
+                    "_last_modification_date": _common.to_utc_datetime(),
+                }
+            },
         )
-        self._bot.sendMessage(chat_id=chat_id, text=f"""
+
+        self._bot.delete_message(chat_id, message_id)
+        self._bot.sendMessage(
+            chat_id=chat_id,
+            text=f"""
 got: {time_category}
 remaining time to live: {str(datetime(1991+70,12,24)-_now)} 
-        """.strip())
+        """.strip(),
+        )
 
 
 class ProcessCommand:
@@ -92,39 +111,65 @@ class ProcessCommand:
 
         if chat_id != self._chat_id:
             logging.warning(
-                f"spurious message {update.message} from {chat_id} ==> ignore")
+                f"spurious message {update.message} from {chat_id} ==> ignore"
+            )
             return
 
         try:
             text = update.message.text.strip()
             for command, callback in self._commands.items():
                 if text.startswith(f"/{command}"):
-                    stripped = text[len(command)+1:].strip()
-                    callback(stripped, send_message_cb=self._send_message,
-                             mongo_client=self._mongo_client)
+                    stripped = text[len(command) + 1 :].strip()
+                    callback(
+                        stripped,
+                        send_message_cb=self._send_message,
+                        mongo_client=self._mongo_client,
+                    )
                     return
             if text.startswith("/"):
                 cmd, *_ = re.split(r"\s+", text)
                 raise Exception(f"unknown command {cmd}")
-#                logging.error(f"unknown command {text}")
-#                return
-            logging.warning(
-                f"unmatched message \"{text}\" ==> use default handler")
+            #                logging.error(f"unknown command {text}")
+            #                return
+            logging.warning(f'unmatched message "{text}" ==> use default handler')
             self._commands[None](
-                text, send_message_cb=self._send_message, mongo_client=self._mongo_client)
+                text,
+                send_message_cb=self._send_message,
+                mongo_client=self._mongo_client,
+            )
         except Exception as e:
             # FIXME: is catch-all catcher inappropriate here?
             self._send_message(f"exception: ``` {e}```", parse_mode="Markdown")
             raise e
 
     def _send_message(self, text, **kwargs):
-        mess = self._bot.sendMessage(
-            chat_id=self._chat_id,
-            text=text,
-            **kwargs
-        )
+        mess = self._bot.sendMessage(chat_id=self._chat_id, text=text, **kwargs)
+
 
 #        print(update.message.text,flush=True)
+
+
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+# --- ADD THIS DUMMY SERVER CLASS ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+
+def run_health_server():
+    # Cloud Run provides the PORT environment variable
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    logging.warning(f"Starting health check server on port {port}")
+    server.serve_forever()
+
+
+# -----------------------------------
 
 
 @click.command()
@@ -132,8 +177,12 @@ class ProcessCommand:
 @click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
 @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
 def actor(telegram_token, chat_id, mongo_url):
+    # --- START THE HEALTH CHECK THREAD ---
+    threading.Thread(target=run_health_server, daemon=True).start()
+
     logging.warning(datetime.now().isoformat())
     updater = Updater(telegram_token, use_context=True)
+    # ... (rest of your existing code)
     bot = updater.bot
     pc = ProcessCommand(
         chat_id,
@@ -142,28 +191,72 @@ def actor(telegram_token, chat_id, mongo_url):
         commands={
             "money": _actor.add_money,
             #        if text.startswith("/habits"):
-            "habits": functools.partial(_actor.os_command, command="python3 heartbeat_habits.py show-habits"),
+            "habits": functools.partial(
+                _actor.os_command, command="python3 heartbeat_habits.py show-habits"
+            ),
             "tasks": functools.partial(_actor.os_command, command="python3 task.py s"),
-            "tasknew": functools.partial(_actor.os_command, command="python3 task.py n"),
-            "taskmodify": functools.partial(_actor.os_command, command="python3 task.py m"),
+            "tasknew": functools.partial(
+                _actor.os_command, command="python3 task.py n"
+            ),
+            "taskmodify": functools.partial(
+                _actor.os_command, command="python3 task.py m"
+            ),
             #            # TODO
             #        elif text.startswith("/done"):
             **{
                 k: getattr(_actor, k)
-                for k
-                in "sleepstart,sleepend,ttask,note,rand,nutrition".split(",")
+                for k in "sleepstart,sleepend,ttask,note,rand,nutrition".split(",")
             },
             None: _actor.ttask,
-        }
+        },
     )
     updater.dispatcher.add_handler(
         #        MessageHandler(filters=Filters.command, callback=pc))
-        MessageHandler(filters=Filters.all, callback=pc))
+        MessageHandler(filters=Filters.all, callback=pc)
+    )
     edbp = Callback(chat_id, mongo_url, bot)
-    updater.dispatcher.add_handler(
-        CallbackQueryHandler(callback=edbp))
+    updater.dispatcher.add_handler(CallbackQueryHandler(callback=edbp))
     updater.start_polling()
     updater.idle()
+
+
+# @click.command()
+# @click.option("-t", "--telegram-token", required=True, envvar="TELEGRAM_TOKEN")
+# @click.option("-c", "--chat-id", required=True, envvar="CHAT_ID", type=int)
+# @click.option("-m", "--mongo-url", required=True, envvar="MONGO_URL")
+# def actor(telegram_token, chat_id, mongo_url):
+#     logging.warning(datetime.now().isoformat())
+#     updater = Updater(telegram_token, use_context=True)
+#     bot = updater.bot
+#     pc = ProcessCommand(
+#         chat_id,
+#         mongo_url,
+#         bot,
+#         commands={
+#             "money": _actor.add_money,
+#             #        if text.startswith("/habits"):
+#             "habits": functools.partial(_actor.os_command, command="python3 heartbeat_habits.py show-habits"),
+#             "tasks": functools.partial(_actor.os_command, command="python3 task.py s"),
+#             "tasknew": functools.partial(_actor.os_command, command="python3 task.py n"),
+#             "taskmodify": functools.partial(_actor.os_command, command="python3 task.py m"),
+#             #            # TODO
+#             #        elif text.startswith("/done"):
+#             **{
+#                 k: getattr(_actor, k)
+#                 for k
+#                 in "sleepstart,sleepend,ttask,note,rand,nutrition".split(",")
+#             },
+#             None: _actor.ttask,
+#         }
+#     )
+#     updater.dispatcher.add_handler(
+#         #        MessageHandler(filters=Filters.command, callback=pc))
+#         MessageHandler(filters=Filters.all, callback=pc))
+#     edbp = Callback(chat_id, mongo_url, bot)
+#     updater.dispatcher.add_handler(
+#         CallbackQueryHandler(callback=edbp))
+#     updater.start_polling()
+#     updater.idle()
 
 
 if __name__ == "__main__":

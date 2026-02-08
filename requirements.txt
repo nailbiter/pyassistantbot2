@@ -1,4 +1,5 @@
-git+https://github.com/nailbiter/alex_leontiev_toolbox_python@main-poetry
+#git+https://github.com/nailbiter/alex_leontiev_toolbox_python@main-stable
+alex_leontiev_toolbox_python[bigquery, analytics] @ git+https://github.com/nailbiter/alex_leontiev_toolbox_python@main-stable
 
 APScheduler==3.6.3
 attrs==21.4.0
