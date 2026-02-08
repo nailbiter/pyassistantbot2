@@ -38,3 +38,9 @@ ply
 json5
 more_itertools
 graphviz
+
+## 2026-02-08 15:40 -- make cloud run work
+## fastapi, uvicorn, and gunicorn
+fastapi
+uvicorn
+gunicorn

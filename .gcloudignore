@@ -173,3 +173,5 @@ birthdays.json5
 .habits.json5
 .DS_Store
 
+.envrc
+.env

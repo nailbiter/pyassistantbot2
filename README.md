@@ -20,9 +20,7 @@ docker-compose build
 ## deploy to Cloud Run
 
 ```
-time gcloud run deploy pyas2-habits \
-  --source . \
-  --region us-east1 --no-allow-unauthenticated;
+./deploy.sh
 ```
 
 ## gstasks

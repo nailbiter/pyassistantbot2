@@ -28,19 +28,10 @@ import schedule
 from datetime import datetime, timedelta
 import logging
 import time
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    ReplyKeyboardMarkup,
-)
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    Filters,
-)
+
+# from telegram.ext import (
+#     # Updater,
+# )
 from pymongo import MongoClient
 import _common
 import pandas as pd
@@ -54,9 +45,12 @@ class SendKeyboard:
     def __init__(self, token, chat_id, mongo_url, create_bot=False):
         self._chat_id = chat_id
         self._bot = None
-        if create_bot:
-            updater = Updater(token, use_context=True)
-            self._bot = updater.bot
+
+        assert not create_bot
+        # if create_bot:
+        #     updater = Updater(token, use_context=True)
+        #     self._bot = updater.bot
+
         self._mongo_client = MongoClient(mongo_url)
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -287,23 +281,23 @@ def heartbeat_habits(ctx, **kwargs):
         ctx.obj[k] = v
 
 
-@heartbeat_habits.command()
-@click.pass_context
-def heartbeat(ctx):
-    job = SendKeyboard(
-        *[ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")],
-        create_bot=True,
-    )
+# @heartbeat_habits.command()
+# @click.pass_context
+# def heartbeat(ctx):
+#     job = SendKeyboard(
+#         *[ctx.obj[k] for k in "telegram_token,chat_id,mongo_url".split(",")],
+#         create_bot=True,
+#     )
 
-    if not False:
-        schedule.every(1).minutes.do(job)
-    else:
-        for i in range(0, 60, 2):
-            schedule.every().hour.at(f":{i:02d}").do(job)
+#     if not False:
+#         schedule.every(1).minutes.do(job)
+#     else:
+#         for i in range(0, 60, 2):
+#             schedule.every().hour.at(f":{i:02d}").do(job)
 
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+#     while True:
+#         schedule.run_pending()
+#         time.sleep(1)
 
 
 @heartbeat_habits.command()
