@@ -14,6 +14,13 @@ docker-compose build
 ### run
 
 ```sh
+#
+```
+
+## deploy to Cloud Run
+
+```
+gcloud builds submit --tag gcr.io/$GCLOUD_PROJECT_ID/pyas2-habits ./ ;
 ```
 
 ## gstasks
