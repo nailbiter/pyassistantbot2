@@ -1010,6 +1010,7 @@ def real_mark(
         )
         if is_out:
             click.echo(None if task is None else task["uuid"])
+        return task, {}
     else:
         if uuid_text == MARK_UNSET_SYMBOL:
             r = {"uuid": None}
