@@ -3,16 +3,7 @@
   to_html_kwargs: { table_uuid: "tasks_ttask_table" },
   out_file: "ttask_tasks.html",
   sorting_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/sorting.jinja.sql",
-  row_styling_sql: "\
-    select uuid,\
-iif(date(scheduled_date)=date('{{now}}'),'is_today','') as class,\
- scheduled_date,\
- iif(due is not null,'has_due','') as class_has_due,\
- iif(date(due)<=date('{{now}}'),'is_past_due','') as class_is_past_due,\
- datetime('{{now}}') as now\
---status as class \n\
-from tasks\
-",
+  row_styling_sql: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/styling.jinja.sql",
   //template: "@/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
   sql_udfs_file: "gstasks_sql_uds.py",
   index_style: '<a href="http://127.0.0.1:5000/lso/{{x}}">{{x.split("-")[0]}}</a>',
