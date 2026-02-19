@@ -58,6 +58,9 @@ td {
 .has_due {
     background-color: yellow;
 }
+.is_engage {
+    font-weight: bold;
+}
 .is_past_due {
     background-color: red;
 }
