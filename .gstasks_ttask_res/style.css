@@ -61,6 +61,9 @@ td {
 .is_engage {
     font-weight: bold;
 }
+.is_recreational {
+    background-color: lightblue;
+}
 .is_past_due {
     background-color: red;
 }
