@@ -1,6 +1,6 @@
 with t_tags as (
      select uuid
-     	    , max(iif(tag='gstasks',1,0)) is_recreational
+     	    , max(iif(tag='gstasks' or tag='pyas3',1,0)) is_recreational
      from tags
      group by uuid
 )
