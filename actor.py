@@ -26,8 +26,7 @@ import re
 import functools
 import threading
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, BackgroundTasks
 import typing
 
 from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
@@ -209,7 +208,7 @@ app = FastAPI(
 
 
 @app.post("/")
-async def health_check(request: Request):
+async def health_check(request: Request, background_tasks: BackgroundTasks):
     """Standard health check for Cloud Run"""
     logger.debug(request)
 
@@ -223,7 +222,7 @@ async def health_check(request: Request):
     )
     message = data["message"]["text"]
 
-    run_telegram_bot(message, from_chat_id)
+    background_tasks.add_task(run_telegram_bot, message, from_chat_id)
 
     return {"status": "ok", "bot_running": True}
 

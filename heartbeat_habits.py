@@ -172,7 +172,7 @@ class SendKeyboard:
         habits_punch_coll = self._mongo_client[_common.MONGO_COLL_NAME][
             "alex.habitspunch2"
         ]
-        if True:
+        if False:  # Disabling expensive sanity check for performance
             _df = pd.DataFrame(habits_punch_coll.find())
             #            logging.warning("sanity check")
             _df = pd.DataFrame(
