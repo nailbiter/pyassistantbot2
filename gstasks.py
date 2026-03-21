@@ -386,7 +386,7 @@ def real_edit(
     uuid_list_file=None,
     tag_operation: str = "symmetric_difference",  # FIXME: sync with above
     create_new_tag: bool = False,
-    string_set_mode: str = "set",  # FIXME: sync with above
+    string_set_mode: str = "set",  # FIXME: sync_with above
     post_hook=None,
     **kwargs,
 ) -> None:
@@ -394,19 +394,12 @@ def real_edit(
     this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
     logger = logging.getLogger(__name__).getChild(this_function_name)
     logging.warning(uuid_text)
-
-    timings = {}
-    TimeItContext = functools.partial(
-        __TimeItContext__, report_dict=timings, print_callback=logger.warning
-    )
-
-    with TimeItContext("fetch_uuids"):
-        uuid_text = list(
-            map(
-                functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj.get("uuid_cache_db")),
-                uuid_text,
-            )
+    uuid_text = list(
+        map(
+            functools.partial(_fetch_uuid, uuid_cache_db=ctx.obj.get("uuid_cache_db")),
+            uuid_text,
         )
+    )
 
     if uuid_list_file is not None:
         with click.open_file(uuid_list_file) as f:
@@ -414,12 +407,11 @@ def real_edit(
         uuid_text += list(filter(lambda x: len(x) > 0, map(lambda s: s.strip(), l)))
 
     task_list = ctx.obj["task_list"]
-    with TimeItContext("TagProcessor_init"):
-        _process_tag = TagProcessor(
-            task_list.get_coll("tags"),
-            create_new_tag=create_new_tag,
-            flag_name="--create-new-tag",
-        )
+    _process_tag = TagProcessor(
+        task_list.get_coll("tags"),
+        create_new_tag=create_new_tag,
+        flag_name="--create-new-tag",
+    )
 
     _PROCESSORS = {
         "scheduled_date": lambda s: None
@@ -429,55 +421,49 @@ def real_edit(
         "tags": lambda tags: {_process_tag(tag) for tag in tags},
     }
     _UNSET = "***UNSET***"
-    with TimeItContext("process_kwargs"):
-        for k, v in _PROCESSORS.items():
-            if kwargs[k] is not None:
-                if kwargs[k] == _NONE_CLICK_VALUE:
-                    kwargs[k] = _UNSET
-                else:
-                    kwargs[k] = v(kwargs[k])
+    for k, v in _PROCESSORS.items():
+        if kwargs[k] is not None:
+            if kwargs[k] == _NONE_CLICK_VALUE:
+                kwargs[k] = _UNSET
+            else:
+                kwargs[k] = v(kwargs[k])
 
     for _uuid_text, _index in tqdm.tqdm(
         [(x, None) for x in uuid_text] + [(None, x) for x in index]
     ):
-        with TimeItContext("get_task"):
-            r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
+        r, idx = task_list.get_task(uuid_text=_uuid_text, index=_index)
         logger.debug((r, idx))
-        with TimeItContext("apply_changes"):
-            for k, v in kwargs.items():
-                if v is not None:
-                    if k == "tags":
-                        r["tags"] = sorted(
-                            getattr(set, tag_operation)(
-                                set([] if is_missing(r["tags"]) else r["tags"]),
-                                kwargs["tags"],
-                            )
+        for k, v in kwargs.items():
+            if v is not None:
+                if k == "tags":
+                    r["tags"] = sorted(
+                        getattr(set, tag_operation)(
+                            set([] if is_missing(r.get("tags")) else r["tags"]),
+                            kwargs["tags"],
                         )
-                    elif k in ["name", "comment"]:
-                        if v == _UNSET:
-                            r[k] = None
-                        elif string_set_mode == "set":
-                            r[k] = v
-                        elif string_set_mode == "rappend":
-                            r[k] += v
-                        else:
-                            raise NotImplementedError(dict(string_set_mode=string_set_mode))
-                        # r[k] = None if v == _UNSET else v
-                    elif k == "label":
-                        r["label"] = {
-                            **ifnull(r.get("label", {}), {}),
-                            **{kk: vv for kk, vv in v},
-                        }
+                    )
+                elif k in ["name", "comment"]:
+                    if v == _UNSET:
+                        r[k] = None
+                    elif string_set_mode == "set":
+                        r[k] = v
+                    elif string_set_mode == "rappend":
+                        r[k] += v
                     else:
-                        r[k] = None if v == _UNSET else v
-        with TimeItContext("insert_or_replace_record"):
-            task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)
+                        raise NotImplementedError(dict(string_set_mode=string_set_mode))
+                    # r[k] = None if v == _UNSET else v
+                elif k == "label":
+                    r["label"] = {
+                        **ifnull(r.get("label", {}), {}),
+                        **{kk: vv for kk, vv in v},
+                    }
+                else:
+                    r[k] = None if v == _UNSET else v
+        task_list.insert_or_replace_record(r, index=idx, action_comment=action_comment)
 
     if post_hook is not None:
         logging.warning(f'executing post_hook "{post_hook}"')
         os.system(post_hook)
-
-    logging.warning(f"timings: {timings}")
 
 
 @gstasks.command()

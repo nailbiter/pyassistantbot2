@@ -25,20 +25,20 @@ from datetime import datetime, timedelta
 import typing
 import uuid
 import sys
+import re
 
 from alex_leontiev_toolbox_python.utils import typify
+from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
 
 from _common import to_utc_datetime
 
-
-import time
 
 class TaskList:
     def __init__(self, mongo_url, database_name, collection_name):
         self._mongo_client = MongoClient(mongo_url)
         self._database_name = database_name
         self._collection_name = collection_name
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = get_configured_logger(self.__class__.__name__, level="DEBUG")
         self._mongo_url = mongo_url
 
     @property
@@ -52,13 +52,10 @@ class TaskList:
         tags: list[str] = [],
         exclude_tags: list[str] = [],
     ) -> pd.DataFrame:
-        t0 = time.time()
         filter_ = {}
         if tags:
             filter_["tags"] = {"$all": tags}
         df = pd.DataFrame(self.get_coll().find(filter=filter_))
-        t1 = time.time()
-        self._logger.warning(f"get_all_tasks: Mongo fetch took {t1-t0:.4f}s")
         # df["scheduled_date"] = (
         #     pd.to_datetime(df["scheduled_date"])
         #     .dropna()
@@ -91,10 +88,42 @@ class TaskList:
         self._logger.info(r)
         self.get_coll(collection_name="actions").insert_one(r)
 
+    def tidy_up_task(self, r: dict, is_drop_hidden_fields: bool) -> dict:
+        if is_drop_hidden_fields:
+            r = {k: v for k, v in r.items() if not str(k).startswith("_")}
+        for k in ["due"]:
+            r[k] = r.get(k)
+        return r
+
     def get_task(
         self, uuid_text=None, index=None, get_all_tasks_kwargs: dict = {}
     ) -> (dict, int):
         assert sum([x is not None for x in [index, uuid_text]]) == 1
+
+        # Fast path for direct UUID lookup
+        if uuid_text is not None and (
+            (get_all_tasks_kwargs == {})
+            or (get_all_tasks_kwargs == dict(is_drop_hidden_fields=False))
+        ):
+            self._logger.debug(dict(get_all_tasks_kwargs=get_all_tasks_kwargs))
+            query = {"uuid": {"$regex": re.compile(f"^{uuid_text}")}}
+            results = list(self.get_coll().find(query))
+            if len(results) == 1:
+                r = results[0]
+                self._logger.debug(f"here with {r}")
+                r = self.tidy_up_task(
+                    r,
+                    is_drop_hidden_fields=get_all_tasks_kwargs.get(
+                        "is_drop_hidden_fields", True
+                    ),
+                )
+                # Mimic is_drop_hidden_fields=True behavior
+                self._logger.debug(f"here with {r}")
+                return r, None
+            elif len(results) == 0:
+                raise ValueError(f"No task found for UUID prefix: {uuid_text}")
+            # If multiple results, fall back to slow path for consistency
+
         ## FIXME: this should be cached
         df = self.get_all_tasks(is_post_processing=False, **get_all_tasks_kwargs)
         if index is not None:
@@ -134,7 +163,7 @@ class TaskList:
         assert action in ["inserting", "replacing"]
         print(f"{action} {r}", file=sys.stderr)
         if action == "inserting":
-            index = len(self.get_all_tasks())
+            index = self.get_coll().count_documents({})
 
         log_kwargs = {}
         if action == "replacing":
