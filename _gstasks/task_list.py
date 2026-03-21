@@ -31,6 +31,8 @@ from alex_leontiev_toolbox_python.utils import typify
 from _common import to_utc_datetime
 
 
+import time
+
 class TaskList:
     def __init__(self, mongo_url, database_name, collection_name):
         self._mongo_client = MongoClient(mongo_url)
@@ -50,10 +52,13 @@ class TaskList:
         tags: list[str] = [],
         exclude_tags: list[str] = [],
     ) -> pd.DataFrame:
+        t0 = time.time()
         filter_ = {}
         if tags:
             filter_["tags"] = {"$all": tags}
         df = pd.DataFrame(self.get_coll().find(filter=filter_))
+        t1 = time.time()
+        self._logger.warning(f"get_all_tasks: Mongo fetch took {t1-t0:.4f}s")
         # df["scheduled_date"] = (
         #     pd.to_datetime(df["scheduled_date"])
         #     .dropna()
