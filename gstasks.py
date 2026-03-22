@@ -386,7 +386,7 @@ def real_edit(
     uuid_list_file=None,
     tag_operation: str = "symmetric_difference",  # FIXME: sync with above
     create_new_tag: bool = False,
-    string_set_mode: str = "set",  # FIXME: sync with above
+    string_set_mode: str = "set",  # FIXME: sync_with above
     post_hook=None,
     **kwargs,
 ) -> None:
@@ -438,7 +438,7 @@ def real_edit(
                 if k == "tags":
                     r["tags"] = sorted(
                         getattr(set, tag_operation)(
-                            set([] if is_missing(r["tags"]) else r["tags"]),
+                            set([] if is_missing(r.get("tags")) else r["tags"]),
                             kwargs["tags"],
                         )
                     )
