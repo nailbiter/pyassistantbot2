@@ -93,9 +93,9 @@ def _on_shutdown():
         logger.info(f"Recorded shutdown timestamp to {filepath}")
 
         _, mongo_url = _init()
-        _init_g(g, mongo_url=mongo_url)
+        # _init_g(g, mongo_url=mongo_url)
         res, debug_info = real_mark(
-            g.ctx,
+            MockClickContext(mongo_url),
             uuid_text=MARK_UNSET_SYMBOL,
             mark=CLICK_DEFAULT_VALUES["mark"]["mark"],
         )
