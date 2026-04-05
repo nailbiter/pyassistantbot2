@@ -1,29 +1,80 @@
-table {
-    border: 1px solid;
-
-    /* outline: 0.5rem solid khaki; */
-    /* box-shadow: 0 0 0 2rem skyblue; */
-    /* border-radius: 12px; */
-    /* font: bold 1rem sans-serif; */
-    /* margin: 2rem; */
-    /* padding: 1rem; */
-    /* outline-offset: 0.5rem; */
-
-    table-layout: fixed; width: 100%
+.container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 15px;
+    padding: 15px;
+    align-items: flex-start;
+    overflow-x: auto;
 }
 
-
-th {
-    border: 1px solid;
+table.dataframe {
+    flex: 1 1 auto;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background-color: white;
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 
-.col0 {
+.habits_df {
+    flex: 3 1 auto !important;
 }
 
-td {
-    border: 1px solid;
+.tags_df {
+    flex: 1 1 auto !important;
 }
 
-.REGULAR {
-    background-color: brown;
+table.dataframe th {
+    background-color: #333;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid #444;
+}
+
+table.dataframe td {
+    padding: 10px 15px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+table.dataframe tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+table.dataframe tr:hover {
+    background-color: #f0f0f0;
+}
+
+.habits_df {
+    flex: 2 1 600px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.tags_df {
+    flex: 1 1 300px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+/* Status colors and other specific styling */
+.is_today { background-color: lightgray !important; }
+.has_due { background-color: #fff9c4 !important; } /* Light yellow */
+.is_engage { font-weight: bold; border: 2px solid black !important; }
+.is_pending { background-color: #f8bbd0 !important; } /* Light magenta */
+.is_recreational { background-color: #bbdefb !important; } /* Light blue */
+.is_past_due { background-color: #ffcdd2 !important; color: #b71c1c; } /* Light red */
+.REGULAR { background-color: #d7ccc8 !important; } /* Light brown/taupe */
+
+a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
 }

@@ -1,75 +1,82 @@
-table {
-    border: 1px solid;
-    /* outline: 0.5rem solid khaki; */
-    /* box-shadow: 0 0 0 2rem skyblue; */
-    /* border-radius: 12px; */ 
-    /* font: bold 1rem sans-serif; */
-    /* margin: 2rem; */
-    /* padding: 1rem; */
-    /* outline-offset: 0.5rem; */
-
-    table-layout: fixed;
-    width: 100%;
-    overflow-y: scroll;
-    height: 70vh;
-    display: block;
-}
-table.dataframe.habits_df{
-    border: 1px solid;
-    /* outline: 0.5rem solid khaki; */
-    /* box-shadow: 0 0 0 2rem skyblue; */
-    /* border-radius: 12px; */ 
-    /* font: bold 1rem sans-serif; */
-    /* margin: 2rem; */
-    /* padding: 1rem; */
-    /* outline-offset: 0.5rem; */
-
-    table-layout: fixed;
-    width: 60%;
-    float:left;
-    overflow-y: scroll;
-    height: 30vh;
-    display: block;
-}
-table.dataframe.tags_df{
-    border: 1px solid;
-    table-layout: fixed;
-    width: 30%;
-    float:right;
-    overflow-y: scroll;
-    height: 30vh;
-    display: block;
+.container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 15px;
+    padding: 15px;
+    align-items: flex-start;
+    overflow-x: auto;
+    font-family: Arial, sans-serif;
 }
 
-th {
-    border: 1px solid;
+table.dataframe {
+    flex: 1 1 auto;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background-color: white;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    table-layout: auto;
 }
 
-.col0 {
+.habits_df {
+    flex: 3 1 auto !important;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
-td {
-    border: 1px solid;
+.tags_df {
+    flex: 1 1 auto !important;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
-.is_today {
-    background-color: lightgray;
+table.dataframe th {
+    background-color: #333;
+    color: white;
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid #444;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
-.has_due {
-    background-color: yellow;
+
+table.dataframe td {
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid #ddd;
 }
-.is_engage {
-    font-weight: bold;
+
+table.dataframe tr:nth-child(even) {
+    background-color: #f8f8f8;
 }
-.is_pending {
-    background-color: magenta;
+
+table.dataframe tr:hover {
+    background-color: #f0f0f0;
 }
-.is_recreational {
-    background-color: dodgerblue;
+
+/* Status colors and other specific styling */
+.is_today { background-color: lightgray !important; }
+.has_due { background-color: #fff9c4 !important; } /* Light yellow */
+.is_engage { font-weight: bold; border: 2px solid black !important; }
+.is_pending { background-color: #f8bbd0 !important; } /* Light magenta */
+.is_recreational { background-color: #bbdefb !important; } /* Light blue */
+.is_past_due { background-color: #ffcdd2 !important; color: #b71c1c; } /* Light red */
+.REGULAR { background-color: #d7ccc8 !important; } /* Light brown/taupe */
+
+a {
+    color: #1a73e8;
+    text-decoration: none;
 }
-.is_past_due {
-    background-color: red;
+
+a:hover {
+    text-decoration: underline;
 }
-.REGULAR {
-    background-color: brown;
+
+/* Maintain original block-scrolling behavior for internal table bodies if needed, 
+   but cleaned up for flex compatibility */
+table.dataframe {
+    display: table; /* Reset from display: block which breaks table layouts */
 }

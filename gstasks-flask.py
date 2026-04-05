@@ -66,7 +66,7 @@ import functools
 import atexit
 import signal
 import sys
-from _gstasks.flask.widgets import WidgetTags
+from _gstasks.flask.widgets import WidgetTags, WidgetEngage
 
 # from _gstasks.my_logging import get_configured_logger
 from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
@@ -662,10 +662,11 @@ def ls():
                     if "mongo_url" in widget_config
                     else None
                 )
-            elif widget == "tags":
-                jinja_env["widgets"]["tags_df"] = WidgetTags(**widget_config)(
-                    profile=profile
-                )
+            elif widget in ["tags", "engage"]:
+                jinja_env["widgets"][f"{widget}_df"] = dict(
+                    tags=WidgetTags,
+                    engage=WidgetEngage,
+                )[widget](**widget_config)(profile=profile, ctx=g.ctx)
             else:
                 logger.error(dict(widget=widget))
 
