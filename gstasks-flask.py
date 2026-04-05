@@ -86,22 +86,22 @@ logger = get_configured_logger(
 def _on_shutdown():
     """Shutdown hook: appends the current timestamp to ~/Downloads/gstasks-flask-stopped.txt."""
     filepath = os.path.expanduser("~/Downloads/gstasks-flask-stopped.txt")
-    try:
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "a") as f:
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "a") as f:
+        try:
             f.write(f"{datetime.now().isoformat()}\n")
-        logger.info(f"Recorded shutdown timestamp to {filepath}")
+            f.write(f"Recorded shutdown timestamp to {filepath}\n")
 
-        _, mongo_url = _init()
-        # _init_g(g, mongo_url=mongo_url)
-        res, debug_info = real_mark(
-            MockClickContext(mongo_url),
-            uuid_text=MARK_UNSET_SYMBOL,
-            mark=CLICK_DEFAULT_VALUES["mark"]["mark"],
-        )
-        logger.info(dict(res=res, debug_info=debug_info))
-    except Exception as e:
-        logger.error(f"Failed to record shutdown timestamp: {e}")
+            _, mongo_url = _init()
+            # _init_g(g, mongo_url=mongo_url)
+            res, debug_info = real_mark(
+                MockClickContext(mongo_url),
+                uuid_text=MARK_UNSET_SYMBOL,
+                mark=CLICK_DEFAULT_VALUES["mark"]["mark"],
+            )
+            f.write(f"{dict(res=res, debug_info=debug_info)}\n")
+        except Exception as e:
+            f.write(f"Failed to record shutdown timestamp: {e}\n")
 
 
 def _handle_signal(signum, frame):
