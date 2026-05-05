@@ -60,7 +60,8 @@ table.dataframe tr:hover {
 /* Status colors and other specific styling */
 .is_today { background-color: lightgray !important; }
 .has_due { background-color: #fff9c4 !important; } /* Light yellow */
-.is_engage { font-weight: bold; border: 2px solid black !important; }
+.is_engage { font-weight: bold; }
+.is_actual { border: 2px solid black !important; }
 .is_pending { background-color: #e1bee7 !important; color: #6a1b9a; font-style: italic; border-left: 4px solid #ab47bc !important; } /* Purple with italic + left border */
 .is_recreational { background-color: #bbdefb !important; } /* Light blue */
 .is_past_due { background-color: #ffcdd2 !important; color: #b71c1c; } /* Light red */
