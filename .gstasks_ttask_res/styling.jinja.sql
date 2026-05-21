@@ -1,6 +1,7 @@
 with t_tags as (
      select uuid
      	    , max(iif(tag='gstasks' or tag='pyas3',1,0)) is_recreational
+     	    , max(iif(tag='actual',1,0)) is_actual
      from tags
      group by uuid
 )
@@ -13,4 +14,5 @@ iif(date(scheduled_date)=date('{{now}}'),'is_today','') as class
  , iif(date(due)<=date('{{now}}'),'is_past_due','') as class_is_past_due
  , datetime('{{now}}') as now
  , iif(t_tags.is_recreational, 'is_recreational', '') class_is_recreational
+ , iif(t_tags.is_actual, 'is_actual', '') class_is_actual
 from tasks left join t_tags using (uuid)
