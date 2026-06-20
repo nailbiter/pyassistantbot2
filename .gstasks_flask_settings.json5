@@ -36,6 +36,7 @@
             "borg",
           ],
         },
+        engage: {},
       },
       template: "/Users/nailbiter/Documents/forgithub/pyassistantbot2/.gstasks_ttask_res/template.html",
       static_files: {

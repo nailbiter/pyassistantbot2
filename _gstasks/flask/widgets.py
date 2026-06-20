@@ -24,8 +24,38 @@ import pandas as pd
 import pymongo
 from jinja2 import Template
 
-from _gstasks import str_or_envvar, StringContractor
+from _gstasks import str_or_envvar, StringContractor, get_last_engaged_task_uuid
 from _gstasks.my_logging import get_configured_logger
+
+
+class WidgetEngage:
+    def __init__(self):
+        self._logger = get_configured_logger(self.__class__.__name__, level="DEBUG")
+
+    def __call__(
+        self, profile: str, name: typing.Optional[str] = None, ctx=None
+    ) -> pd.DataFrame:
+        task_list = ctx.obj["task_list"]
+        last_engaged = get_last_engaged_task_uuid(task_list)
+        self._logger.info(dict(last_engaged=last_engaged))
+        task = (
+            {}
+            if last_engaged is None
+            else task_list.get_task(uuid_text=last_engaged)[0]
+        )
+        self._logger.info(dict(task=task))
+        res = pd.DataFrame(
+            [
+                {
+                    "engaged_uuid": None
+                    if last_engaged is None
+                    else last_engaged.split("-")[0],
+                    "name": task.get("name"),
+                    "status": task.get("status"),
+                }
+            ]
+        )
+        return res
 
 
 class WidgetTags:
@@ -59,7 +89,9 @@ class WidgetTags:
 
         self._logger.info(f"log_level: {log_level}")
 
-    def __call__(self, profile: str, name: typing.Optional[str] = None) -> pd.DataFrame:
+    def __call__(
+        self, profile: str, name: typing.Optional[str] = None, ctx=None
+    ) -> pd.DataFrame:
         widget_config = self.widget_config
 
         tags_df = pd.DataFrame(dict(tag_name=["tag"], cnt=[999]))

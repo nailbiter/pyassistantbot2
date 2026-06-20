@@ -63,7 +63,10 @@ import base64
 import typing
 from bson import json_util
 import functools
-from _gstasks.flask.widgets import WidgetTags
+import atexit
+import signal
+import sys
+from _gstasks.flask.widgets import WidgetTags, WidgetEngage
 
 # from _gstasks.my_logging import get_configured_logger
 from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
@@ -78,6 +81,41 @@ logger = get_configured_logger(
     ),
     file_mode=os.environ.get("GSTASKS_FLASK_LOGFILE_MODE", "w"),
 )
+
+
+def _on_shutdown():
+    """Shutdown hook: appends the current timestamp to ~/Downloads/gstasks-flask-stopped.txt."""
+    filepath = os.path.expanduser("~/Downloads/gstasks-flask-stopped.txt")
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "a") as f:
+        try:
+            f.write(f"{datetime.now().isoformat()}\n")
+            f.write(f"Recorded shutdown timestamp to {filepath}\n")
+
+            _, mongo_url = _init()
+            # _init_g(g, mongo_url=mongo_url)
+            res, debug_info = real_mark(
+                MockClickContext(mongo_url),
+                uuid_text=MARK_UNSET_SYMBOL,
+                mark=CLICK_DEFAULT_VALUES["mark"]["mark"],
+            )
+            f.write(f"{dict(res=res, debug_info=debug_info)}\n")
+        except Exception as e:
+            f.write(f"Failed to record shutdown timestamp: {e}\n")
+
+
+def _handle_signal(signum, frame):
+    """Gracefully handle signals like SIGINT and SIGTERM to trigger atexit hooks."""
+    logger.info(f"Received signal {signum}, exiting...")
+    sys.exit(0)
+
+
+# Register for normal exits
+atexit.register(_on_shutdown)
+
+# Handle common shutdown signals
+signal.signal(signal.SIGINT, _handle_signal)
+signal.signal(signal.SIGTERM, _handle_signal)
 
 
 # MockClickContext = collections.namedtuple("MockClickContext", "obj", defaults=[{}])
@@ -502,9 +540,9 @@ def _engage_message(txt: str, debug_info: dict) -> str:
 @app.route("/unmark")
 def unmark() -> str:
     _, mongo_url = _init()
-    _init_g(g, mongo_url=mongo_url)
+    ctx = MockClickContext(mongo_url)
     res, debug_info = real_mark(
-        g.ctx, uuid_text=MARK_UNSET_SYMBOL, mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
+        ctx, uuid_text=MARK_UNSET_SYMBOL, mark=CLICK_DEFAULT_VALUES["mark"]["mark"]
     )
     txt = robust_json_dumps(res, sort_keys=True, indent=2, separators=(",<br>", ":"))
     logger.info(txt)
@@ -624,10 +662,11 @@ def ls():
                     if "mongo_url" in widget_config
                     else None
                 )
-            elif widget == "tags":
-                jinja_env["widgets"]["tags_df"] = WidgetTags(**widget_config)(
-                    profile=profile
-                )
+            elif widget in ["tags", "engage"]:
+                jinja_env["widgets"][f"{widget}_df"] = dict(
+                    tags=WidgetTags,
+                    engage=WidgetEngage,
+                )[widget](**widget_config)(profile=profile, ctx=g.ctx)
             else:
                 logger.error(dict(widget=widget))
 

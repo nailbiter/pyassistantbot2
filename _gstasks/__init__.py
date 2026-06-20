@@ -53,6 +53,7 @@ from bson.codec_options import CodecOptions
 from dateutil.relativedelta import relativedelta
 import pytz
 import _common
+from alex_leontiev_toolbox_python.utils.logging_helpers import get_configured_logger
 
 
 _LOCAL_TZ_NAME = "Asia/Tokyo"
@@ -93,6 +94,8 @@ def setup_ctx_obj(
     template_dir: str = TEMPLATE_DIR_DEFAULT,
 ) -> None:
     # (['task_list', 'list_id', 'uuid_cache_db', 'template_dir']
+    logger = get_configured_logger("setup_ctx_obj")
+    logger.debug(dict(mongo_url=mongo_url))
     ctx.obj["task_list"] = TaskList(
         mongo_url=mongo_url, database_name="gstasks", collection_name="tasks"
     )
@@ -418,9 +421,11 @@ def preprocess_stopwatch_slice(df: pd.DataFrame) -> list[dict]:
     rs = [
         dict(
             action=action,
-            now=min(map(operator.itemgetter("now"), group))
-            if action == "start"
-            else max(map(operator.itemgetter("now"), group)),
+            now=(
+                min(map(operator.itemgetter("now"), group))
+                if action == "start"
+                else max(map(operator.itemgetter("now"), group))
+            ),
         )
         for action, group in itertools.groupby(rs, key=operator.itemgetter("action"))
     ]

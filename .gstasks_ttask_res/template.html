@@ -1,31 +1,42 @@
-
 <html>
   <!--https://flask.palletsprojects.com/en/2.3.x/tutorial/static/-->
   <head>
-    <link rel='icon' type='image/x-icon' href='/T-favicon.jpg'>
+    <link rel="icon" type="image/x-icon" href="/T-favicon.jpg" />
     <style>
       {{ static_files['style'] }}
     </style>
   </head>
   <body>
-    <p>task streams</p>
-    <ol>
-      <li>emails</li>
-      <li>[TEMP] ellis porter</li>
-      <li>jira</li>
-      <li>gstasks</li>
-      <!--deprioritizing "yellow pads", cause we can /tasknew stuff now-->
-      <li>yellow pad</li>
-    </ol>
-    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday&et=operation">before yesterday (no <code>operation</code> tag)</a>
-    {% for k in ['yesterday','today','tomorrow'] %}
-    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad={{k}}">{{k}}</a>
-    {% endfor %}
-    <a href="http://127.0.0.1:5000/download_json/{{ utils.safe_dump(kwargss['ttask']) }}">download</a>
+    <div class="container">
+      <div>
+	<p>task streams</p>
+	<ol>
+	  <li>emails</li>
+	  <li>[TEMP] ellis porter</li>
+	  <li>jira</li>
+	  <li>gstasks</li>
+	  <!--deprioritizing "yellow pads", cause we can /tasknew stuff now-->
+	  <li>yellow pad</li>
+	</ol>
+      </div>
+      {{ widgets.engage_df.to_html(escape=False)|safe }}
+    </div>
+    <a href="http://127.0.0.1:5000/ls?profile=ttask&bd=yesterday&et=operation"
+      >before yesterday (no <code>operation</code> tag)</a
+    >
+    {% for k in ['yesterday','today','tomorrow'] -%}
+      <a href="http://127.0.0.1:5000/ls?profile=ttask&bd={{k}}&ad={{k}}">{{k}}</a>
+    {% endfor -%}
+    <a href="http://127.0.0.1:5000/ls?profile=ttask&ad=2026-02-06&bd=2026-02-06">backlog</a>
+    <a
+      href="http://127.0.0.1:5000/download_json/{{ utils.safe_dump(kwargss['ttask']) }}"
+      >download</a
+    >
+
     {{table_htmls['ttask']|safe}}
-    <div class='container'>
-      {{widgets.habits_df.to_html(classes=['habits_df'])|safe}}
-      {{widgets.tags_df.to_html(classes=['tags_df'],escape=False)|safe}}
+    <div class="container">
+      {{ widgets.habits_df.to_html(classes=['habits_df'])|safe }}
+      {{ widgets.tags_df.to_html(classes=['tags_df'],escape=False)|safe }}
     </div>
   </body>
 </html>
